@@ -323,11 +323,52 @@ frontmatter was actually intended.
   full `CapturePipeline` end-to-end smoke (text → vault note + nudge, then follow-up Pass 2
   replace) driving the **real** DB + filesystem with fake providers.
 
-**Next M1 task:** capture **routers + wiring** — `POST /capture/{text,voice}`, `GET /captures`,
-`GET /captures/{id}`, `POST /captures/{id}/{retry,follow-up}` (03-api), plus lifespan wiring
-(pipeline on `app.state`, boot `sweep_orphans`). Then: `VaultBackupService` + durability/R2/
-scheduler + `/health` 4th leg; then the web capture screen. Code committed locally (not pushed —
-user's call).
+**M1 progress — Task 2 done (capture routers + wiring, 2026-07-12).** The HTTP capture surface
+(03-api §Capture) is live over `CapturePipeline`, committed locally (`8c65a0c`, **not pushed —
+user's call**). Delivered:
+
+- **Router** (`app/routers/capture.py`) — all six endpoints, session-gated at the router level
+  (`dependencies=[Depends(require_session)]`; only `/auth/login` + `/health` stay public):
+  `POST /capture/text` (`{text, created_at?}` → `202 {capture_id, status:"received"}`),
+  `POST /capture/voice` (multipart `file`, `UnsupportedAudio` → `400`), `GET /captures?limit=`
+  (default 20, `1..100`, newest-first), `GET /captures/{id}` (`404` if missing),
+  `POST /captures/{id}/retry` (`409` unless `failed`), `POST /captures/{id}/follow-up`
+  (`{answer}` → `202`, `409` if no nudge pending). Router only validates + delegates + maps
+  domain errors (rule 5); wire models (`CaptureView.from_record`, `CaptureAcceptedResponse`, …)
+  in `models.py`.
+- **Pipeline additions** — read-through `get`/`list_recent`; **`retry_capture`** re-drives from
+  the first incomplete step: a **held follow-up answer** re-runs Pass 2 (enrich, never degrade —
+  ADR-019 §2), otherwise the **recorded** notes are removed before re-running `_process`
+  (idempotent, rule 6). New `CaptureStore.reset_for_retry` clears the failure back to `received`
+  (+ asyncpg impl + in-memory fake).
+- **Lifespan wiring** (`main.py`) — builds `CapturePipeline` (`PgCaptureStore` + `NoteWriter` +
+  the `LoggingVaultBackup` M1 stub) onto `app.state.capture_pipeline`, runs **boot
+  `sweep_orphans`** after the migration-head check, and **`drain()`s** in-flight tasks on
+  shutdown before `db.disconnect()`. Router mounted under `api_prefix`.
+
+- **Independent review** (fresh agent, diff vs 03-api + ADR-019 + CLAUDE.md rules): **no must-fix**
+  — six endpoints match the contract exactly, auth gating verified (401 test exercises the real
+  gate), retry branching + never-lose/idempotency traced correct, layering clean, lifespan
+  collaborator/order correct. Minors applied: retry docstring no longer over-claims duplicate
+  safety; added a test asserting a provided `created_at` reaches the pipeline. **Logged
+  follow-ups (non-blocking):** (1) a note that lands in a batch crashing *before*
+  `set_note_paths` records it isn't tracked, so a retry can leave a `" 2"` duplicate — pre-existing
+  `_process` ordering, fix by recording `note_paths` incrementally or sweeping by frontmatter
+  `id`; (2) the whole voice upload is read into memory before the 25 MB check (Starlette spools
+  to a temp file; fine for single-user M1); (3) the `follow-up` 202 body reuses `status:"received"`
+  though that capture goes `indexed→organizing` (contract pins a body only for text/voice; UI
+  polls `GET /captures` for real status); (4) `models.py` importing `CaptureRecord` from the
+  service layer for the mapper (no cycle; cosmetic).
+- **Verification:** 73 server unit tests + `ruff` green (CI parity: fakes + tmp vault, no DB).
+  Router tested end-to-end via FastAPI `TestClient` over a fake pipeline (status codes, shapes,
+  error→code mapping, auth gate); `retry_capture`'s four paths tested against the real filesystem
+  with fakes; `create_app()` imports clean and OpenAPI registers all six routes under `/api/v1`.
+
+**Next M1 task:** **`VaultBackupService`** (ADR-014) + durability/R2/scheduler + `/health` 4th
+leg — replaces the `LoggingVaultBackup` stub with the real git-backed service (ff-only push,
+heal-on-reject, one git lock; empty-repo bootstrap; debounced ~60s commit + 04:55 sweep +
+`POST /admin/backup`; the four R2 jobs + integrity drill via APScheduler/CLI; `/health` `backups`
+leg). Then the web capture screen (06). Code committed locally (not pushed — user's call).
 
 ## M2 — Indexing & search
 

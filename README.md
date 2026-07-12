@@ -16,9 +16,11 @@ unit tests); see [08-implementation-plan.md](08-implementation-plan.md) Accept a
 [ADR-019](adr/019-conversational-capture-minimal-in-m1.md) and the M1 build-decisions block in
 [08-implementation-plan.md](08-implementation-plan.md)) — minimal conversational capture pulled
 into M1, full ADR-014 durability set, online-only web capture. **M1 implementation IN PROGRESS:
-Task 1 (migration 002 + capture domain core / `CapturePipeline`) done, reviewed, and verified
-2026-07-12** (see the *M1 progress* block in [08](08-implementation-plan.md)). **Next: capture
-routers + wiring**, then the durability service, then the web capture screen. Paused per the
+Task 1 (migration 002 + capture domain core / `CapturePipeline`) and Task 2 (capture routers +
+lifespan wiring — all six 03-api endpoints, boot `sweep_orphans`, retry) done, reviewed, and
+verified 2026-07-12** (see the *M1 progress* block in [08](08-implementation-plan.md)). **Next:
+the `VaultBackupService` durability task (ADR-014) + `/health` 4th leg**, then the web capture
+screen. Code committed locally (not pushed — user's call). Paused per the
 [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
