@@ -32,14 +32,36 @@ deploy/docker-compose.yml
   `docker compose exec api claude login`, credentials persisted on a volume).
 - `ENABLE_SCHEDULER=true` on exactly one instance (there is only one).
 
-## Vault backup (ADR-001)
+## Vault backup & history durability (ADR-001 + [ADR-014](adr/014-vault-history-durability.md))
 
+**Live copy — GitHub (rewritable primary):**
 - `/srv/vault` is a git repo with a private GitHub remote (deploy key, write access).
 - Auto commit+push: after every pipeline write batch (debounced ~60s) + a 04:55 sweep +
   `POST /admin/backup`. Commit messages: `capture: 2 notes` / `slack-ingest: 3 notes` etc.
-- Recovery: `git clone` → mount → `POST /admin/reindex`.
-- Occasional manual exploration: clone/pull the same repo on laptop/phone, open in
-  Obsidian (obsidian-git plugin for auto-pull/push).
+- The server only fast-forward pushes — **never force/rebase/reset**; on non-fast-forward it
+  pulls (merge) and re-pushes (healing GitHub if a client rewound it). gc/reflog pinned:
+  `gc.pruneExpire=never`, `gc.reflogExpire=never`, `gc.reflogExpireUnreachable=never`, auto-gc off.
+- `.gitignore` excludes **only** `.obsidian/workspace*` + OS cruft — **not `.trash`, not notes**
+  (indexer `vault_ignore` ≠ git ignore; soft-deleted notes stay committed).
+
+**Immutable copy — Cloudflare R2 (WORM, the never-lose guarantee):**
+- Nightly `git bundle --all` (full history, self-contained, `git bundle verify`-able) →
+  R2 bucket with **versioning + object-lock**. A checkpoint bundle is also taken at the
+  start of the agent window (after pull), before any reorganization. Object-lock makes the
+  history append-only at the storage layer — immune to force-push, rebase, or account loss.
+- A **fingerprint** (HEAD sha, monotonic commit count, file count) is recorded per bundle
+  (`agent_runs` + manifest object) for drills.
+- **Weekly integrity drill** on the VPS: `git bundle verify` + clone + fingerprint check on
+  both R2 and GitHub; failure → `failed` `agent_run` + `/health` degraded. Fast-follows:
+  monthly full-restore drill in GitHub Actions, semi-annual manual DR rehearsal.
+
+**Operational-state backup (second independent copy, not never-lose):**
+- Nightly `pg_dump` → R2 (versioned) so Supabase isn't a SPOF; restore-to-last-nightly.
+- Nightly sync of `/srv/data` raw inputs (audio) → R2 so un-transcribed input isn't VPS-disk-only.
+
+**Recovery:** `git clone` (GitHub or the R2 bundle) → mount → `POST /admin/reindex`
+(+ `pg_dump` restore for operational history). Occasional manual exploration: clone/pull the
+same repo on laptop/phone, open in Obsidian (obsidian-git, **merge-only**, never force-push).
 
 ## CI/CD (GitHub Actions on the code monorepo)
 
@@ -54,7 +76,10 @@ deploy/docker-compose.yml
 All on the VPS in `deploy/.env` (never in git; `.env.example` documents every key):
 `API_PASSWORD_HASH`, `SESSION_SECRET`, `DATABASE_URL`, `OPENAI_API_KEY`,
 `NEBIUS_API_KEY`, `SLACK_USER_TOKEN`, `GITHUB_DEPLOY_KEY` (file), `VAULT_PATH`,
-`PLANES`, model routing config. Claude Max credentials live only in the CLI volume.
+`PLANES`, model routing config, and **R2 backup creds** (`R2_ACCOUNT_ID`,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` — [ADR-014](adr/014-vault-history-durability.md)).
+Claude Max credentials live only in the CLI volume. The monthly CI restore drill (fast-follow)
+needs R2-read + `OPENAI_API_KEY` as GitHub Actions secrets.
 
 ## Observability
 

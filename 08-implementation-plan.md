@@ -59,11 +59,15 @@ the accept criteria. Deploy artifacts are written but unexercised.
 ## M1 — Capture end-to-end (usable week 1)
 
 Capture endpoints + pipeline (transcribe → organize/split per plane → write notes with
-frontmatter contract → index stub) + vault git auto-backup. Web: capture screen (record
+frontmatter contract → index stub) + vault git auto-backup **per [ADR-014](adr/014-vault-history-durability.md)**
+(fast-forward-only push, gc/reflog pinned, atomic writes, `.trash` git-tracked, nightly
+`git bundle --all` → R2 WORM, `/srv/data` + `pg_dump` → R2, weekly integrity drill;
+monthly-CI restore + DR rehearsal are fast-follows). Web: capture screen (record
 button + visualizer, text input, recent-captures strip with live status, retry).
 
 **Accept:** voice memo from the phone becomes correctly plane-classified note(s) in the
-vault < 30s, visible in GitHub history; organizer failure still yields an Inbox note.
+vault < 30s, visible in GitHub history; organizer failure still yields an Inbox note; a
+nightly WORM bundle lands in R2 and the weekly integrity drill passes the fingerprint check.
 
 ## M2 — Indexing & search
 
@@ -104,7 +108,11 @@ retrievable via chat; weekly review lands Sunday; reruns overwrite.
 
 Instagram spike (ADR-009) · more connectors (WhatsApp, email, calendar) · note editing in
 web · related-notes suggestions & graph features · hybrid keyword+vector search ·
-Cloudflare Access second wall · voice offline queue · entity extraction.
+Cloudflare Access second wall · voice offline queue · entity extraction ·
+**conversational capture** (short LLM "interviewer/therapist" nudges during voice ingestion
+— e.g. "expand on this", "how did you feel when that happened" — to draw out missing detail;
+gentle, not strict; grill UX + prompt design at the capture-pipeline stage) ·
+backup fast-follows (monthly CI restore drill, semi-annual DR rehearsal — [ADR-014](adr/014-vault-history-durability.md)).
 
 **Priority v2 candidates (agreed 2026-07-12):**
 - **Agentic retrieval over the vault** — instead of passive top-k context, the chat model

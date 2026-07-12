@@ -1,6 +1,9 @@
 # ADR-001: Vault lives on the VPS; git is backup, history and the Obsidian bridge
 
 **Status:** Accepted · 2026-07-12 · (supersedes the v1 idea of a local vault + Obsidian Sync)
+**Extended by:** [ADR-014](014-vault-history-durability.md) — hardens durability (R2 WORM
+snapshots, rewrite protection, merge-only sync, restore drills). This ADR's core decision
+(vault on VPS + git backup + Obsidian bridge) stands unchanged.
 
 ## Context
 v1 assumed the vault on the user's machine with Obsidian Sync. Requirement changed: the

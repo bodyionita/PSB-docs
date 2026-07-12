@@ -136,9 +136,22 @@ gets embedded.
 
 ## 5. Rebuild & recovery matrix
 
-| Loss | Recovery |
-|---|---|
-| Derived tables | `POST /admin/reindex` from vault |
-| Whole database | Supabase backup; worst case: reindex restores search/chat (capture/run/chat history lost) |
-| Vault on VPS | `git clone` from private GitHub repo |
-| Whole VPS | Reprovision (scripted, [07-infrastructure.md](07-infrastructure.md)) + git clone + reindex |
+Durability tiers ([ADR-014](adr/014-vault-history-durability.md)): the **vault is the only
+never-lose tier** (memory content); operational state gets a cheap second independent copy
+and may restore-to-last-nightly. All memory content reaches the vault regardless (every
+capture ends as a note — organized, or an Inbox fallback), so total DB loss never loses memory.
+
+| Loss | Recovery | Tier |
+|---|---|---|
+| Derived tables (`notes`,`chunks`) | `POST /admin/reindex` from vault | rebuildable |
+| Operational state (`agent_runs`, `chat_*`, `captures`, cursors, settings) | Supabase backup, or nightly `pg_dump` in R2 (second independent copy) → restore-to-last-nightly | operational (not never-lose) |
+| Whole database | as above; worst case reindex restores search/chat, losing at most the current day's operational log | operational |
+| Vault on VPS | `git clone` from GitHub **or** `git clone` the latest **R2 WORM bundle** (`git bundle --all`, object-locked) | **never-lose** |
+| Vault history rewritten (force-push/rebase) on GitHub | Restore from R2 WORM bundle; server heals GitHub by merge-push (never resets to remote) | **never-lose** |
+| GitHub account/repo lost or taken down | R2 WORM bundle holds full history; re-create remote and push | **never-lose** |
+| Un-transcribed audio (`/srv/data`) | Nightly-synced to R2 (no longer VPS-disk-only) | input-safety |
+| Whole VPS | Reprovision (scripted, [07-infrastructure.md](07-infrastructure.md)) + clone vault (GitHub/R2) + `pg_dump` restore + reindex | mixed |
+
+Recovery is **verified**, not assumed: a weekly integrity drill (`git bundle verify` +
+fingerprint check — HEAD sha, monotonic commit count, file count — on both R2 and GitHub)
+runs on the VPS and degrades `/health` on failure ([ADR-014](adr/014-vault-history-durability.md) §6).
