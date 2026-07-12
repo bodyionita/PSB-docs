@@ -12,7 +12,12 @@ HTTPS, login works, `/health` green (db/vault/git_remote), Cloudflare TLS **Full
 `claude login` done on the box. The one accept clause with no M0 surface — the *live*
 Claude-limit→Nebius chain-and-record — is formally **deferred to M3** (satisfied for M0 by
 unit tests); see [08-implementation-plan.md](08-implementation-plan.md) Accept amendment.
-**Next milestone: M1.** Paused per the [session protocol](09-session-protocol.md).
+**M1 grilled + recorded to build-ready detail 2026-07-12** (see
+[ADR-019](adr/019-conversational-capture-minimal-in-m1.md) and the M1 build-decisions block in
+[08-implementation-plan.md](08-implementation-plan.md)) — minimal conversational capture pulled
+into M1, full ADR-014 durability set, online-only web capture. **Next: an implementation
+session builds M1** against that spec (no grilling). Paused per the
+[session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

@@ -1,6 +1,7 @@
 # API Contract
 
-**Version:** 2.0 · **Status:** Approved 2026-07-12
+**Version:** 2.1 · **Status:** Approved 2026-07-12 (2.1 = M1 capture additions: `GET /captures`
+list, `POST /captures/{id}/follow-up`, follow-up fields, `/health` `backups` leg)
 
 This HTTP API is the **only** seam between `web/` and `server/`
 ([ADR-006](adr/006-monorepo-with-strict-server-web-decoupling.md)). The server publishes
@@ -25,9 +26,11 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | | |
 |---|---|
 | `POST /capture/text` | `{ "text": "...", "created_at"?: iso }` → `202 { "capture_id", "status": "received" }`; pipeline continues in background |
-| `POST /capture/voice` | multipart `file` (m4a/webm/ogg/mp3/wav) → same `202` body |
-| `GET /captures/{id}` | pipeline state: `{ capture_id, kind, status, raw_text, note_paths[], error, created_at, updated_at }` |
+| `POST /capture/voice` | multipart `file` (m4a/webm/ogg/mp3/wav, ≤25 MB) → same `202` body |
+| `GET /captures?limit=20` | recent captures for the capture-screen strip, newest first: `[{ capture_id, kind, status, raw_text, note_paths[], follow_up_question, follow_up_answer, error, created_at, updated_at }]` (M1; `/activity` supersedes it in M4) |
+| `GET /captures/{id}` | pipeline state: `{ capture_id, kind, status, raw_text, note_paths[], follow_up_question, follow_up_answer, error, created_at, updated_at }` |
 | `POST /captures/{id}/retry` | re-run from first incomplete step; `409` unless `failed` |
+| `POST /captures/{id}/follow-up` | `{ "answer": "..." }` → **Pass 2** re-organize (original + answer), replacing the capture's notes ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)); `202`. `409` if no `follow_up_question` pending |
 
 ## Chat
 
@@ -74,4 +77,4 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | `POST /agents/{name}/run` | trigger on demand (e.g. `slack-ingest`, `daily-summary`); `409` if already running |
 | `POST /admin/reindex` | vault reconciliation → `{ indexed, skipped, deleted }` |
 | `POST /admin/backup` | force vault git commit+push → `{ committed, pushed }` |
-| `GET /health` | no auth: `{ status, db, vault, git_remote }`, `503` when degraded |
+| `GET /health` | no auth: `{ status, db, vault, git_remote, backups }`, `503` when degraded. `backups` (M1, [ADR-014](adr/014-vault-history-durability.md) §6) is false when the latest `integrity-drill` run failed or is overdue (>~8 days) |

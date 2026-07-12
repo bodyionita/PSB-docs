@@ -1,6 +1,7 @@
 # Implementation Plan
 
-**Version:** 2.0 · **Status:** Approved 2026-07-12
+**Version:** 2.1 · **Status:** Approved 2026-07-12 (2.1 = M1 grilled to build-ready detail; v2
+backlog additions)
 **Rule:** ship in phases; every phase ends usable. A phase starts only when the previous
 one's acceptance criteria pass. Code lives in `second-brain/` (monorepo, ADR-006).
 **Process:** every session runs under [09-session-protocol.md](09-session-protocol.md)
@@ -206,6 +207,72 @@ button + visualizer, text input, recent-captures strip with live status, retry).
 vault < 30s, visible in GitHub history; organizer failure still yields an Inbox note; a
 nightly WORM bundle lands in R2 and the weekly integrity drill passes the fingerprint check.
 
+**M1 build decisions (grilled 2026-07-12 — [ADR-019](adr/019-conversational-capture-minimal-in-m1.md);
+implements [ADR-014](adr/014-vault-history-durability.md), [ADR-005](adr/005-planes-and-atomic-notes.md)).**
+Build-ready detail below; nothing here is left to implementer discretion.
+
+- **Execution model.** API returns `202`; the pipeline runs **in-process** via a
+  `CapturePipeline` service (`asyncio.create_task`), state in `captures.status`. No broker.
+  **Boot-time sweep** marks orphaned in-flight captures (non-terminal, non-`failed`) as
+  `failed` ("interrupted by restart") — retryable, nothing hangs silently (rule 7).
+- **Pipeline order.** `transcribe` (voice only) → `organize` → `write` → `index` (stub) →
+  **then** generate the follow-up nudge as a trailing, non-blocking step (notes land first,
+  protecting <30s). **Never-lose:** the `captures` row (raw_text, or audio saved under
+  `DATA_PATH` as `{id}.{ext}`) is persisted **before any model call**. Audio capped at 25 MB
+  (whisper limit) → clear error if exceeded.
+- **Transcription.** `registry.transcribe()` → `openai`/whisper, **no fallback**; STT-down ⇒
+  capture `failed` + retry (accepted for M1).
+- **Organizer.** `registry.distill()` (cheap chain). Prompt-instructed JSON
+  `{ notes:[{title,plane,planes[],tags[],body}] }`, robust parse (tolerate code fences). A
+  **pure, unit-tested `validate_organizer_output`**: `plane` must be a configured plane else
+  Inbox; `planes[]` filtered to valid planes and made a superset of `plane`; caps on note/tag
+  counts. **Organic tagging** in the prompt — emotional tone + the what/why around feelings,
+  free-form (no rigid taxonomy). **Inbox fallback** (chain exhausted / unparseable / zero
+  valid notes): one note, `plane=Inbox`, title=first 8 words, body=full raw. Only infra
+  failures (STT / vault-write) mark a capture `failed`; the organizer never does.
+- **Note writing.** `<YYYY-MM-DD> <Sanitized Title>.md` in the plane folder; numeric-suffix
+  collisions (` 2`, ` 3`); **atomic write** (temp + `os.replace`, ADR-014). Frontmatter per
+  [02 §2](02-data-model.md) (`id`=capture id, local-TZ `created`, source, source_ref, plane,
+  planes, tags, related). Siblings: `related:` frontmatter **+** a `## Related` section with
+  `[[wikilinks]]`.
+- **Conversational capture (minimal, [ADR-019](adr/019-conversational-capture-minimal-in-m1.md)).**
+  Migration **002** adds `captures.follow_up_question` / `follow_up_answer` (nullable). One
+  gentle nudge (≤20 words, versioned prompt constant) generated after a **successful** organize
+  (none on the Inbox-fallback path). `POST /captures/{id}/follow-up {answer}` → **Pass 2**:
+  re-organize original+answer, `git rm` the Pass-1 `note_paths` (soft-delete), write the
+  enriched set, overwrite `note_paths` (**replace, not augment**). No server-side expiry.
+- **Index stub = no-op.** `notes`/`chunks` stay empty until M2's real indexer/reindex; the
+  step only transitions `written → indexed`. No frontmatter parser in M1. Keeps the supersede
+  path pure filesystem+git.
+- **Durability ([ADR-014](adr/014-vault-history-durability.md)).** A `VaultBackupService`
+  owns **all** git ops behind one lock (file writes are concurrent+atomic; git staging/commit/
+  push serialize): debounced ~60s commit + 04:55 sweep + `POST /admin/backup`; **ff-only push,
+  heal-on-reject** (merge, never force/rebase/reset); gc/reflog pins set idempotently at
+  startup (provision.sh doesn't). **Empty-repo bootstrap** creates the folder skeleton
+  (`Inbox/`, `Summaries/Daily|Weekly/`, plane folders + `.gitkeep`) + initial commit +
+  `push -u` — this **subsumes the `PSB-vault` initial-commit follow-up** (done in code).
+- **Scheduler.** M1 introduces an **in-process APScheduler** (existing `enable_scheduler`
+  flag; off by default, on in prod) running **only** the durability jobs; **M4 extends the same
+  scheduler** with the 03:00–05:00 agent window. Jobs are also exposed via a **CLI entrypoint**
+  so a future external scheduler (e.g. an eventual multi-tenant deployment) can drive them
+  without rework. **All four R2 jobs land in M1** (via boto3): nightly `git bundle --all` →
+  WORM, weekly integrity drill, nightly `pg_dump` → R2, nightly `/srv/data` sync → R2. Each
+  writes `agent_runs` (`vault-backup`, `integrity-drill`, `db-backup`, `data-sync`).
+- **`/health` fourth leg.** Degrades if the latest `integrity-drill` `agent_run` failed or is
+  overdue (>~8 days) — ADR-014 §6. Contract change recorded in [03-api](03-api.md).
+- **Web (online-only).** Capture screen: record button + Web-Audio `AnalyserNode` visualizer,
+  text input, optimistic confirm; recent-captures strip via new **`GET /captures?limit=20`**,
+  TanStack Query **polling** (~2s while in-flight, stop when idle); pending nudge shown inline
+  with an answer input. **Offline text queue stays M5, voice-offline stays v2** (06-vs-08
+  wording reconciled in favour of 08).
+- **API contract additions** (recorded in [03-api](03-api.md)): `GET /captures?limit=` (list),
+  `POST /captures/{id}/follow-up`, follow-up fields on `GET /captures/{id}`, `/health` fourth
+  leg.
+
+**Paused after grilling (2026-07-12) — recorded, not yet implemented** per the
+[session protocol](09-session-protocol.md). Next: an **implementation session** builds M1
+against this spec (no grilling), pausing between tasks with independent review at each.
+
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +
@@ -244,11 +311,21 @@ retrievable via chat; weekly review lands Sunday; reruns overwrite.
 ## v2 backlog (do not build in v1)
 
 Instagram spike (ADR-009) · more connectors (WhatsApp, email, calendar) · note editing in
-web · related-notes suggestions & graph features · hybrid keyword+vector search ·
+web · hybrid keyword+vector search ·
 Cloudflare Access second wall · voice offline queue · entity extraction ·
-**conversational capture** (short LLM "interviewer/therapist" nudges during voice ingestion
-— e.g. "expand on this", "how did you feel when that happened" — to draw out missing detail;
-gentle, not strict; grill UX + prompt design at the capture-pipeline stage) ·
+**conversational capture — full version** (adaptive *multi-turn* interviewer/therapist nudges
+during ingestion — a minimal one-nudge form ships in M1 per [ADR-019](adr/019-conversational-capture-minimal-in-m1.md);
+v2 is the multi-turn, gentle-not-strict experience) ·
+**share ChatGPT/Claude conversations as an ingestion source** (slots into the existing
+`source`/`source_ref` contract; a shared-conversation URL becomes `source_ref`) ·
+**undo a manual ingestion** (soft-delete a capture's notes via `git rm` — history kept —
+using `captures.note_paths[]`; builds on the M1 supersede path from ADR-019) ·
+**demo/presentation layer** (a separate, limited access point showing a curated/redacted
+view of the brain with wow-factor, for showing other people) ·
+**explorable memory-graph visualization** (clean, navigable graph of notes/links — useful to
+the user, not just decorative; extends related-notes suggestions & graph features) ·
+**multi-tenant deployment** (far horizon — a handful of users, not mass scale; keep M1+
+architecture from actively precluding it, e.g. jobs invokable via CLI/external scheduler) ·
 backup fast-follows (monthly CI restore drill, semi-annual DR rehearsal — [ADR-014](adr/014-vault-history-durability.md)).
 
 **Priority v2 candidates (agreed 2026-07-12):**

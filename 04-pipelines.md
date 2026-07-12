@@ -1,6 +1,6 @@
 # Pipelines & Scheduling
 
-**Version:** 2.0 · **Status:** Approved 2026-07-12
+**Version:** 2.1 · **Status:** Approved 2026-07-12 (2.1 = M1 capture follow-up nudge, ADR-019)
 
 Five pipelines, decoupled: each fails, retries and evolves independently. Every step
 transition is persisted (`captures.status`, `agent_runs`) — nothing silent
@@ -27,6 +27,12 @@ INDEX each note + enqueue vault git backup         status=indexed
 Failure ⇒ `status=failed` + error; `retry` resumes from first incomplete step. Organizer
 failure fallback: single note, title = first 8 words, plane = Inbox — capture is never
 lost to a model error.
+
+**Follow-up nudge (M1, [ADR-019](adr/019-conversational-capture-minimal-in-m1.md)).** After a
+*successful* organize (not the Inbox fallback), a single gentle "dig deeper" question is
+generated as a **trailing, non-blocking** step (notes land first, protecting <30s) and stored
+on the capture. `POST /captures/{id}/follow-up` re-organizes original+answer and **replaces**
+the capture's notes (soft-delete via `git rm`, then write the enriched set).
 
 ## 2. Ingestion pipeline (agents, scheduled)
 

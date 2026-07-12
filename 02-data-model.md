@@ -1,6 +1,7 @@
 # Data Model
 
-**Version:** 2.0 · **Status:** Approved 2026-07-12
+**Version:** 2.1 · **Status:** Approved 2026-07-12 (2.1 = M1 migration 002: capture follow-up
+columns; new `agent_runs` agent names)
 **Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [002](adr/002-supabase-pgvector-for-index.md) · [005](adr/005-planes-and-atomic-notes.md)
 
 ## 1. Vault layout
@@ -60,7 +61,8 @@ migration + full reindex ([ADR-004](adr/004-provider-registry-claude-primary-neb
 `op.create_table`) — **no ORM, no autogenerate** ([ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md)).
 Applied explicitly via `alembic upgrade head` in CI / `provision.sh`, never in the request
 path. The `vector` extension and `vector(1536)` columns are created in raw SQL. Query code
-stays plain asyncpg (no ORM). M0 ships revision 001 = the full schema below.
+stays plain asyncpg (no ORM). M0 ships revision 001 = the full schema below; **M1 adds
+revision 002** (`captures.follow_up_question` / `follow_up_answer` — [ADR-019](adr/019-conversational-capture-minimal-in-m1.md)).
 
 ### Derived index (rebuildable from vault)
 
@@ -93,7 +95,12 @@ stays plain asyncpg (no ORM). M0 ships revision 001 = the full schema below.
 **`captures`** — user capture pipeline state
 | column | type |
 |---|---|
-| id uuid pk · kind (`voice`\|`text`) · status (`received→transcribing→organizing→written→indexed` \| `failed`) · raw_text · audio_path · note_paths text[] · error · created_at · updated_at |
+| id uuid pk · kind (`voice`\|`text`) · status (`received→transcribing→organizing→written→indexed` \| `failed`) · raw_text · audio_path · note_paths text[] · follow_up_question text null · follow_up_answer text null · error · created_at · updated_at |
+
+`follow_up_question` / `follow_up_answer` are added by **migration 002** (M1,
+[ADR-019](adr/019-conversational-capture-minimal-in-m1.md)): a single "dig deeper" nudge
+generated after a successful organize; answering re-organizes and **replaces** the capture's
+notes. Question-present + answer-absent = "nudge pending" (no separate status).
 
 **`connector_cursors`** — incremental sync position per connector
 | column | type | notes |
@@ -106,7 +113,7 @@ stays plain asyncpg (no ORM). M0 ships revision 001 = the full schema below.
 | column | type | notes |
 |---|---|---|
 | id | uuid pk | |
-| agent | text | `slack-ingest`, `daily-summary`, `weekly-review`, `reindex`, `vault-backup` |
+| agent | text | `slack-ingest`, `daily-summary`, `weekly-review`, `reindex`, `vault-backup`, `integrity-drill`, `db-backup`, `data-sync` (last three added M1, [ADR-014](adr/014-vault-history-durability.md)) |
 | status | text | `running` \| `success` \| `partial` \| `failed` |
 | started_at / finished_at | timestamptz | |
 | model_used | text null | resolved model after fallback |
