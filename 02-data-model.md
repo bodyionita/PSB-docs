@@ -1,8 +1,9 @@
 # Data Model
 
-**Version:** 2.1 · **Status:** Approved 2026-07-12 (2.1 = M1 migration 002: capture follow-up
-columns; new `agent_runs` agent names)
-**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [002](adr/002-supabase-pgvector-for-index.md) · [005](adr/005-planes-and-atomic-notes.md)
+**Version:** 2.2 · **Status:** Approved 2026-07-12 (2.2 = M1 replan: migration 003 =
+`capture_interactions` view, `agent="capture"` runs [ADR-021]; 2.1 = M1 migration 002: capture
+follow-up columns; new `agent_runs` agent names)
+**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [002](adr/002-supabase-pgvector-for-index.md) · [005](adr/005-planes-and-atomic-notes.md) · [020](adr/020-stt-fallback-chain-groq-primary.md) · [021](adr/021-capture-interactions-agent-runs-logging.md)
 
 ## 1. Vault layout
 
@@ -62,7 +63,9 @@ migration + full reindex ([ADR-004](adr/004-provider-registry-claude-primary-neb
 Applied explicitly via `alembic upgrade head` in CI / `provision.sh`, never in the request
 path. The `vector` extension and `vector(1536)` columns are created in raw SQL. Query code
 stays plain asyncpg (no ORM). M0 ships revision 001 = the full schema below; **M1 adds
-revision 002** (`captures.follow_up_question` / `follow_up_answer` — [ADR-019](adr/019-conversational-capture-minimal-in-m1.md)).
+revision 002** (`captures.follow_up_question` / `follow_up_answer` — [ADR-019](adr/019-conversational-capture-minimal-in-m1.md))
+and **revision 003** (the `capture_interactions` view — [ADR-021](adr/021-capture-interactions-agent-runs-logging.md);
+a view only, no table/column change).
 
 ### Derived index (rebuildable from vault)
 
@@ -113,7 +116,7 @@ notes. Question-present + answer-absent = "nudge pending" (no separate status).
 | column | type | notes |
 |---|---|---|
 | id | uuid pk | |
-| agent | text | `slack-ingest`, `daily-summary`, `weekly-review`, `reindex`, `vault-backup`, `integrity-drill`, `db-backup`, `data-sync` (last three added M1, [ADR-014](adr/014-vault-history-durability.md)) |
+| agent | text | `capture` (M1, [ADR-021](adr/021-capture-interactions-agent-runs-logging.md)), `slack-ingest`, `daily-summary`, `weekly-review`, `reindex`, `vault-backup`, `integrity-drill`, `db-backup`, `data-sync` (last three added M1, [ADR-014](adr/014-vault-history-durability.md)) |
 | status | text | `running` \| `success` \| `partial` \| `failed` |
 | started_at / finished_at | timestamptz | |
 | model_used | text null | resolved model after fallback |
@@ -121,6 +124,12 @@ notes. Question-present + answer-absent = "nudge pending" (no separate status).
 | summary | text | human-readable one-liner for the feed |
 | details | jsonb | per-item events: notes written, items skipped, errors |
 | error | text null | |
+
+**`capture_interactions`** (view, migration 003, [ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) —
+flattens `agent_runs` rows where `agent='capture'` into readable columns for the Supabase
+dashboard / MCP and the future M4 activity feed: `capture_id, kind, stt_provider, stt_fallback,
+organize_model, fallback_used, status, error, started_at, duration_ms`. Read-only projection over
+`agent_runs.details`; no data of its own.
 
 **`summaries`** — daily/weekly analysis registry
 | period (`daily`\|`weekly`) + period_start date, unique · content · note_path · created_at |

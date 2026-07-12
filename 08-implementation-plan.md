@@ -551,6 +551,42 @@ unit test. Next real step: **deploy web + run the Accept end-to-end** on `braind
 the phone, watch the strip go `received→…→indexed`, confirm the note + git history, and let one
 nightly cycle produce a WORM bundle + drill). Then M1 closes and M2 (indexing/search) begins.
 
+**M1 replan — recorded 2026-07-12 (grilled; live-drive findings + independent review).** The
+first live drive on `braindan.cc` surfaced two Accept-blockers and prompted three decisions plus a
+failed independent review. All decisions recorded; **implementation pending** (paused per the
+session protocol before building). Scope:
+
+1. **STT fallback chain ([ADR-020](adr/020-stt-fallback-chain-groq-primary.md)).** Voice 429'd
+   because STT was single-provider (OpenAI). Fix: `STT_CHAIN = ["groq","openai"]` (Groq
+   `whisper-large-v3` primary, OpenAI `whisper-1` fallback), reusing `OpenAICompatibleProvider`;
+   registry gains `_transcribe_over_chain`; `transcribe()` returns a result carrying
+   `model_used`/`fallback_used` (rule 3). No per-provider retry in v1. New config `STT_CHAIN`,
+   `GROQ_BASE_URL`, `GROQ_STT_MODEL` + secret `GROQ_API_KEY` (human-entered on the box).
+2. **Capture interaction logging ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)).**
+   Capture writes **one `agent_runs` row per run** (`agent="capture"`, model/fallback + `details`
+   JSON of stt/organize/nudge + timings); migration 003 adds the `capture_interactions` view.
+   Explore via Supabase dashboard / view / optional Supabase MCP. Docker logs left as-is; no custom
+   UI before M4.
+3. **Claude Max effort.** Global `CLAUDE_MAX_EFFORT` (default `medium`) threaded into every
+   claude-max CLI call (`--effort`), shipping in v1; per-task effort deferred (post-v1).
+4. **Web capture must-fix (independent review, 3 findings — live-only, static gates missed them).**
+   (a/b) The recent-strip stops polling at `indexed`, but ADR-019 generates the follow-up nudge
+   *after* `indexed`, so the nudge — and the answered-nudge Pass-2 re-cycle — usually never render
+   live; fix by polling a grace window past `indexed` until the nudge settles / a just-submitted
+   follow-up re-enters flight. (c) `RecentCaptures` never imports `useReducedMotion` — the strip's
+   infinite pulsing status dot ignores `prefers-reduced-motion` (06 / CLAUDE.md). Minors logged:
+   server error `detail` discarded on capture/follow-up failures (25 MB / format rejection gives no
+   hint); transient glow + row entrance not RM-gated.
+5. **Vault push blocker (deployment, not code).** `VaultBackupService` logged "vault push failed
+   (remote unreachable)" — the *designed* best-effort degradation (commits kept local), but the
+   Accept needs "note visible in git history", so the vault-backup GitHub remote must be
+   provisioned on the box (repo + deploy key + remote; README cold-start note #5).
+
+**Build order when implementation resumes:** STT chain (+ Groq key on the box) → capture
+`agent_runs` logging + migration 003 view → `CLAUDE_MAX_EFFORT` → web 3 must-fix → vault remote
+provisioning → **re-run the M1 live Accept**. Each task gets an independent review before its pause
+(session protocol); the M1 Accept stays open until the live drive passes.
+
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +

@@ -28,12 +28,23 @@ store, CLI) done, reviewed, and verified 2026-07-12** (see the *M1 progress* blo
 M1 surface: record orb + Web-Audio `AnalyserNode` visualizer, quick text capture, recent-captures
 strip (`GET /captures?limit=20`, TanStack Query polling ~2s while in-flight), failed→retry, inline
 follow-up nudge; online-only (offline text queue stays M5). `tsc`+`eslint`+`vite build` green; code
-committed locally (not pushed — user's call). **M1 is now code-complete.** Review caveat: only an
-*implementer self-review* ran (the harness blocked spawning the protocol's independent agent this
-session; 3 findings fixed) — **recommend a fresh independent review / `/code-review ultra` before
-declaring M1 closed.** **Next: the M1 *live Accept*** — a deployed-stack drive on `braindan.cc`
-(voice→plane-note <30s in vault + git history + a nightly WORM bundle/drill), not a code task; then
-M2 (indexing/search). Paused per the [session protocol](09-session-protocol.md).
+committed locally (not pushed — user's call). **M1 replan recorded 2026-07-12** — the first live
+drive on `braindan.cc` + an independent review reopened M1 with recorded, not-yet-built scope
+(see the *M1 replan* block in [08](08-implementation-plan.md) and
+[ADR-020](adr/020-stt-fallback-chain-groq-primary.md)/[ADR-021](adr/021-capture-interactions-agent-runs-logging.md)):
+**(1)** STT fallback chain (Groq `whisper-large-v3` primary → OpenAI fallback) after voice hit an
+OpenAI 429; **(2)** capture interactions logged to `agent_runs` + a `capture_interactions` view,
+explored via the Supabase dashboard/MCP; **(3)** global `CLAUDE_MAX_EFFORT=medium` on every
+claude-max call. The independent review of the web capture screen ran this session and found it
+**not acceptance-complete — 3 must-fix** (the follow-up nudge + its Pass-2 re-cycle usually never
+render live because the strip stops polling at `indexed` before the nudge is generated; the strip
+ignores `prefers-reduced-motion`). Deployment blocker: the vault-backup git remote is unreachable
+on the box (designed best-effort degradation, but blocks the Accept's "visible in git history").
+**Nothing from the replan is built yet — paused before implementation** per the
+[session protocol](09-session-protocol.md). **Next:** implement the replan (order in
+[08](08-implementation-plan.md): STT chain → capture logging → effort → web 3 must-fix → vault
+remote), each with an independent review, then run the M1 *live Accept* (voice→plane-note <30s in
+vault + git history + a nightly WORM bundle/drill); then M2 (indexing/search).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

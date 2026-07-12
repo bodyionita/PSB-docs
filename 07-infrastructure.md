@@ -102,13 +102,16 @@ same repo on laptop/phone, open in Obsidian (obsidian-git, **merge-only**, never
 
 - **Secrets → GitHub Actions Secrets** (a `production` Environment; entered once in the UI,
   never seen by the agent, never committed): `API_PASSWORD_HASH`, `SESSION_SECRET`,
-  `DATABASE_URL`, `OPENAI_API_KEY`, `NEBIUS_API_KEY`, `SLACK_USER_TOKEN`, and the **R2 backup
+  `DATABASE_URL`, `OPENAI_API_KEY`, `NEBIUS_API_KEY`, `GROQ_API_KEY` (STT primary, M1 replan
+  [ADR-020](adr/020-stt-fallback-chain-groq-primary.md)), `SLACK_USER_TOKEN`, and the **R2 backup
   creds** `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` ([ADR-014](adr/014-vault-history-durability.md)),
   the **origin TLS** PEM material `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM` ([ADR-017](adr/017-tls-cloudflare-origin-ca.md)),
   plus deploy secrets `VPS_HOST` / `VPS_USER` (= `deploy`, [ADR-018](adr/018-vps-ssh-hardening-non-root-deploy-user.md)) / `VPS_SSH_KEY`.
 - **Non-secret config → git** in `deploy/defaults.env` (versioned, reviewable):
-  `BRAINDAN_DOMAIN`, `PLANES`, `NEBIUS_CHAT_MODEL`, `CLAUDE_MAX_MODEL`, `SCHEDULER_TZ`,
-  `VAULT_PATH`, `SESSION_COOKIE_SECURE`, `ENVIRONMENT`, `R2_BUCKET`.
+  `BRAINDAN_DOMAIN`, `PLANES`, `NEBIUS_CHAT_MODEL`, `CLAUDE_MAX_MODEL`, `CLAUDE_MAX_EFFORT`
+  (default `medium`, M1 replan), `STT_CHAIN` (default `groq,openai`), `GROQ_BASE_URL`,
+  `GROQ_STT_MODEL` (default `whisper-large-v3`) — all [ADR-020](adr/020-stt-fallback-chain-groq-primary.md)/replan —
+  `SCHEDULER_TZ`, `VAULT_PATH`, `SESSION_COOKIE_SECURE`, `ENVIRONMENT`, `R2_BUCKET`.
 - **Deploy renders** `.env = defaults.env + secrets`, `scp`s it to the VPS mode 600, then
   `compose up`. It **also renders the origin TLS files** `deploy/origin.crt` / `origin.key`
   from `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM` and `scp`s them mode 600 for Caddy to mount
