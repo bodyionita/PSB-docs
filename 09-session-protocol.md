@@ -1,6 +1,6 @@
 # Session Protocol (working agreement)
 
-**Version:** 1.4 · **Status:** Approved 2026-07-12
+**Version:** 1.5 · **Status:** Approved 2026-07-12
 
 How every session is run. This is binding process, not a suggestion — it exists so any
 session (human or AI) can be started, paused, and **respawned fresh** without losing
@@ -87,19 +87,21 @@ credential is the single worst outcome of any session, worse than any bug.
 - **Code:** commit freely while implementing (small, coherent commits). **Pushing code is
   the user's call** — do not push the code repo without being asked.
 
-## Respawn handoff prompt (at every session end)
+## Recording state for respawn (the docs are the single source)
 
-At every pause where the session might end, **output a copy-pasteable prompt (max 3 lines)
-for the next agent** — the first message the user pastes to spawn a fresh session. It is a
-pointer, not a summary (the docs hold the state): it names what to read, where we are, and
-the single next action. Keep it to **≤3 lines**.
+Before any pause, **the docs must record where we are and what's next** — progress into the
+relevant contract doc (e.g. a milestone's progress note in [08](08-implementation-plan.md)),
+decisions as ADRs — and be pushed. That, plus the README cold-start procedure, is what lets
+a fresh session continue. If it isn't written and pushed, a respawned session won't know it.
 
-Shape (adapt per session):
+**Handoff prompt — optional, and only a pointer.** Because the docs already hold the state
+and the next action, a per-session handoff prompt is **not required**. Provide one **only**
+when the docs don't already make the next step obvious — and then it is a **single pointer
+line**, never a restated summary:
 ```
-Read second-brain-docs/ (git pull first): README → 09-session-protocol → <the docs that matter now>.
-State: <one line — what was just decided/built, and what's pushed>.
-Next: <the one next action — e.g. "grill Topic X" or "implement M1 against 08 + ADR-014">.
+Read second-brain-docs/ (git pull first): README → 09 → <the doc that records where we are>.
 ```
+State and next-action belong in the docs, not in the prompt.
 
 ## Why respawn-friendliness matters
 
@@ -116,15 +118,14 @@ won't know it happened.
 **Planning / replanning session**
 - [ ] `/grilling` run; decisions captured
 - [ ] Decisions recorded to docs (ADR for architectural choices)
-- [ ] Docs committed **and pushed**
-- [ ] **≤3-line handoff prompt for the next agent** provided
+- [ ] **Where-we-are + next action recorded in the docs** and pushed (handoff prompt optional
+      — a single pointer line only if the docs don't already make the next step obvious)
 - [ ] **Paused** — user chose continue vs respawn
 
 **Implementation session**
 - [ ] Built against the approved plan (no grilling)
 - [ ] **Independent agent review** run at each task boundary (fresh context, checks diff vs
       acceptance criteria + ADRs + invariants); **must-fix findings resolved**; outcome recorded
-- [ ] Code committed at each task; progress recorded to docs at each pause
-- [ ] Docs committed **and pushed** at each pause
-- [ ] **≤3-line handoff prompt for the next agent** provided at session end
+- [ ] Code committed at each task; **progress + next action recorded to docs** at each pause
+- [ ] Docs committed **and pushed** at each pause (handoff prompt optional — pointer line only)
 - [ ] Any unrecorded decision → stopped and replanned, not decided inline
