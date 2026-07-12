@@ -669,10 +669,37 @@ forces `*.md eol=lf` (kills the Obsidian/Windows CRLF↔LF churn); both reconcil
 `ensure_ready`; **pull-first** merge before every push (integrates remote/other-device edits, still
 merge-only). (4) **Re-organize** — `POST /admin/captures/{id}/reorganize` re-runs organize on a
 capture's stored raw text and replaces its notes (the retranslation tool), sharing the Pass-2 core.
-Verified: 129 pytest + ruff green. **Post-deploy step:** run reorganize on the one Romanian-content
-capture (`a1e1e9b9-…`, → Braindan/Diana notes) to translate it; the local clone needs a one-time
-`git add --renormalize . && git config core.autocrlf false` to clear existing CRLF diffs. **Not yet
-pushed/deployed.**
+Verified: 129 pytest + ruff green. **SHIPPED 2026-07-13** — code pushed (`d469277`) and deployed;
+reorganize run on the Romanian capture `a1e1e9b9-…` (both reorganizes `6aa45db`+`328b142` in the
+`PSB-vault` remote), English output + commit verified by the user. Local clone one-time
+`git config core.autocrlf false` applied (`.gitattributes` `*.md eol=lf`; working tree clean, no
+CRLF churn).
+
+**Post-ship vault review + one manual content fix (2026-07-13).** Reviewed the reorganized vault
+end-to-end: all four notes are English, filenames English, tags valid English slugs — the polish
+batch held. **One organizer-v2 translation error found and fixed by hand** (vault commit `70396dd`,
+pushed): the app name **`Braindan`** (a "Brain" + "Bogdan" wordplay — the project's own domain is
+`braindan.cc`) was corrupted to **`Braindone`** in the Ideas note's H1, body, filename, and both
+sibling cross-links. Corrected all five occurrences directly in the vault clone (the never-lose
+source of truth; nightly pull+rescan / `POST /admin/reindex` will reconcile the derived tables once
+M2 lands). **Follow-up for M1-organizer:** LLM translation can mangle proper nouns / coined names —
+consider passing known entities (app name, people) as a do-not-translate glossary, or a light
+post-check; logged as a quality follow-up, not an M1 blocker.
+
+**Two "odd" observations from live use — clarified as BY-DESIGN, with one open scope question.**
+The user noticed (a) the two sibling notes from capture `a1e1e9b9` **share one `id`**, and (b) they
+are **`related:` to each other** despite being unrelated in meaning (a park picnic vs. an app idea),
+and asked whether the nightly run fixes this. Answer per [02-data-model.md](02-data-model.md) §2 +
+[ADR-005](adr/005-planes-and-atomic-notes.md): both are the **documented design**, not bugs —
+frontmatter `id` **is the capture id** (siblings from one capture share it; the `notes` table still
+gives each file its own uuid pk keyed on unique `vault_path`), and `related:` means **"sibling
+notes from the same source"** (co-capture linkage, not semantic similarity). **The nightly run does
+NOT change this:** M2 nightly pull+rescan only rebuilds `notes`/`chunks` from the vault; nothing in
+the current plan re-links notes by semantic relatedness or re-keys sibling ids. So the user's
+underlying want — **links that reflect actual topical relatedness rather than mere co-capture** — is
+a genuine **new scope item** (semantic backlinks / relatedness graph), not something an existing
+milestone delivers. **Not decided here** (session protocol: don't resolve scope inline) — flagged
+for a future planning/grilling pass; M2 (pgvector similarity) is the natural place to consider it.
 
 ## M2 — Indexing & search
 

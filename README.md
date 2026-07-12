@@ -47,7 +47,14 @@ run live**. `GROQ_API_KEY` added to GitHub Actions secrets. **What remains (all 
 code; confirm the `PSB-vault` GitHub repo + write-enabled deploy key on the box; then run the M1
 *live Accept*** on `braindan.cc` (voice→plane-note <30s in vault **and GitHub history**, nudge
 appears, organizer-down→Inbox note, a nightly WORM bundle + drill). Then M1 closes and M2
-(indexing/search) begins. Paused per the [session protocol](09-session-protocol.md).
+(indexing/search) begins. **M1 polish batch SHIPPED 2026-07-13** — English-only vault + valid tags +
+vault git hygiene + `POST /admin/captures/{id}/reorganize` (`d469277`, deployed); the one Romanian
+capture reorganized to English + pushed to `PSB-vault`. **Post-ship vault review (2026-07-13):** all
+notes English/valid; one organizer-v2 name corruption `Braindone`→`Braindan` fixed by hand (vault
+`70396dd`). Clarified two by-design points (shared `id` = capture id; `related` = same-source
+siblings) and flagged **semantic relatedness linking** as a future-scope question for M2 — see the
+*M1 polish batch* block in [08](08-implementation-plan.md). Paused per the
+[session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
