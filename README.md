@@ -35,16 +35,19 @@ drive on `braindan.cc` + an independent review reopened M1 with recorded, not-ye
 **(1)** STT fallback chain (Groq `whisper-large-v3` primary → OpenAI fallback) after voice hit an
 OpenAI 429; **(2)** capture interactions logged to `agent_runs` + a `capture_interactions` view,
 explored via the Supabase dashboard/MCP; **(3)** global `CLAUDE_MAX_EFFORT=medium` on every
-claude-max call. The independent review of the web capture screen ran this session and found it
-**not acceptance-complete — 3 must-fix** (the follow-up nudge + its Pass-2 re-cycle usually never
-render live because the strip stops polling at `indexed` before the nudge is generated; the strip
-ignores `prefers-reduced-motion`). Deployment blocker: the vault-backup git remote is unreachable
-on the box (designed best-effort degradation, but blocks the Accept's "visible in git history").
-**Nothing from the replan is built yet — paused before implementation** per the
-[session protocol](09-session-protocol.md). **Next:** implement the replan (order in
-[08](08-implementation-plan.md): STT chain → capture logging → effort → web 3 must-fix → vault
-remote), each with an independent review, then run the M1 *live Accept* (voice→plane-note <30s in
-vault + git history + a nightly WORM bundle/drill); then M2 (indexing/search).
+claude-max call. **M1 replan IMPLEMENTED 2026-07-12** — all replan code is built, independently reviewed, and
+static-verified; committed locally (**not pushed — user's call**). Commits: server `d9b21e8` (STT
+chain, capture `agent_runs` logging + migration 003 view, `CLAUDE_MAX_EFFORT`), web `4d988ea` +
+`26a1c09` (nudge/Pass-2 render live, reduced-motion), deploy `a56038f` (vault-push SSH wiring:
+openssh-client + entrypoint installs the mounted deploy key + pins GitHub's host key). The
+independent review found **1 must-fix** (answered-nudge Pass-2 not rendering live) — **fixed in
+`26a1c09`** — and reconciled Inbox-fallback semantics (a *success*, now flagged via
+`inbox_fallback`). Server 124 pytest + ruff green; web `tsc`+`eslint`+`vite build` green; **not yet
+run live**. `GROQ_API_KEY` added to GitHub Actions secrets. **What remains (all operational): push
+code; confirm the `PSB-vault` GitHub repo + write-enabled deploy key on the box; then run the M1
+*live Accept*** on `braindan.cc` (voice→plane-note <30s in vault **and GitHub history**, nudge
+appears, organizer-down→Inbox note, a nightly WORM bundle + drill). Then M1 closes and M2
+(indexing/search) begins. Paused per the [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

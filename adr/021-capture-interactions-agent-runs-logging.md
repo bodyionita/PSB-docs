@@ -65,9 +65,15 @@ into a clean, sortable table for the dashboard; the same view a future in-app ac
 - ✅ Reuses the existing `AgentRunStore` seam + its in-memory fake, so the capture pipeline's new
   logging is unit-testable without a live DB.
 - ✅ `capture_interactions` is the seam the M4 activity feed reads — no rework later.
-- ⚙️ The capture pipeline gains an `agent_runs` open/close around the run; a model failure still
-  ends the run `failed` with context (rule 7) and still produces the Inbox-fallback note (rule 2)
-  — logging never changes capture behavior.
+- ⚙️ The capture pipeline gains an `agent_runs` open/close around the run; logging never changes
+  capture behavior (a logging-store failure is swallowed — the capture still runs). Run status
+  follows the **capture** outcome, not the model calls: a genuine capture failure (STT chain
+  exhausted, vault write error) ends the run `failed` with context (rule 7); but an **organize
+  outage that degrades to an Inbox note is a capture *success*** (never-lose — the note is written
+  and indexed, rule 2), so the run ends `succeeded` — marking it `failed` would falsely flag a
+  saved note in the activity feed. The degradation stays visible via `details.organize.inbox_fallback`
+  (and the `capture_interactions.inbox_fallback` column) + the run summary, so a dashboard can find
+  "organize was down" captures without treating them as failures.
 - ⚙️ Adds migration 003 (a view; no table/column change).
 - ↩️ Supabase MCP wiring, raw-log aggregation, and the in-app activity UI are deferred (MCP =
   user's call; aggregation = out of v1 scope; UI = M4).

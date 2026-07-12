@@ -128,8 +128,10 @@ notes. Question-present + answer-absent = "nudge pending" (no separate status).
 **`capture_interactions`** (view, migration 003, [ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) —
 flattens `agent_runs` rows where `agent='capture'` into readable columns for the Supabase
 dashboard / MCP and the future M4 activity feed: `capture_id, kind, stt_provider, stt_fallback,
-organize_model, fallback_used, status, error, started_at, duration_ms`. Read-only projection over
-`agent_runs.details`; no data of its own.
+organize_model, inbox_fallback, fallback_used, status, error, started_at, duration_ms`. Read-only
+projection over `agent_runs.details`; no data of its own. (`inbox_fallback` = organize chain was
+exhausted and the capture degraded to an Inbox note — a *success*, not a failure; see
+[ADR-021](adr/021-capture-interactions-agent-runs-logging.md).)
 
 **`summaries`** — daily/weekly analysis registry
 | period (`daily`\|`weekly`) + period_start date, unique · content · note_path · created_at |

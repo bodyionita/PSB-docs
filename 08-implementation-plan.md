@@ -577,15 +577,64 @@ session protocol before building). Scope:
    infinite pulsing status dot ignores `prefers-reduced-motion` (06 / CLAUDE.md). Minors logged:
    server error `detail` discarded on capture/follow-up failures (25 MB / format rejection gives no
    hint); transient glow + row entrance not RM-gated.
-5. **Vault push blocker (deployment, not code).** `VaultBackupService` logged "vault push failed
-   (remote unreachable)" — the *designed* best-effort degradation (commits kept local), but the
-   Accept needs "note visible in git history", so the vault-backup GitHub remote must be
-   provisioned on the box (repo + deploy key + remote; README cold-start note #5).
+5. **Vault push blocker — root-caused to a container SSH-wiring gap (deploy config).**
+   `VaultBackupService` logged "vault push failed (remote unreachable)" — the *designed*
+   best-effort degradation (commits kept local), but the Accept needs "note visible in git
+   history". Diagnosis (2026-07-12): the vault repo at `/srv/vault` pushes to `origin =
+   git@github.com:bodyionita/PSB-vault.git` over **SSH from inside the api container**, but
+   `deploy/Dockerfile` installs `git` **without `openssh-client`**, and `deploy/docker-compose.yml`
+   mounts `/srv/vault` but **no deploy key** and sets **no `GIT_SSH_COMMAND`** — even though
+   `.env.example` promises "GITHUB_DEPLOY_KEY is mounted as a file for vault git push." So the
+   container has no ssh binary / key / known_hosts and every push fails auth. Fix (deploy config,
+   not app code): (a) add `openssh-client` to the Dockerfile; (b) mount the `provision.sh`-generated
+   vault deploy key read-only into the container + set `GIT_SSH_COMMAND` (with a host-key policy —
+   pin GitHub's key or `accept-new`); (c) ensure the `PSB-vault` GitHub repo exists and the deploy
+   key is added with **write** access (`provision.sh` prints it). Until (a)+(b) land, provisioning
+   the box alone won't make the push succeed.
+
+**Provisioning status (2026-07-12):** `GROQ_API_KEY` **added to GitHub Actions secrets** (user).
+Vault push still blocked pending the SSH-wiring fix above.
 
 **Build order when implementation resumes:** STT chain (+ Groq key on the box) → capture
 `agent_runs` logging + migration 003 view → `CLAUDE_MAX_EFFORT` → web 3 must-fix → vault remote
 provisioning → **re-run the M1 live Accept**. Each task gets an independent review before its pause
 (session protocol); the M1 Accept stays open until the live drive passes.
+
+**M1 replan — IMPLEMENTED 2026-07-12 (code done, reviewed, static-verified; live Accept pending).**
+All replan code is built and committed locally (**not pushed — user's call**):
+- **Server** (`d9b21e8`): STT chain `[groq,openai]` + `_transcribe_over_chain` + `TranscriptResult`
+  (rule 3); Groq as an `OpenAICompatibleProvider`; one `agent_runs` row per capture run
+  (model/fallback + `details` stt/organize/nudge/timings), `PgAgentRunStore.finish` persists
+  model/fallback; **migration 003** `capture_interactions` view; global `CLAUDE_MAX_EFFORT` → every
+  claude-max `--effort`.
+- **Web** (`4d988ea`, `26a1c09`): the 3 must-fix — trailing nudge + Pass-2 render live via a
+  bounded `isSettling` poll window; strip pulse gated on `useReducedMotion`.
+- **Deploy** (`a56038f`): the vault-push SSH-wiring fix (openssh-client + entrypoint installs the
+  bind-mounted deploy key root-owned 0600 + pins GitHub's host key + `core.sshCommand`; compose
+  mounts the key).
+- **Independent review ran** (fresh agent, diff vs ADRs/plan/rules). Found **1 must-fix** — the
+  answered-nudge Pass-2 didn't render live (optimistic write clobbered by its own invalidate;
+  `isSettling` stopped on `follow_up_answer`) — **resolved in `26a1c09`** (polling keyed off
+  `updated_at`, stops only for a nudge awaiting the user). Also reconciled a doc/code mismatch: an
+  **Inbox-fallback capture is a *success*** (never-lose), so its run stays `succeeded` but is now
+  flagged via `details.organize.inbox_fallback` + the `capture_interactions.inbox_fallback` column
+  ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md) updated; test added). Server-half
+  verdict: contract-clean. Accepted minors (not blocking): `SETTLE_MS=20s` is a tuning bound not
+  tied to nudge completion; a shutdown-cancelled task leaves a `running` row (consistent with the
+  durability jobs — no agent_runs orphan sweep exists yet); the server-error-`detail` UI minor from
+  the first review still stands.
+- **Static-verified:** server 124 pytest + ruff green; web `tsc`+`eslint`+`vite build` green. **Not
+  exercised live** (needs the deployed stack + real mic + Groq/OpenAI keys + a reachable vault
+  remote).
+
+**What remains for the M1 Accept (all operational — needs the user / the deployed box):**
+1. **Push code** to `origin/main` (user's call) so CI deploys it.
+2. **Box side of the vault fix (deploy §5c):** confirm the `PSB-vault` GitHub repo exists and the
+   `provision.sh` vault deploy key is added to it with **write** access; confirm `/srv/vault` has
+   `origin` set (re-run `provision.sh` if the first-pass clone never completed).
+3. **Run the live Accept** on `braindan.cc`: record from phone → strip goes `received→…→indexed`
+   with the nudge appearing → note visible in the vault **and GitHub history** → organizer-down
+   still yields an Inbox note → one nightly WORM bundle + the weekly drill pass. Then M1 closes.
 
 ## M2 — Indexing & search
 
