@@ -30,6 +30,32 @@ that satisfies the remote half of the accept criteria. Stack: **uv**, Alembic + 
 (no ORM), Argon2id, **pnpm**; `claude-max` implemented but health-guarded. Deploy artifacts
 are written now but dormant until (b).
 
+**M0 progress (local-first build done — 2026-07-12).** Code monorepo `../second-brain/`
+created (`server/` + `web/` + `deploy/` + CI, CLAUDE.md from template). Verified locally:
+
+- **Server:** pydantic-settings config, asyncpg pool, Argon2id auth (login/session/logout +
+  per-IP rate limit), health-guarded provider registry with fallback chain
+  (`claude-max → nebius`, OpenAI-compatible client), `/health`. 21 unit tests pass (registry
+  fallback with fakes, security, rate limit, config, migration-head); `ruff` clean.
+- **DB:** dockerized `pgvector/pgvector:pg16` (`deploy/docker-compose.dev.yml`);
+  `alembic upgrade head` applies revision `001` = full schema (11 tables, `vector` +
+  `pgcrypto` extensions, HNSW cosine index) — confirmed in the running DB.
+- **Boot flow:** `/health` green (db+vault); `POST /auth/login` sets an httpOnly cookie;
+  `GET /auth/me` confirms the session; logout revokes it — all exercised against the live
+  server, plus wrong-password/no-cookie → 401.
+- **Web:** React+Vite+TS (strict) PWA, 5 themes, animated shell + auth + 4 screens.
+  `pnpm build` (tsc strict + vite) and `pnpm lint` green; driven in a browser end-to-end
+  (login → all four tabs switch → theme switch persists → logout). Fixed a real bug found
+  during that drive: `AnimatePresence mode="wait"` hung transitions because screens contain
+  infinite (`repeat`) animations that never complete an exit — switched to enter-only keyed
+  transitions.
+- **Toolchain pinned:** server on **uv**/pip + Python 3.12; web on **Node 24** (`.nvmrc`) +
+  **pnpm 9** (`packageManager` field, Corepack). CI uses Node 24.
+
+Deferred to the provisioning session (accepted M0 gap, ADR-012): live VPS/Cloudflare/
+Supabase/GitHub remotes, `claude login` (real `claude-max` path), and the remote half of
+the accept criteria. Deploy artifacts are written but unexercised.
+
 ## M1 — Capture end-to-end (usable week 1)
 
 Capture endpoints + pipeline (transcribe → organize/split per plane → write notes with

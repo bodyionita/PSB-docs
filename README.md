@@ -6,9 +6,11 @@ implementation plus a `CLAUDE.md` that points here.
 
 **Status:** design approved 2026-07-12 (grilled decision-by-decision). **M0 grilled and
 recorded 2026-07-12** (see [ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md),
-[ADR-012](adr/012-m0-implementation-stack.md)); M0 implementation not yet started —
-paused per the [session protocol](09-session-protocol.md) for the user to continue or
-respawn.
+[ADR-012](adr/012-m0-implementation-stack.md)). **M0 local-first build complete
+2026-07-12** — the code monorepo `../second-brain/` now exists and boots end-to-end
+locally (see [08-implementation-plan.md](08-implementation-plan.md) M0 progress). Paused
+per the [session protocol](09-session-protocol.md); remaining M0 work is the live
+provisioning session (VPS/Cloudflare/Supabase/GitHub + `claude login`).
 
 > **Every session starts with `/grilling` and follows [09-session-protocol.md](09-session-protocol.md).**
 
