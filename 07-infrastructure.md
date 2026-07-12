@@ -5,9 +5,25 @@
 
 ## Hosting
 
-- **VPS:** Hetzner CX22 (2 vCPU / 4GB RAM / 40GB disk, ~5€/mo incl. IPv4). Ubuntu LTS.
-  Cost comparison vs PaaS documented in ADR-003 (PaaS ≈ 2× price + fragile Claude CLI OAuth
-  on ephemeral containers + single-host volumes anyway).
+- **VPS:** Hetzner **CX23** (2 vCPU / 4GB RAM / 40GB NVMe, ~€5.49/mo + €0.50 IPv4), EU,
+  Ubuntu LTS ([ADR-015](adr/015-compute-tier-hetzner-cx23.md)). 4GB is the comfortable floor:
+  the Node-based Claude CLI (ADR-004) drives RAM, bursting on every `claude-max` chat and the
+  nightly window — sub-4GB risks OOM and swap thrash in exactly that window. Free tiers
+  (Oracle Always Free) were rejected: idle-reclaim targets our bursty workload; ADR-014 keeps
+  data safe through a reclaim but not uptime. Cost comparison vs PaaS is in ADR-003.
+
+### All-in monthly cost
+
+| Component | €/mo |
+|---|---|
+| VPS — Hetzner CX23 (x86, 4GB) | ~5.49 |
+| IPv4 | 0.50 |
+| Web hosting (Caddy on the same box — [ADR-013](adr/013-web-stays-on-vps-single-origin.md)) | 0 |
+| Vault WORM bundle + DB `pg_dump` + raw-input sync — Cloudflare R2 ([ADR-014](adr/014-vault-history-durability.md)) | 0 (free tier) |
+| Database — Supabase | 0 (free tier) |
+| DNS / TLS / proxy — Cloudflare | 0 (free tier) |
+| Domain (~€10–12/yr, amortized) | ~1 |
+| **Total** | **~€7/mo** |
 - **Web hosting:** the PWA is served by Caddy on the VPS, **single origin** (`/` = web,
   `/api` = API) — Vercel/Cloudflare Pages/Netlify were evaluated and rejected (no cost
   benefit for a single-user static PWA + they force cross-origin cookie rework of ADR-007).
