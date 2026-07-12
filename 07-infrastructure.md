@@ -8,6 +8,10 @@
 - **VPS:** Hetzner CX22 (2 vCPU / 4GB RAM / 40GB disk, ~5€/mo incl. IPv4). Ubuntu LTS.
   Cost comparison vs PaaS documented in ADR-003 (PaaS ≈ 2× price + fragile Claude CLI OAuth
   on ephemeral containers + single-host volumes anyway).
+- **Web hosting:** the PWA is served by Caddy on the VPS, **single origin** (`/` = web,
+  `/api` = API) — Vercel/Cloudflare Pages/Netlify were evaluated and rejected (no cost
+  benefit for a single-user static PWA + they force cross-origin cookie rework of ADR-007).
+  See [ADR-013](adr/013-web-stays-on-vps-single-origin.md).
 - **DNS/TLS edge:** Cloudflare, proxied DNS (origin IP hidden). Caddy terminates TLS on
   origin (Cloudflare "Full (strict)"). Cloudflare Access = optional future second wall.
 - **Database:** Supabase (managed Postgres + pgvector) — zero RAM cost on the VPS,

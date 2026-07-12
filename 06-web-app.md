@@ -1,7 +1,8 @@
 # Web App (PWA)
 
 **Version:** 1.0 · **Status:** Approved 2026-07-12
-**Stack:** React + Vite + TypeScript, installable PWA, served statically by Caddy,
+**Stack:** React + Vite + TypeScript, installable PWA, served statically by Caddy on the
+VPS at **single origin** (`/` = web, `/api` = API — [ADR-013](adr/013-web-stays-on-vps-single-origin.md)),
 consumes only [03-api.md](03-api.md). Strictly decoupled from the server
 ([ADR-006](adr/006-monorepo-with-strict-server-web-decoupling.md)).
 

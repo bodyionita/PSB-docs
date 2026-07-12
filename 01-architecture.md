@@ -1,7 +1,7 @@
 # Architecture
 
 **Version:** 2.0 · **Status:** Approved 2026-07-12
-**Key ADRs:** [001 vault-on-VPS+git](adr/001-vault-on-vps-with-git-backup.md) · [003 single-service](adr/003-single-service-on-vps.md) · [004 provider-registry](adr/004-provider-registry-claude-primary-nebius-fallback.md) · [006 monorepo-decoupled](adr/006-monorepo-with-strict-server-web-decoupling.md) · [008 connectors-on-vps](adr/008-connectors-run-on-vps.md)
+**Key ADRs:** [001 vault-on-VPS+git](adr/001-vault-on-vps-with-git-backup.md) · [003 single-service](adr/003-single-service-on-vps.md) · [004 provider-registry](adr/004-provider-registry-claude-primary-nebius-fallback.md) · [006 monorepo-decoupled](adr/006-monorepo-with-strict-server-web-decoupling.md) · [008 connectors-on-vps](adr/008-connectors-run-on-vps.md) · [013 web-on-VPS-single-origin](adr/013-web-stays-on-vps-single-origin.md)
 
 ## High-level view
 
