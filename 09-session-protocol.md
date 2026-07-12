@@ -56,6 +56,29 @@ than deciding silently while coding.
 4. **Hit an unrecorded decision? Stop and replan.** Don't resolve architecture or scope
    questions inline — grill them in a planning/replanning pass first, record, then resume.
 
+## Security & secrets discipline
+
+Secrets are the one class of data that must never be mishandled — a leaked or committed
+credential is the single worst outcome of any session, worse than any bug.
+
+- **The agent (LM) never handles secret values.** Private keys, passwords, API tokens,
+  session secrets, and connection strings are never pasted into chat, never echoed back,
+  never written to a tracked file by the agent. The agent works with **references** — env
+  var names, `.env.example` placeholders, dashboard locations — not values. When a real
+  secret is needed, the **human enters it directly** into the target (the VPS `deploy/.env`,
+  the process environment, a provider dashboard, or a GitHub Actions secret); the agent may
+  guide but must not receive it.
+- **Secrets never enter git.** Real values live **only** in `deploy/.env` on the VPS
+  (gitignored), the process environment, or GitHub Actions secrets. The repo tracks only
+  `.env.example` (placeholders). Key material (`*.pem`, `id_*`, `*.key`, …) is gitignored.
+- **Enforced, not just asked.** The code repo carries `.githooks/pre-commit` (blocks key
+  files + secret-shaped values; enable with `git config core.hooksPath .githooks`) plus a
+  **gitleaks** CI job as an un-bypassable backstop. **`git commit --no-verify` is forbidden
+  for secret material.**
+- **Exposure = compromise.** If a secret is ever pasted, echoed, or committed, treat it as
+  compromised: **rotate it immediately** at the provider, then purge. Do not rationalise
+  ("it was only for a second"); rotate.
+
 ## Commit & push discipline
 
 - **Docs:** at **every pause** (after grilling, and between tasks), **commit *and* push**
@@ -85,6 +108,10 @@ docs, progress → docs, pauses → pushed. If it isn't written and pushed, a re
 won't know it happened.
 
 ## Checklist
+
+**Every session**
+- [ ] **No secret handled by the agent or committed** — values only in VPS `.env` / env /
+      Actions secrets; hook + gitleaks green; any exposure rotated immediately
 
 **Planning / replanning session**
 - [ ] `/grilling` run; decisions captured
