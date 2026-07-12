@@ -68,7 +68,11 @@ secrets recorded here (ADR-016 / protocol §Security):
   Connection = **Session pooler + `?sslmode=require`** (the `DATABASE_URL` is a secret, not
   stored here). `vector`/`pgcrypto` left for migration 001 (not dashboard-enabled).
 - **Code repo:** `PSB` on GitHub, `main` pushed; CI (lint/test/build + **gitleaks** secrets
-  job) live. Vault-backup repo: `PSB-vault` (deploy key generated on the VPS at Step 9).
+  job) live. **Made PUBLIC 2026-07-12** so the VPS clones/pulls `/srv/app` anonymously over
+  HTTPS — no code-repo deploy key needed. Safe because no secret is ever in git (ADR-016;
+  hook + gitleaks on full history; verified only `*.env.example` + non-secret `defaults.env`
+  are tracked). Reversible: to go private, add a read-only PSB deploy key on the box and use
+  the SSH remote. Vault-backup repo: `PSB-vault` (deploy key generated on the VPS at Step 9).
 - **Backups (R2) — Step 7 DONE 2026-07-12:** bucket **`braindan-backups`** created + an
   **Object Read & Write** API token scoped to it (creds are Step 8 secrets `R2_ACCOUNT_ID` /
   `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`, not stored here). WORM immutability is an R2
@@ -81,11 +85,16 @@ secrets recorded here (ADR-016 / protocol §Security):
   corruption; transport vs ADR §3) + a caddy `BRAINDAN_DOMAIN` gap were fixed (code committed
   **and pushed** — `origin/main` at `70f5d63`).
 
-**Remaining M0b:** ~~Step 7 R2 bucket + token~~ (done) → **Step 8 (next)** populate the GitHub
-`production` secrets (incl. `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM`; `VPS_USER=deploy`; `VPS_HOST`
-arms the deploy job) → Step 9 run `provision.sh` (box prep + `deploy` user + SSH hardening +
-vault deploy key; pass the CI deploy pubkey as `CI_DEPLOY_PUBKEY`, `passwd deploy`) →
-trigger deploy → Step 10 `claude login` → Step 11 Cloudflare **Full (strict)** + verify.
+**Remaining M0b:** ~~Step 7 R2 bucket + token~~ (done) → ~~Step 8 populate `production` secrets~~
+(done — all set **except `VPS_HOST`, intentionally held** so the deploy job stays dormant until
+the box is prepared; `ORIGIN_CERT_PEM`/`ORIGIN_KEY_PEM` in; `VPS_USER=deploy`; `SLACK_USER_TOKEN`
+deferred to M4) → **Step 9 (next)** run `provision.sh` as root (box prep + `deploy` user + SSH
+hardening + vault deploy key; pass the CI deploy pubkey as `CI_DEPLOY_PUBKEY`, `passwd deploy`) →
+set `VPS_HOST` → trigger deploy (`workflow_dispatch` now enabled) → Step 10 `claude login` →
+Step 11 Cloudflare **Full (strict)** + verify.
+
+CI trigger gap fixed 2026-07-12: `ci.yml` gained `workflow_dispatch` + deploy runs on it
+(`origin/main` `ff7ad4b`), matching `provision.sh`'s "Actions → Run workflow" instruction.
 
 **Open decisions — RESOLVED 2026-07-12 (planning pass, grilled):**
 - **TLS cert method** → **Cloudflare Origin CA**, cert+key CI-rendered via the ADR-016 path
