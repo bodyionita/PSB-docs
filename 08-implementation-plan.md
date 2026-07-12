@@ -131,8 +131,13 @@ had been **invalid YAML since the ADR-016 step** — `e30cdc0` — so no jobs ex
   `API_PASSWORD_HASH`) → project interpolation uses non-secret `defaults.env` (`ed4a7ff`) **and**
   the api `env_file` uses **`format: raw`** (`d9700a1`) so secrets pass literally.
 
-**Remaining for M0/M0b accept:** (a) **verify login** in the browser after the `d9700a1` redeploy
-(confirms the raw-hash fix end-to-end); (b) **Step 10** `claude login` on the box (lights up the
+**Remaining for M0/M0b accept:** ~~(a) **verify login** in the browser after the `d9700a1`
+redeploy (confirms the raw-hash fix end-to-end)~~ — **DONE 2026-07-12**: CI `d9700a1`
+(run 29197844854) green on all four jobs (`server`/`secrets`/`web`/`deploy`); live
+`/api/v1/health` = `{status:ok, db:true, vault:true, git_remote:true}`; PWA root 200 over HTTPS;
+login mechanism confirmed (wrong password → clean `401 "Invalid password"`, **not** a `500` —
+proves the raw-hash argon2 verify parses) **and real-password login confirmed working in the
+browser by the user**. The `d9700a1` raw-hash fix is verified end-to-end. (b) **Step 10** `claude login` on the box (lights up the
 real `claude-max` path); (c) the accept criterion **"Claude-limit simulation → chain answers via
 Nebius and records it"** (needs Step 10); (d) **Step 11** confirm Cloudflare SSL mode = **Full
 (strict)** (the site loads over HTTPS to the Origin CA cert, so it's Full or Full-strict —
