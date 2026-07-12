@@ -1,6 +1,6 @@
 # Session Protocol (working agreement)
 
-**Version:** 1.2 · **Status:** Approved 2026-07-12
+**Version:** 1.3 · **Status:** Approved 2026-07-12
 
 How every session is run. This is binding process, not a suggestion — it exists so any
 session (human or AI) can be started, paused, and **respawned fresh** without losing
@@ -64,6 +64,20 @@ than deciding silently while coding.
 - **Code:** commit freely while implementing (small, coherent commits). **Pushing code is
   the user's call** — do not push the code repo without being asked.
 
+## Respawn handoff prompt (at every session end)
+
+At every pause where the session might end, **output a copy-pasteable prompt (max 3 lines)
+for the next agent** — the first message the user pastes to spawn a fresh session. It is a
+pointer, not a summary (the docs hold the state): it names what to read, where we are, and
+the single next action. Keep it to **≤3 lines**.
+
+Shape (adapt per session):
+```
+Read second-brain-docs/ (git pull first): README → 09-session-protocol → <the docs that matter now>.
+State: <one line — what was just decided/built, and what's pushed>.
+Next: <the one next action — e.g. "grill Topic X" or "implement M1 against 08 + ADR-014">.
+```
+
 ## Why respawn-friendliness matters
 
 A new session starts cold. Its only reliable memory is this docs repo. So: decisions →
@@ -76,6 +90,7 @@ won't know it happened.
 - [ ] `/grilling` run; decisions captured
 - [ ] Decisions recorded to docs (ADR for architectural choices)
 - [ ] Docs committed **and pushed**
+- [ ] **≤3-line handoff prompt for the next agent** provided
 - [ ] **Paused** — user chose continue vs respawn
 
 **Implementation session**
@@ -84,4 +99,5 @@ won't know it happened.
       acceptance criteria + ADRs + invariants); **must-fix findings resolved**; outcome recorded
 - [ ] Code committed at each task; progress recorded to docs at each pause
 - [ ] Docs committed **and pushed** at each pause
+- [ ] **≤3-line handoff prompt for the next agent** provided at session end
 - [ ] Any unrecorded decision → stopped and replanned, not decided inline
