@@ -47,6 +47,15 @@ question inviting them to expand on the most emotionally or substantively signif
 ≤20 words; gentle, never an interrogation." Preserves the input's language. **No server-side
 expiry** in M1 — the nudge simply ages out of the recent-captures strip in the UI.
 
+> **Amendment (2026-07-12, `nudge-v2`).** The nudge is generated from the **raw capture text**,
+> not the organized notes. During the M1 live Accept an English capture produced a Romanian
+> question: the nudge model only ever saw the (distilled) notes, so the prompt's "preserve the
+> input's language" was a dangling reference to text it couldn't see. Sourcing the nudge from the
+> original capture — and instructing it to detect and match that language explicitly — fixes the
+> drift and keeps the question faithful to what the person actually said. Trailing/non-blocking
+> placement (§1) and the Inbox-fallback skip are unchanged; only the *input* to the nudge call
+> moved from notes → raw capture.
+
 **5. Web.** A recent-capture item with a pending `follow_up_question` shows the question with
 an inline answer input; submitting calls the follow-up endpoint and shows re-processing via
 the same live-status polling as any capture.
