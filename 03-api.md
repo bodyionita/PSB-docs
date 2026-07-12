@@ -57,6 +57,15 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | `GET /settings` | current app settings incl. agent model chain and available models |
 | `PUT /settings/agents` | `{ "conspect_model": id, "fallback_model": id }` — applies to future runs; separate from per-chat picker by design |
 
+## Summaries
+
+| | |
+|---|---|
+| `GET /summaries?period=daily&limit=14` | most recent summaries: `[{ period, period_start, content, note_path }]` |
+
+(Generating/re-running summaries goes through `POST /agents/{name}/run` with
+`daily-summary` / `weekly-review`.)
+
 ## Agents & admin
 
 | | |

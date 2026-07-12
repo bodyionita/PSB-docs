@@ -91,7 +91,7 @@ say explicitly when the context lacks the answer; reply in the user's language.
 
 - All heavy agent work runs **03:00–05:00**, staggered as above: it's when the user
   doesn't compete for Claude Max usage windows, RAM, or attention.
-- Jobs are idempotent and manually triggerable (`POST /agents/{name}/run`,
-  `POST /summaries` via daily/weekly agents) — the scheduler decides *when*, never *what*.
+- Jobs are idempotent and manually triggerable via `POST /agents/{name}/run` — the
+  scheduler decides *when*, never *what*.
 - Every run lands in `agent_runs` → activity feed, including fallback events
   ("conspected on Nebius: Claude limit reached").

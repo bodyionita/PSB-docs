@@ -33,6 +33,22 @@ PersonalSecondBrain/          # workspace folder, not a repo
 
 Production vault lives on the VPS (see [ADR-001](adr/001-vault-on-vps-with-git-backup.md)).
 
+## Cold start — instructions for a fresh implementation session
+
+If you are an AI (or human) picking this up with no prior context:
+
+1. Read the docs in the order above; skim every ADR — they are binding.
+2. The code monorepo `../second-brain/` **may not exist yet**. If missing, create it per
+   [01-architecture.md](01-architecture.md) layout (`server/`, `web/`, `deploy/`), git-init
+   it, and copy [templates/CLAUDE.md](templates/CLAUDE.md) to its root as `CLAUDE.md`.
+3. Implement strictly by phases in [08-implementation-plan.md](08-implementation-plan.md),
+   starting at the first milestone whose acceptance criteria don't pass yet. Do not skip ahead.
+4. Anything ambiguous or contradictory: fix the docs first (new ADR if architectural),
+   then implement. Never silently diverge from these documents.
+5. Things intentionally NOT decided yet (ask the user when reached): domain name,
+   Cloudflare account setup, Supabase project credentials, Slack app creation,
+   GitHub repo names for vault backup and code.
+
 ## Rules of this repo
 
 - Behavior changes in code **must** be reflected here first or alongside — docs are the contract.
