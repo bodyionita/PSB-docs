@@ -68,6 +68,16 @@ Instagram spike (ADR-009) · more connectors (WhatsApp, email, calendar) · note
 web · related-notes suggestions & graph features · hybrid keyword+vector search ·
 Cloudflare Access second wall · voice offline queue · entity extraction.
 
+**Priority v2 candidates (agreed 2026-07-12):**
+- **Agentic retrieval over the vault** — instead of passive top-k context, the chat model
+  gets tools (`search`, `read_note`, `list_by_plane`, `follow_links`) and navigates the
+  vault itself (Claude-Code-style). The server already sits next to both the files and
+  the index; this is a chat-pipeline upgrade, not an architecture change.
+- **MCP server layer** — expose the same services (search/read/capture) as an MCP server
+  on the VPS (token-authenticated), so Claude and other LLM clients can talk to the vault
+  directly from any conversation, without opening the web app. REST and MCP stay thin
+  interfaces over shared services — no logic duplication.
+
 ## Testing policy
 
 Pure logic (chunking, frontmatter, filename sanitization, cursor math) → unit tests, no
