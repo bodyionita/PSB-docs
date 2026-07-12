@@ -64,7 +64,9 @@ deploy/docker-compose.yml
 
 **Immutable copy — Cloudflare R2 (WORM, the never-lose guarantee):**
 - Nightly `git bundle --all` (full history, self-contained, `git bundle verify`-able) →
-  R2 bucket with **versioning + object-lock**. A checkpoint bundle is also taken at the
+  R2 bucket with **versioning + object-lock** (on R2 the WORM mechanism is a **bucket lock
+  rule**, added post-creation in bucket Settings — there is no S3-style create-time toggle;
+  keep retention bounded, as a lock rule overrides lifecycle deletes). A checkpoint bundle is also taken at the
   start of the agent window (after pull), before any reorganization. Object-lock makes the
   history append-only at the storage layer — immune to force-push, rebase, or account loss.
 - A **fingerprint** (HEAD sha, monotonic commit count, file count) is recorded per bundle

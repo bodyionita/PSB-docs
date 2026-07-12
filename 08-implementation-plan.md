@@ -69,15 +69,22 @@ secrets recorded here (ADR-016 / protocol §Security):
   stored here). `vector`/`pgcrypto` left for migration 001 (not dashboard-enabled).
 - **Code repo:** `PSB` on GitHub, `main` pushed; CI (lint/test/build + **gitleaks** secrets
   job) live. Vault-backup repo: `PSB-vault` (deploy key generated on the VPS at Step 9).
+- **Backups (R2) — Step 7 DONE 2026-07-12:** bucket **`braindan-backups`** created + an
+  **Object Read & Write** API token scoped to it (creds are Step 8 secrets `R2_ACCOUNT_ID` /
+  `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`, not stored here). WORM immutability is an R2
+  **bucket lock rule** (Settings → Bucket lock rules), added **post-creation** — R2's equivalent
+  of S3 "object-lock" named in ADR-014/07; there is no create-time toggle. Retention kept
+  **bounded** (not indefinite) since a lock rule overrides lifecycle deletes and blocks emptying.
 - **Secrets/deploy:** per [ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md) —
   GitHub `production` environment (**not yet populated**); CI renders `deploy/.env`. The
   ADR-016 implementation was **independently reviewed**; 2 must-fix (secret-rendering `$`
   corruption; transport vs ADR §3) + a caddy `BRAINDAN_DOMAIN` gap were fixed (code committed
   **and pushed** — `origin/main` at `70f5d63`).
 
-**Remaining M0b:** Step 7 R2 bucket (`braindan-backups`) + API token → Step 8 populate the
-GitHub `production` secrets (now incl. `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM`; `VPS_USER=deploy`) →
-Step 9 run `provision.sh` (box prep + `deploy` user + SSH hardening + vault deploy key) →
+**Remaining M0b:** ~~Step 7 R2 bucket + token~~ (done) → **Step 8 (next)** populate the GitHub
+`production` secrets (incl. `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM`; `VPS_USER=deploy`; `VPS_HOST`
+arms the deploy job) → Step 9 run `provision.sh` (box prep + `deploy` user + SSH hardening +
+vault deploy key; pass the CI deploy pubkey as `CI_DEPLOY_PUBKEY`, `passwd deploy`) →
 trigger deploy → Step 10 `claude login` → Step 11 Cloudflare **Full (strict)** + verify.
 
 **Open decisions — RESOLVED 2026-07-12 (planning pass, grilled):**
@@ -87,7 +94,7 @@ trigger deploy → Step 10 `claude login` → Step 11 Cloudflare **Full (strict)
   disabled, keys-only, automated + guarded in `provision.sh`
   ([ADR-018](adr/018-vps-ssh-hardening-non-root-deploy-user.md)).
 
-**Code for ADR-017/018 — DONE 2026-07-12 (implementation session; code committed, unpushed).**
+**Code for ADR-017/018 — DONE 2026-07-12 (implementation session; pushed — `origin/main` at `ae08d43`).**
 In `../second-brain/`: `deploy/Caddyfile` → explicit `tls /etc/caddy/origin.crt
 /etc/caddy/origin.key` (no ACME); `deploy/docker-compose.yml` → dropped `:80`, mounts the two
 cert files read-only; `.github/workflows/ci.yml` deploy job → renders `origin.crt`/`origin.key`
