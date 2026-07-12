@@ -56,6 +56,31 @@ Deferred to the provisioning session (accepted M0 gap, ADR-012): live VPS/Cloudf
 Supabase/GitHub remotes, `claude login` (real `claude-max` path), and the remote half of
 the accept criteria. Deploy artifacts are written but unexercised.
 
+**M0b provisioning progress (in flight — 2026-07-12).** Live bring-up, step by step. No
+secrets recorded here (ADR-016 / protocol §Security):
+
+- **Domain:** `braindan.cc` registered via Cloudflare Registrar; zone active; **apex `A` record
+  proxied** (orange-cloud) → the VPS. Origin IP is held out of the docs (hidden behind
+  Cloudflare); it goes into the GitHub `VPS_HOST` secret at Step 8.
+- **VPS:** Hetzner **CX23** (2 vCPU / 4 GB, Ubuntu 24.04, Germany), SSH keys-only, Hetzner
+  firewall 22+443, backups off (ADR-014/015). **Not yet provisioned** — `provision.sh` not run.
+- **Supabase:** project (free tier), region `eu-central-1`, ref `aegauzpsyybfknddxlbw`.
+  Connection = **Session pooler + `?sslmode=require`** (the `DATABASE_URL` is a secret, not
+  stored here). `vector`/`pgcrypto` left for migration 001 (not dashboard-enabled).
+- **Code repo:** `PSB` on GitHub, `main` pushed; CI (lint/test/build + **gitleaks** secrets
+  job) live. Vault-backup repo: `PSB-vault` (deploy key generated on the VPS at Step 9).
+- **Secrets/deploy:** per [ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md) —
+  GitHub `production` environment (**not yet populated**); CI renders `deploy/.env`. The
+  ADR-016 implementation was **independently reviewed**; 2 must-fix (secret-rendering `$`
+  corruption; transport vs ADR §3) + a caddy `BRAINDAN_DOMAIN` gap were fixed (code committed,
+  unpushed).
+
+**Remaining M0b:** Step 7 R2 bucket (`braindan-backups`) + API token → Step 8 populate the
+GitHub `production` secrets → Step 9 run `provision.sh` (box prep + vault deploy key) →
+trigger deploy → Step 10 `claude login` → Step 11 Cloudflare **Full (strict)** + verify.
+**Open decisions/gaps:** TLS cert method (Cloudflare **Origin CA** vs Caddy DNS-01) before
+Caddy serves; `provision.sh` SSH-hardening (non-root user, disable root login).
+
 ## M1 — Capture end-to-end (usable week 1)
 
 Capture endpoints + pipeline (transcribe → organize/split per plane → write notes with
