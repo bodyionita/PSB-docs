@@ -72,8 +72,8 @@ secrets recorded here (ADR-016 / protocol §Security):
 - **Secrets/deploy:** per [ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md) —
   GitHub `production` environment (**not yet populated**); CI renders `deploy/.env`. The
   ADR-016 implementation was **independently reviewed**; 2 must-fix (secret-rendering `$`
-  corruption; transport vs ADR §3) + a caddy `BRAINDAN_DOMAIN` gap were fixed (code committed,
-  unpushed).
+  corruption; transport vs ADR §3) + a caddy `BRAINDAN_DOMAIN` gap were fixed (code committed
+  **and pushed** — `origin/main` at `70f5d63`).
 
 **Remaining M0b:** Step 7 R2 bucket (`braindan-backups`) + API token → Step 8 populate the
 GitHub `production` secrets → Step 9 run `provision.sh` (box prep + vault deploy key) →
