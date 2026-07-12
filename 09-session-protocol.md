@@ -1,6 +1,6 @@
 # Session Protocol (working agreement)
 
-**Version:** 1.5 · **Status:** Approved 2026-07-12
+**Version:** 1.6 · **Status:** Approved 2026-07-12
 
 How every session is run. This is binding process, not a suggestion — it exists so any
 session (human or AI) can be started, paused, and **respawned fresh** without losing
@@ -94,14 +94,14 @@ relevant contract doc (e.g. a milestone's progress note in [08](08-implementatio
 decisions as ADRs — and be pushed. That, plus the README cold-start procedure, is what lets
 a fresh session continue. If it isn't written and pushed, a respawned session won't know it.
 
-**Handoff prompt — optional, and only a pointer.** Because the docs already hold the state
-and the next action, a per-session handoff prompt is **not required**. Provide one **only**
-when the docs don't already make the next step obvious — and then it is a **single pointer
-line**, never a restated summary:
+**Handoff prompt — ALWAYS emit one at every pause (mandatory, user preference 2026-07-12).**
+End every pause with a short respawn prompt — never skip it, never bury it. Keep it to ~2–3
+lines: a pointer to the docs plus the immediate next action. It is a pointer, not a restated
+summary (full state lives in the docs). Format:
 ```
-Read second-brain-docs/ (git pull first): README → 09 → <the doc that records where we are>.
+Read second-brain-docs/ (git pull first): README → 09 → <doc that records where we are>.
+Next: <the immediate next action>.
 ```
-State and next-action belong in the docs, not in the prompt.
 
 ## Why respawn-friendliness matters
 
@@ -118,8 +118,8 @@ won't know it happened.
 **Planning / replanning session**
 - [ ] `/grilling` run; decisions captured
 - [ ] Decisions recorded to docs (ADR for architectural choices)
-- [ ] **Where-we-are + next action recorded in the docs** and pushed (handoff prompt optional
-      — a single pointer line only if the docs don't already make the next step obvious)
+- [ ] **Where-we-are + next action recorded in the docs** and pushed
+- [ ] **Short handoff/respawn prompt emitted** (mandatory at every pause — pointer + next action)
 - [ ] **Paused** — user chose continue vs respawn
 
 **Implementation session**
@@ -127,5 +127,6 @@ won't know it happened.
 - [ ] **Independent agent review** run at each task boundary (fresh context, checks diff vs
       acceptance criteria + ADRs + invariants); **must-fix findings resolved**; outcome recorded
 - [ ] Code committed at each task; **progress + next action recorded to docs** at each pause
-- [ ] Docs committed **and pushed** at each pause (handoff prompt optional — pointer line only)
+- [ ] Docs committed **and pushed** at each pause
+- [ ] **Short handoff/respawn prompt emitted** (mandatory at every pause — pointer + next action)
 - [ ] Any unrecorded decision → stopped and replanned, not decided inline
