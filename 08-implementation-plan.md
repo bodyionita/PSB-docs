@@ -405,12 +405,56 @@ behind a single `asyncio` lock** (ADR-014 §2–3):
   heal-merge preserving both sides) tested against actual git, **skipped when git is absent** so CI
   stays green; `create_app()` imports clean and `/admin/backup` registers under `/api/v1`.
 
-**Next M1 task — durability Slice B:** APScheduler (in-process, `enable_scheduler` flag; the four
-R2 jobs via **boto3** — nightly `git bundle --all` → WORM, weekly integrity drill, nightly
-`pg_dump` → R2, nightly `/srv/data` sync → R2 — each writing `agent_runs`), a **CLI entrypoint**
-for the jobs, the **04:55 vault-backup sweep**, and the **`/health` 4th leg** (`backups`: degraded
-when the latest `integrity-drill` run failed or is overdue >~8 days, ADR-014 §6). Then the web
-capture screen (06). Code committed locally (not pushed — user's call).
+**M1 progress — Task 3 / durability Slice B1 done (R2 job layer, 2026-07-12).** The four R2/WORM
+jobs + `agent_runs` writer + CLI, committed locally (`7f3c4a7`, **not pushed — user's call**).
+Driven for now by the CLI; the in-process scheduler + `/health` 4th leg are **Slice B2**.
+
+- **`ObjectStore` seam + `R2ObjectStore`** (`services/object_store.py`) — Cloudflare R2 via the S3
+  API; **boto3 imported lazily** inside the impl so the module graph / tests / CI never pull it.
+  `build_object_store(settings)` → `None` when creds are absent (dev) ⇒ the R2 jobs record a
+  **skipped** run. New R2 settings (`r2_account_id/access_key_id/secret_access_key/bucket/
+  endpoint_url`; endpoint derives `https://<account>.r2.cloudflarestorage.com`) in `.env.example`.
+- **`AgentRunStore`** (`services/agent_runs.py`, plain SQL, no ORM) — every job **opens/closes an
+  `agent_runs` row** (`running` → `succeeded`/`failed`/`skipped`) with a summary + `details` jsonb
+  (vision P8); `latest(agent, status=)` feeds the drill and (Slice B2) `/health`.
+- **Git bundle support** — `GitRepo` gains `bundle_all` / `commit_count` / `tracked_file_count` /
+  `verify_bundle` / `clone_from`; `VaultBackupService` gains a **`Fingerprint`** (HEAD sha +
+  monotonic commit count + file count) with `write_bundle` / `snapshot_fingerprint` **both under
+  the one git lock** (live-repo git never runs outside the lock, ADR-014 §2).
+- **`BackupJobs`** (`services/backup_jobs.py`) — the four jobs + the 04:55 sweep:
+  **`vault-backup`** (`git bundle --all` → R2 WORM + `.manifest.json`, records the fingerprint),
+  **`integrity-drill`** (download the last *good* bundle → `git bundle verify` + clone → assert
+  fingerprint vs manifest + **monotonic** live count), **`db-backup`** (`pg_dump` → R2),
+  **`data-sync`** (`DATA_PATH` raw inputs → R2). Never-crash (rule 7): each ends as a `failed` run
+  with context; all blocking IO (boto3/pg_dump/git/file/tempdir) via `asyncio.to_thread`. The sweep
+  is a plain `backup_now` (the git commit), not one of the four named runs.
+- **CLI** (`app/cli.py`) — `python -m app.cli {vault-backup|integrity-drill|db-backup|data-sync|
+  vault-sweep}` for a future external scheduler (no rework); `ensure_ready()` first. `boto3` added
+  to deps (prod only).
+
+- **Independent review** (fresh agent, diff vs ADR-014 §1/§6/§7 + CLAUDE.md rules): **1 must-fix
+  resolved** — the **monotonic truncation alarm wasn't actually enforced**: the drill only compared
+  live vs the *latest* bundle, so a persistent commit-count DROP got silently re-recorded as the
+  new baseline and never alarmed. Fixed by failing the **`vault-backup`** run when its count drops
+  below the last **succeeded** bundle (so the good baseline is preserved) **and** drilling the last
+  *succeeded* bundle — a truncation now always alarms. 3 minors applied: wrap the `agent_runs`
+  row-open so a DB-down never crashes a job (rule 7); CLI `ensure_ready()` + a use-CLI-**or**-
+  scheduler note; a note that the drill's live-repo check stands in for the "and GitHub" side.
+  **Logged follow-ups:** an independent GitHub-side fingerprint fetch; data-sync re-uploads the
+  whole corpus nightly with flattened keys (fine for the flat uuid-named inputs today).
+- **Verification:** 105 server unit tests + `ruff` green. Jobs tested with fake R2/agent-runs/git
+  (fingerprint upload, monotonic-regression → failed run, skip-when-disabled, drill pass +
+  regression + mismatch + no-bundle, db/data uploads, row-open-failure resilience); **real-git**
+  bundle→R2→verify→clone→drill **round-trip** against actual git (skipped when git absent); CLI
+  arg-handling + job wiring smoke; `boto3` confirmed **not** imported without creds.
+
+**Next M1 task — durability Slice B2:** wire the **in-process APScheduler** (`enable_scheduler`
+flag; cron per ADR-010 window — the 04:55 sweep + nightly `vault-backup`/`db-backup`/`data-sync`
++ weekly `integrity-drill`, all `scheduler_tz`, configurable) into the app lifespan (start on the
+one prod instance, shut down cleanly), and add the **`/health` 4th leg** (`backups`: degraded when
+the latest `integrity-drill` run failed or is overdue >~8 days — ADR-014 §6; gated to prod like the
+`git_remote` leg). Then the web capture screen (06). Code committed locally (not pushed — user's
+call).
 
 ## M2 — Indexing & search
 
