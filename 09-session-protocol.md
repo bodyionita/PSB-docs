@@ -1,6 +1,6 @@
 # Session Protocol (working agreement)
 
-**Version:** 1.3 · **Status:** Approved 2026-07-12
+**Version:** 1.4 · **Status:** Approved 2026-07-12
 
 How every session is run. This is binding process, not a suggestion — it exists so any
 session (human or AI) can be started, paused, and **respawned fresh** without losing
