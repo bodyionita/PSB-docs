@@ -16,12 +16,13 @@ unit tests); see [08-implementation-plan.md](08-implementation-plan.md) Accept a
 [ADR-019](adr/019-conversational-capture-minimal-in-m1.md) and the M1 build-decisions block in
 [08-implementation-plan.md](08-implementation-plan.md)) — minimal conversational capture pulled
 into M1, full ADR-014 durability set, online-only web capture. **M1 implementation IN PROGRESS:
-Task 1 (migration 002 + capture domain core / `CapturePipeline`) and Task 2 (capture routers +
-lifespan wiring — all six 03-api endpoints, boot `sweep_orphans`, retry) done, reviewed, and
-verified 2026-07-12** (see the *M1 progress* block in [08](08-implementation-plan.md)). **Next:
-the `VaultBackupService` durability task (ADR-014) + `/health` 4th leg**, then the web capture
-screen. Code committed locally (not pushed — user's call). Paused per the
-[session protocol](09-session-protocol.md).
+Task 1 (migration 002 + capture domain core / `CapturePipeline`), Task 2 (capture routers +
+lifespan wiring), and Task 3 / durability **Slice A** (git-backed `VaultBackupService` — one-lock
+ff-only push + heal-on-reject merge, debounced commits, empty-repo bootstrap, gc/reflog pins,
+`POST /admin/backup`) done, reviewed, and verified 2026-07-12** (see the *M1 progress* block in
+[08](08-implementation-plan.md)). **Next: durability Slice B** — APScheduler + the four R2 jobs
+(boto3) + CLI + the `/health` 4th leg — then the web capture screen. Code committed locally (not
+pushed — user's call). Paused per the [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

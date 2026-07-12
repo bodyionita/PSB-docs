@@ -364,11 +364,53 @@ user's call**). Delivered:
   error→code mapping, auth gate); `retry_capture`'s four paths tested against the real filesystem
   with fakes; `create_app()` imports clean and OpenAPI registers all six routes under `/api/v1`.
 
-**Next M1 task:** **`VaultBackupService`** (ADR-014) + durability/R2/scheduler + `/health` 4th
-leg — replaces the `LoggingVaultBackup` stub with the real git-backed service (ff-only push,
-heal-on-reject, one git lock; empty-repo bootstrap; debounced ~60s commit + 04:55 sweep +
-`POST /admin/backup`; the four R2 jobs + integrity drill via APScheduler/CLI; `/health` `backups`
-leg). Then the web capture screen (06). Code committed locally (not pushed — user's call).
+**M1 progress — Task 3 / durability Slice A done (git-backed `VaultBackupService`, 2026-07-12).**
+The durability task is being built in two reviewable slices; **Slice A (the git side)** is done,
+committed locally (`884855f`, **not pushed — user's call**). Replaces the `LoggingVaultBackup`
+no-op stub the pipeline depended on with the real service — the **one owner of all vault git ops
+behind a single `asyncio` lock** (ADR-014 §2–3):
+
+- **`GitRepo`** (`services/git_repo.py`) — thin subprocess wrapper (async via `to_thread`) behind
+  a **`GitClient` protocol** (fakeable, mirrors the `CaptureStore` seam). Only ever
+  **fast-forward** pushes (`git push HEAD:branch`, no `--force`); the sole reconciliation is a
+  **merge** (`pull --no-rebase --no-edit`) — never rebase/force/reset. `is_merging`/`abort_merge`
+  guards; push/pull **network timeouts are soft failures** (commits kept local, retried).
+- **`VaultBackupService`** — **debounced ~60s batch commits** (coalesced, deduped message); every
+  stage/commit/push serialises under one lock; **gc/reflog pins** (`gc.pruneExpire`/`reflogExpire`/
+  `reflogExpireUnreachable=never`, `gc.auto=0`) + commit identity applied **idempotently at
+  startup**; **empty-repo bootstrap** (`Inbox/`, `Summaries/Daily|Weekly/`, plane folders +
+  `.gitkeep`, the ADR-014 §3 `.gitignore` — excludes only Obsidian UI cache + OS cruft, never
+  notes/`.trash` — initial commit + `push -u`; subsumes the `PSB-vault` initial-commit follow-up);
+  **heal-on-reject** (non-ff push → pull-merge → re-push, healing GitHub if a client rewound it);
+  best-effort push (unreachable remote ⇒ commits stay local, next backup reconciles — §5).
+- **`POST /admin/backup`** → `{committed, pushed}` (03-api), session-gated; forces an immediate
+  commit + push, folding in any pending debounced reasons.
+- **Lifespan** — builds the service, `ensure_ready()` at boot (init if needed → pins → bootstrap),
+  wires it into `CapturePipeline` (replacing the stub), and on shutdown **drains the pipeline →
+  flushes the backup → disconnects the DB** (order matters: a draining capture may enqueue a
+  commit). New non-secret settings (`vault_git_remote/branch`, `vault_backup_debounce_seconds`,
+  `git_user_name/email`) in `.env.example`.
+
+- **Independent review** (fresh agent, diff vs ADR-014 + CLAUDE.md rules): **1 must-fix resolved** —
+  cancelling the debounce timer *mid-commit* (via `flush`/`backup_now`) raised `CancelledError`
+  into the in-flight batch, releasing the lock while the uncancellable `to_thread` git subprocess
+  kept running, so the canceller launched a **second concurrent git command** (broke the single-
+  lock invariant). Fixed by **`asyncio.shield`ing the commit phase** so the canceller blocks on the
+  lock until the in-flight batch finishes; **regression test verified it fails without the shield**.
+  3 minors also applied: an in-progress-merge commit guard (never capture conflict markers),
+  reschedule-on-failed-batch (don't wait for the nightly sweep), and soft push/pull timeouts.
+- **Verification:** 89 server unit tests + `ruff` green. Orchestration (debounce/coalesce, heal-on-
+  reject success+abort, no-remote, no-op flush, backup_now fold-in, the shield regression) tested
+  with a `FakeGitRepo`; **real-git integration** (bootstrap→push to a bare remote, a genuine non-ff
+  heal-merge preserving both sides) tested against actual git, **skipped when git is absent** so CI
+  stays green; `create_app()` imports clean and `/admin/backup` registers under `/api/v1`.
+
+**Next M1 task — durability Slice B:** APScheduler (in-process, `enable_scheduler` flag; the four
+R2 jobs via **boto3** — nightly `git bundle --all` → WORM, weekly integrity drill, nightly
+`pg_dump` → R2, nightly `/srv/data` sync → R2 — each writing `agent_runs`), a **CLI entrypoint**
+for the jobs, the **04:55 vault-backup sweep**, and the **`/health` 4th leg** (`backups`: degraded
+when the latest `integrity-drill` run failed or is overdue >~8 days, ADR-014 §6). Then the web
+capture screen (06). Code committed locally (not pushed — user's call).
 
 ## M2 — Indexing & search
 
