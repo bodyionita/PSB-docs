@@ -701,6 +701,17 @@ a genuine **new scope item** (semantic backlinks / relatedness graph), not somet
 milestone delivers. **Not decided here** (session protocol: don't resolve scope inline) — flagged
 for a future planning/grilling pass; M2 (pgvector similarity) is the natural place to consider it.
 
+**M1 close POSTPONED to end of M2 (decided 2026-07-13).** M1's live Accept has a time-dependent
+tail — **a nightly WORM bundle lands in R2** and **the weekly integrity drill passes the
+fingerprint check** — that can only be confirmed after real overnight/weekly cycles run on the box.
+The app is now **left running overnight**, so those results (plus live signal on the nudge /
+organizer-down→Inbox paths, and whether the semantic-relatedness observation actually bites in
+practice) will exist by the next cycle. Rather than block on them, **M1 stays open and is closed at
+the end of M2**: build M2 now, and fold the M1 Accept confirmation (nightly bundle + drill green,
+any overnight-surfaced findings) into the M2 close. The captured-voice-note→GitHub-history half of
+the Accept is already satisfied (capture `a1e1e9b9` notes are in `PSB-vault`); what remains is the
+scheduled-backup evidence and any overnight findings. Start M2 without waiting.
+
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +

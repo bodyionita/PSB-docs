@@ -53,7 +53,10 @@ capture reorganized to English + pushed to `PSB-vault`. **Post-ship vault review
 notes English/valid; one organizer-v2 name corruption `Braindone`→`Braindan` fixed by hand (vault
 `70396dd`). Clarified two by-design points (shared `id` = capture id; `related` = same-source
 siblings) and flagged **semantic relatedness linking** as a future-scope question for M2 — see the
-*M1 polish batch* block in [08](08-implementation-plan.md). Paused per the
+*M1 polish batch* block in [08](08-implementation-plan.md). **M1 close POSTPONED to end of M2
+(2026-07-13):** the Accept's nightly-WORM-bundle + weekly-integrity-drill tail needs real
+overnight/weekly cycles, so the app is left running overnight and **M2 starts now**; the M1 Accept
+confirmation (backup evidence + any overnight findings) folds into the M2 close. Paused per the
 [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
