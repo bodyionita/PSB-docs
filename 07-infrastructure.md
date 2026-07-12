@@ -87,15 +87,26 @@ same repo on laptop/phone, open in Obsidian (obsidian-git, **merge-only**, never
   Rollback = revert commit and push.
 - Docs repo has no pipeline (it's the contract, not a deployable).
 
-## Secrets
+## Secrets & config ([ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md))
 
-All on the VPS in `deploy/.env` (never in git; `.env.example` documents every key):
-`API_PASSWORD_HASH`, `SESSION_SECRET`, `DATABASE_URL`, `OPENAI_API_KEY`,
-`NEBIUS_API_KEY`, `SLACK_USER_TOKEN`, `GITHUB_DEPLOY_KEY` (file), `VAULT_PATH`,
-`PLANES`, model routing config, and **R2 backup creds** (`R2_ACCOUNT_ID`,
-`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` — [ADR-014](adr/014-vault-history-durability.md)).
-Claude Max credentials live only in the CLI volume. The monthly CI restore drill (fast-follow)
-needs R2-read + `OPENAI_API_KEY` as GitHub Actions secrets.
+`deploy/.env` on the VPS is the file the stack reads (docker-compose `env_file`), but it is
+**rendered by CI, never hand-filled and never in git** ([ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md)):
+
+- **Secrets → GitHub Actions Secrets** (a `production` Environment; entered once in the UI,
+  never seen by the agent, never committed): `API_PASSWORD_HASH`, `SESSION_SECRET`,
+  `DATABASE_URL`, `OPENAI_API_KEY`, `NEBIUS_API_KEY`, `SLACK_USER_TOKEN`, and the **R2 backup
+  creds** `R2_ACCOUNT_ID` / `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` ([ADR-014](adr/014-vault-history-durability.md)),
+  plus deploy secrets `VPS_HOST` / `VPS_USER` / `VPS_SSH_KEY`.
+- **Non-secret config → git** in `deploy/defaults.env` (versioned, reviewable):
+  `BRAINDAN_DOMAIN`, `PLANES`, `NEBIUS_CHAT_MODEL`, `CLAUDE_MAX_MODEL`, `SCHEDULER_TZ`,
+  `VAULT_PATH`, `SESSION_COOKIE_SECURE`, `ENVIRONMENT`, `R2_BUCKET`.
+- **Deploy renders** `.env = defaults.env + secrets`, `scp`s it to the VPS mode 600, then
+  `compose up`. `.env.example` documents the full key set.
+
+Not in this flow: **Claude Max** credentials live only in the CLI volume (`claude login`);
+the vault git **deploy key** (`GITHUB_DEPLOY_KEY`, a file) is generated on the VPS and its
+private half never leaves the box. The monthly CI restore drill (fast-follow) reuses the
+GitHub `R2_*` + `OPENAI_API_KEY` secrets.
 
 ## Observability
 
@@ -107,6 +118,10 @@ needs R2-read + `OPENAI_API_KEY` as GitHub Actions secrets.
 
 ## Provisioning (scripted, reproducible)
 
-`deploy/provision.sh` (run once per fresh VPS): create user, harden SSH (keys only),
-UFW (443/22), install Docker, clone repos, restore vault from GitHub, `claude login`,
-start compose. Target: **full disaster recovery < 30 minutes**.
+`deploy/provision.sh` (run once per fresh VPS) **preps the box**: create user, harden SSH
+(keys only), UFW (443/22), install Docker, clone repos, generate + register the vault deploy
+key, restore vault from GitHub, `claude login`. It **does not write `deploy/.env`** — CI is
+the sole writer ([ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md)). **App
+start comes from the deploy workflow**, so **disaster recovery = provision the box + trigger
+the deploy** (renders `.env`, `compose up`, `alembic upgrade head`). Target: **full disaster
+recovery < 30 minutes**.
