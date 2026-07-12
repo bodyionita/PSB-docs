@@ -50,6 +50,15 @@ Rules ([ADR-005](adr/005-planes-and-atomic-notes.md)):
   analysis/queries filter on frontmatter, never on folder.
 - One source may produce **several atomic notes** (split per plane); siblings share
   `source_ref` and cross-link via `related` + `[[wikilinks]]` in the body.
+- **English-only vault (M1, `organizer-v2`).** Pipeline-written note titles, bodies, and tags
+  are always **English** — a non-English capture is *translated* by the organizer, not stored
+  in its original language. (The capture's raw input is preserved verbatim in `captures.raw_text`,
+  and the UI follow-up **nudge** still mirrors the capture's language — it's conversational, not
+  vault content. Existing non-English notes are migrated via `POST /admin/captures/{id}/reorganize`.)
+- **Tags are valid Obsidian tags:** English, lower-case, a single word or hyphenated, **no
+  spaces** (`personal-growth`, not `personal growth`); allowed chars `a–z 0–9 _ - /`, and a
+  tag must contain a letter (purely-numeric dropped). Enforced by `_slugify_tag` in the
+  organizer, not just the prompt.
 - User-created notes may have no frontmatter; every field is optional at read time.
   Title = H1 if present, else filename stem.
 

@@ -77,4 +77,5 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | `POST /agents/{name}/run` | trigger on demand (e.g. `slack-ingest`, `daily-summary`); `409` if already running |
 | `POST /admin/reindex` | vault reconciliation → `{ indexed, skipped, deleted }` |
 | `POST /admin/backup` | force vault git commit+push → `{ committed, pushed }` |
+| `POST /admin/captures/{id}/reorganize` | maintenance re-run: re-organize a capture's stored raw text and **replace** its notes (e.g. re-deriving notes after the English-only organizer change). `202` → `{ capture_id }`; `404` if unknown. Raw input untouched (never-lose); notes replaced only on a successful organize, kept on the Inbox-fallback |
 | `GET /health` | no auth: `{ status, db, vault, git_remote, backups }`, `503` when degraded. `backups` (M1, [ADR-014](adr/014-vault-history-durability.md) §6) is false when the latest `integrity-drill` run failed or is overdue (>~8 days) |

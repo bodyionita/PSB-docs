@@ -658,6 +658,22 @@ Fix: add `GROQ_API_KEY` to the render `env:` block + the `printf` in `.github/wo
 **Requires a redeploy.** Once rendered, Groq (free tier) is the STT primary and voice no longer
 depends on the 429'd OpenAI.
 
+**M1 polish batch — English-only vault, valid tags, vault git hygiene, re-organize (2026-07-13).**
+From live use (grilled decisions recorded here + in the ADRs): (1) **Vault is English-only** —
+`organizer-v2` translates non-English captures; note titles/bodies/tags are English (raw input
+preserved in `captures.raw_text`). The UI **nudge still mirrors the capture's language** (decision:
+vault English, conversational prompt personal). (2) **Tags are valid Obsidian tags** — `_slugify_tag`
+(lower-case, hyphenated, no spaces, purely-numeric dropped). (3) **Vault git hygiene** ([ADR-014
+amendment](adr/014-vault-history-durability.md)): `.gitignore` adds `.idea/`; new `.gitattributes`
+forces `*.md eol=lf` (kills the Obsidian/Windows CRLF↔LF churn); both reconciled idempotently by
+`ensure_ready`; **pull-first** merge before every push (integrates remote/other-device edits, still
+merge-only). (4) **Re-organize** — `POST /admin/captures/{id}/reorganize` re-runs organize on a
+capture's stored raw text and replaces its notes (the retranslation tool), sharing the Pass-2 core.
+Verified: 129 pytest + ruff green. **Post-deploy step:** run reorganize on the one Romanian-content
+capture (`a1e1e9b9-…`, → Braindan/Diana notes) to translate it; the local clone needs a one-time
+`git add --renormalize . && git config core.autocrlf false` to clear existing CRLF diffs. **Not yet
+pushed/deployed.**
+
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +

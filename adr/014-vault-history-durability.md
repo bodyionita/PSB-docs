@@ -83,6 +83,19 @@ data (agent runs, chat) may **restore-to-last-nightly**; losing *today's* run/ch
 total-Supabase disaster is acceptable. **Chat history is classified operational, not memory**
 (insights worth keeping are captured into the vault as notes, not preserved as raw logs).
 
+> **Amendment (2026-07-13, M1).** Two refinements from the live drive:
+> - **Pull-first push.** `VaultBackupService` now does a proactive merge-`pull` of the remote
+>   *before* every push (after committing local work, so the tree is clean), so edits made on
+>   GitHub or another device are integrated and the push is a plain fast-forward. Still
+>   **merge-only, never rebase/reset** (§5 invariant preserved), and **best-effort**: an
+>   unreachable remote or a conflicting merge never loses the local commit — it's aborted-clean
+>   and the next backup reconciles. The non-ff heal-on-reject stays as a backstop.
+> - **Housekeeping files reconciled on boot.** `ensure_ready` idempotently keeps the vault's
+>   `.gitignore` (now also ignores `.idea/`) and a new **`.gitattributes`** (`* text=auto
+>   eol=lf`, `*.md text eol=lf`) matching canonical content — committing only when they change.
+>   The `.gitattributes` stops the CRLF↔LF churn Obsidian/Windows editing produced. §3 still
+>   holds: the ignore set is editor/OS cruft only — never notes, never `.trash`.
+
 ## Consequences
 - ✅ No single event — VPS disk loss, GitHub account/repo loss or takedown, a bad pipeline
   run, or a bad Obsidian merge/force-push — can destroy committed vault history.
