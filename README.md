@@ -24,9 +24,16 @@ fingerprint, integrity drill, `pg_dump`→R2, `/srv/data`→R2 — `agent_runs` 
 store, CLI) done, reviewed, and verified 2026-07-12** (see the *M1 progress* block in
 [08](08-implementation-plan.md)). **Durability Slice B2 (in-process APScheduler + `/health` `backups`
 4th leg) done, reviewed (no must-fix), and verified 2026-07-12 — the durability task is complete
-(Slices A+B1+B2); 116 tests + ruff green.** **Next: the web capture screen (06)** — the last M1
-surface; the whole server side is done. Code committed locally (not pushed — user's call). Paused
-per the [session protocol](09-session-protocol.md).
+(Slices A+B1+B2); 116 tests + ruff green.** **Web capture screen (06) done, 2026-07-12** — the last
+M1 surface: record orb + Web-Audio `AnalyserNode` visualizer, quick text capture, recent-captures
+strip (`GET /captures?limit=20`, TanStack Query polling ~2s while in-flight), failed→retry, inline
+follow-up nudge; online-only (offline text queue stays M5). `tsc`+`eslint`+`vite build` green; code
+committed locally (not pushed — user's call). **M1 is now code-complete.** Review caveat: only an
+*implementer self-review* ran (the harness blocked spawning the protocol's independent agent this
+session; 3 findings fixed) — **recommend a fresh independent review / `/code-review ultra` before
+declaring M1 closed.** **Next: the M1 *live Accept*** — a deployed-stack drive on `braindan.cc`
+(voice→plane-note <30s in vault + git history + a nightly WORM bundle/drill), not a code task; then
+M2 (indexing/search). Paused per the [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

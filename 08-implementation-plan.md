@@ -499,10 +499,57 @@ B2). Delivered:
   `AsyncIOScheduler` to actually fire a job coroutine end-to-end (records a `data-sync` `agent_run`),
   confirming APScheduler awaits the async job methods through the full `agent_runs` path.
 
-**Next M1 task — the web capture screen (06):** record button + Web-Audio `AnalyserNode` visualizer,
-text input, optimistic confirm, recent-captures strip (`GET /captures?limit=20` + TanStack Query
-polling), pending-nudge inline answer. This is the last M1 surface — the whole server side (capture +
-durability) is done. Code committed locally (not pushed — user's call).
+**M1 progress — web capture screen (06) done, 2026-07-12.** The last M1 surface — the PWA capture
+screen over the (already-done) server side — is built in `../second-brain/web/`, committed locally
+(**not pushed — user's call**). **M1 is now code-complete;** what remains is the *live* end-to-end
+Accept (below), which is a deployed-stack drive, not a code task. Delivered:
+
+- **API layer** (`api/types.ts`, `api/client.ts`) — added `CaptureView` / `CaptureAcceptedResponse`
+  + `CaptureKind`/`CaptureStatus` unions (field names match the server `CaptureView` exactly); five
+  capture methods (`captureText`, `captureVoice`, `listCaptures`, `retryCapture`, `submitFollowUp`).
+  The shared `request()` now detects `FormData` and **omits the JSON `Content-Type`** so the browser
+  sets the multipart boundary for the voice upload. **All URLs stay in `api/` (ADR-006 / rule 4);**
+  ids are path-encoded.
+- **`useRecorder`** (`features/capture/useRecorder.ts`) — `MediaRecorder` (picks `audio/webm`, falls
+  back to `audio/mp4`=m4a / `audio/ogg`; all server-accepted per 03-api) + a **Web-Audio
+  `AnalyserNode`** reading mic **RMS each rAF frame into a framer `MotionValue`**, so the orb reacts
+  at ~60fps **without React re-renders** (06 "transform/opacity only"). Secure-context /
+  permission / getUserMedia errors are surfaced; the mic is released on stop **and on unmount**
+  (tab switch); `AudioContext.resume()` inside the tap gesture defeats Chrome's autoplay-suspend.
+- **`CaptureScreen`** (rewritten) — oversized **tap-to-toggle** record orb with a **voice-reactive
+  glow** (idle → breathing halo, recording → amplitude-scaled glow, uploading → spinner), a quick
+  **text field** (`POST /capture/text`), an **optimistic "captured ✓"** flash on any successful
+  submit, and the recent strip. Autonomous animations gated on `useReducedMotion` (06 respect-RM).
+- **`RecentCaptures`** (`features/capture/{RecentCaptures.tsx,useCaptures.ts}`) — `GET /captures?limit=20`
+  via **TanStack Query**, `refetchInterval` = **2s only while any capture is in-flight** (terminal =
+  `indexed`/`failed`), idle otherwise (08 M1); every write invalidates the list. Animated status
+  pills across the full lifecycle (`received → transcribing → organizing → written → indexed`/`failed`),
+  note-path chips once written, **failed → Retry** (`POST …/retry`), and the **pending nudge shown
+  inline** with an answer input (`POST …/follow-up` → Pass 2, shown until `follow_up_answer` lands).
+  **Online-only** — the offline text queue stays M5, per the M1 build decisions.
+
+- **Review (self-review; see caveat).** The session-protocol *independent* review (fresh agent) could
+  **not** be run this session — the harness restricted spawning an unrequested subagent, and the
+  `/code-review` skill that loaded is a generic manual checklist, not the diff reviewer. What ran was
+  a rigorous **implementer self-review** against 03-api + ADR-019 + the 06/08 M1 spec + CLAUDE.md rule 4.
+  **3 findings fixed:** (1) a failed **voice upload** surfaced nothing (text did) → error now shown;
+  (2) `AudioContext` could stay **suspended** under autoplay policy, killing the visualizer →
+  `resume()` added in the gesture; (3) the voice snippet duplicated/contradicted the status pill →
+  simplified. **Recommend a true independent review** (fresh agent or `/code-review ultra`) before
+  M1 is declared closed, to satisfy the protocol's independence requirement.
+- **Verification (static).** `tsc --noEmit` + `eslint --max-warnings 0` + `vite build` (452 modules)
+  all green under the strict config (`noUncheckedIndexedAccess`, `verbatimModuleSyntax`, no-explicit-any).
+  **Not exercised live:** the screen mounts only behind login, so an end-to-end drive needs the
+  deployed backend + DB + session + a real mic — out of reach in this session. The server side already
+  carries 116 tests.
+
+**M1 live Accept — still pending (deployed-stack drive).** All M1 code is done, but the milestone's
+**Accept** ("voice memo → correctly plane-classified note(s) in the vault < 30s, visible in GitHub
+history; organizer failure still yields an Inbox note; a nightly WORM bundle lands in R2 and the
+weekly integrity drill passes the fingerprint check") is a **live run on the deployed box**, not a
+unit test. Next real step: **deploy web + run the Accept end-to-end** on `braindan.cc` (record from
+the phone, watch the strip go `received→…→indexed`, confirm the note + git history, and let one
+nightly cycle produce a WORM bundle + drill). Then M1 closes and M2 (indexing/search) begins.
 
 ## M2 — Indexing & search
 
