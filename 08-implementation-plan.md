@@ -648,6 +648,16 @@ already wiped. Once deployed, audio persists on the R2-synced `/srv/data` volume
 redeploys, so retry works across deploys (matches the recovery matrix in 02-data-model). The user's
 desired invariant ("if it can't process, store it somewhere between deploys") is exactly this fix.
 
+**Bug found during the live Accept — `GROQ_API_KEY` never reached the container (fixed).** Voice
+transcription failed with `groq: no API key configured; openai … 429`: the STT chain worked (Groq
+primary → no key → fell back to a rate-limited OpenAI), but the container's `GROQ_API_KEY` was empty
+despite the GitHub Actions secret existing. Root cause: the CI deploy workflow's `.env` render step
+listed `OPENAI_API_KEY`/`NEBIUS_API_KEY`/… but **not `GROQ_API_KEY`**, so it was never written to
+`deploy/.env` (07-infrastructure already listed it as a rendered secret — the workflow had drifted).
+Fix: add `GROQ_API_KEY` to the render `env:` block + the `printf` in `.github/workflows/ci.yml`.
+**Requires a redeploy.** Once rendered, Groq (free tier) is the STT primary and voice no longer
+depends on the 429'd OpenAI.
+
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +
