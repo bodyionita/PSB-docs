@@ -273,6 +273,62 @@ Build-ready detail below; nothing here is left to implementer discretion.
 [session protocol](09-session-protocol.md). Next: an **implementation session** builds M1
 against this spec (no grilling), pausing between tasks with independent review at each.
 
+**M1 progress — Task 1 done (capture domain core, 2026-07-12).** First implementation task
+("Migration 002 + CapturePipeline") built + reviewed + verified in `../second-brain/server/`.
+Delivered (no routers/web/durability yet — those are later M1 tasks):
+
+- **Migration 002** (`versions/002_capture_follow_up.py`) — nullable `follow_up_question` /
+  `follow_up_answer` on `captures`, hand-authored SQL (ADR-011). Applies to head + downgrade
+  round-trips cleanly on the dev DB; `compute_head()` test bumped 001→002.
+- **Pure logic (unit-tested, no mocks):** `app/capture/organizer.py` — versioned organizer +
+  nudge prompt constants, fence-tolerant `parse_organizer_json`, pure `validate_organizer_output`
+  (plane→configured-plane-else-Inbox, `planes[]` filtered + superset of `plane`, note/tag caps),
+  `inbox_fallback_note` (first-8-words title). `app/capture/notes.py` — filename sanitization,
+  frontmatter/`## Related` wikilink rendering (02 §2), and a filesystem `NoteWriter` (atomic
+  temp+`os.replace`, numeric-suffix collision handling across on-disk + in-batch siblings,
+  `/`-separated vault-relative paths, `remove_notes` for the supersede path).
+- **`CapturePipeline`** (`services/capture_pipeline.py`) — in-process (`asyncio.create_task`,
+  202 semantics), order transcribe(voice, no fallback)→organize→write→index-stub→trailing nudge;
+  never-lose ordering (row/audio persisted before any model call); organizer failure ⇒ Inbox
+  fallback (never `failed`); only STT + vault-write mark `failed`; nudge non-blocking + skipped
+  on the Inbox path; follow-up **Pass 2 replaces** note_paths (soft-delete + rewrite), one nudge
+  only; **boot-time `sweep_orphans`** (non-terminal ⇒ failed, retryable).
+- **`CaptureStore` seam** — protocol + asyncpg `PgCaptureStore` (plain SQL) + in-memory fake, so
+  the pipeline unit-tests with **no live DB** (CI runs pytest DB-less). **`VaultBackup` protocol**
+  + `LoggingVaultBackup` stub — the real git-backed `VaultBackupService` (ADR-014) is a later task.
+- **New settings** (rule 9, in `.env.example`): `DATA_PATH`, `INBOX_PLANE`, `AUDIO_MAX_BYTES`
+  (25 MB), `ORGANIZER_MAX_NOTES/TAGS`; `tzdata` pinned for deterministic `zoneinfo`.
+
+*Interpretation recorded (flag for user):* 02 §2's frontmatter example shows lower-case
+`plane: professional` while `PLANES`/folders are capitalized and 02 says "primary plane ==
+folder". Resolved in favour of the stronger rule: **planes are identified by their configured
+spelling** (`Professional`), used verbatim as folder + frontmatter; the organizer's output is
+normalized to that spelling case-insensitively (so a model returning `professional` maps to
+`Professional`), unknown ⇒ `Inbox`. Keeps M2's folder-derived `notes.plane` and frontmatter
+`planes` consistent. Not an ADR (normalization detail, not architecture) — revisit if lower-case
+frontmatter was actually intended.
+
+- **Independent review** (fresh agent, diff vs M1 spec + ADR-019/014/005/011 + CLAUDE.md rules):
+  **2 must-fix found and resolved**, both untested failure paths — (1) the trailing nudge could
+  flip an already-`indexed` capture to `failed` (only `ProviderUnavailable` was caught) → nudge
+  now swallows *all* errors (ADR-019 §1 non-blocking); (2) Pass-2 re-organize on an unavailable
+  chain deleted the good Pass-1 notes and replaced them with an Inbox dump → now guards on
+  `used_fallback`, keeps the original notes, and fails retryably (ADR-019 §2 "enrich, not
+  degrade"). Regression tests added for both. Minors: nudge now built from the organize result
+  (not raw transcript, ADR-019 §1); `written` status set after files land; settings documented.
+  Accepted-as-scoped minors: per-capture fallback not persisted (no column in M1), single-user
+  TOCTOU on the follow-up guard.
+- **Verification:** 56 server unit tests + `ruff` green (CI parity: fakes + tmp vault, no DB).
+  Against the dockerized dev DB: migration 002 up/down/up; `PgCaptureStore` CRUD/sweep smoke;
+  full `CapturePipeline` end-to-end smoke (text → vault note + nudge, then follow-up Pass 2
+  replace) driving the **real** DB + filesystem with fake providers.
+
+**Next M1 task:** capture **routers + wiring** — `POST /capture/{text,voice}`, `GET /captures`,
+`GET /captures/{id}`, `POST /captures/{id}/{retry,follow-up}` (03-api), plus lifespan wiring
+(pipeline on `app.state`, boot `sweep_orphans`). Then: `VaultBackupService` + durability/R2/
+scheduler + `/health` 4th leg; then the web capture screen. Code committed locally (not pushed —
+user's call).
+
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +
