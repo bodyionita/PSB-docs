@@ -67,12 +67,16 @@ secrets recorded here (ADR-016 / protocol §Security):
 - **Supabase:** project (free tier), region `eu-central-1`, ref `aegauzpsyybfknddxlbw`.
   Connection = **Session pooler + `?sslmode=require`** (the `DATABASE_URL` is a secret, not
   stored here). `vector`/`pgcrypto` left for migration 001 (not dashboard-enabled).
-- **Code repo:** `PSB` on GitHub, `main` pushed; CI (lint/test/build + **gitleaks** secrets
-  job) live. **Made PUBLIC 2026-07-12** so the VPS clones/pulls `/srv/app` anonymously over
-  HTTPS — no code-repo deploy key needed. Safe because no secret is ever in git (ADR-016;
-  hook + gitleaks on full history; verified only `*.env.example` + non-secret `defaults.env`
-  are tracked). Reversible: to go private, add a read-only PSB deploy key on the box and use
-  the SSH remote. Vault-backup repo: `PSB-vault` (deploy key generated on the VPS at Step 9).
+- **Code repo:** `PSB` on GitHub, `main` pushed. **CI caveat:** the workflow file was
+  **invalid YAML from the ADR-016 deploy step until `e30cdc0` (2026-07-12)** — an unquoted
+  colon in a step name — so **no CI jobs actually ran in that window** (server/web/gitleaks/
+  deploy all skipped). Fixed + validated with a real YAML parser; the next push re-enables CI.
+  **Made PUBLIC 2026-07-12** so the VPS clones/pulls `/srv/app` anonymously over HTTPS — no
+  code-repo deploy key needed. Public-safety was confirmed **directly** (`git ls-files`: only
+  `*.env.example` placeholders + non-secret `defaults.env` tracked; no secret ever in git per
+  ADR-016 + pre-commit hook) — not via gitleaks, which wasn't running; gitleaks now re-enabled
+  gives the automated backstop. Reversible: to go private, add a read-only PSB deploy key on
+  the box + SSH remote. Vault-backup repo: `PSB-vault` (deploy key generated on the VPS at Step 9).
 - **Backups (R2) — Step 7 DONE 2026-07-12:** bucket **`braindan-backups`** created + an
   **Object Read & Write** API token scoped to it (creds are Step 8 secrets `R2_ACCOUNT_ID` /
   `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY`, not stored here). WORM immutability is an R2
