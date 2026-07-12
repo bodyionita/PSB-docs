@@ -87,7 +87,11 @@ same repo on laptop/phone, open in Obsidian (obsidian-git, **merge-only**, never
 
 - **PR/push:** lint (ruff, eslint), typecheck (mypy optional, tsc), tests (pytest, vitest),
   web build.
-- **Push to `main`:** all of the above → SSH to VPS → `git pull && docker compose up -d --build`.
+- **Push to `main`** (or manual `workflow_dispatch`): all of the above → render `.env` + origin
+  TLS files → `scp` them to the VPS → **`scp` the built `web/dist`** (uploaded as an artifact by
+  the `web` job; `web/dist` is gitignored, so the box's clone never has it — CI is its sole
+  delivery path, mirroring the `.env`/cert flow) → SSH to VPS → `git pull --ff-only && docker
+  compose up -d --build && alembic upgrade head`. Caddy then serves `/srv/app/web/dist` at `/`.
   Rollback = revert commit and push.
 - Docs repo has no pipeline (it's the contract, not a deployable).
 

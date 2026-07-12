@@ -100,6 +100,9 @@ in `system_health.py`), so the vault clone is not optional.
 
 CI trigger gap fixed 2026-07-12: `ci.yml` gained `workflow_dispatch` + deploy runs on it
 (`origin/main` `ff7ad4b`), matching `provision.sh`'s "Actions → Run workflow" instruction.
+Web-delivery gap fixed 2026-07-12 (`702c5f6`): `web/dist` is gitignored, so the `web` job
+uploads it as an artifact and the `deploy` job downloads + `scp`s it to `/srv/app/web/dist`
+before `compose up` — otherwise the box would serve an API with no PWA (M0b "serves the PWA").
 
 **Open decisions — RESOLVED 2026-07-12 (planning pass, grilled):**
 - **TLS cert method** → **Cloudflare Origin CA**, cert+key CI-rendered via the ADR-016 path
