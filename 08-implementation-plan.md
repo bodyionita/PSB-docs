@@ -20,6 +20,16 @@ compose, Caddy config, provision.sh, GitHub Actions (lint/test/build + deploy on
 **Accept:** provisioned VPS serves the PWA over HTTPS; login works; `/health` green;
 a deliberate Claude-limit simulation makes the chain answer via Nebius and records it.
 
+> **Amendment (2026-07-12, replan):** the last clause — the *live* Claude-limit → Nebius
+> chain-and-record — **cannot be exercised in M0** and is **deferred to M3 (chat)**. M0 has
+> **no chat/admin surface, no chain caller, and no `agent_runs` writer** (routers = `auth` +
+> `health` only), so nothing invokes `.complete()` or records a run. For M0 this clause is
+> satisfied by the **21 registry unit tests** (fallback chain with fakes); the live
+> claude-max path + "records it" are verified in M3 when the chat endpoint exists. Consistent
+> with [ADR-012](adr/012-m0-implementation-stack.md) (real `claude-max` unverified until a
+> live surface). `claude login` (Step 10) is already done on the box, so M3 lights up with
+> zero further infra work. **All other M0 accept clauses pass** (HTTPS PWA, login, `/health`).
+
 **M0 build decisions (grilled 2026-07-12 — [ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md),
 [ADR-012](adr/012-m0-implementation-stack.md)):** M0 is split into (a) a **local-first
 build** — complete `server/`/`web/`/`deploy/`, verified to **boot end-to-end locally**
@@ -137,11 +147,24 @@ redeploy (confirms the raw-hash fix end-to-end)~~ — **DONE 2026-07-12**: CI `d
 `/api/v1/health` = `{status:ok, db:true, vault:true, git_remote:true}`; PWA root 200 over HTTPS;
 login mechanism confirmed (wrong password → clean `401 "Invalid password"`, **not** a `500` —
 proves the raw-hash argon2 verify parses) **and real-password login confirmed working in the
-browser by the user**. The `d9700a1` raw-hash fix is verified end-to-end. (b) **Step 10** `claude login` on the box (lights up the
-real `claude-max` path); (c) the accept criterion **"Claude-limit simulation → chain answers via
-Nebius and records it"** (needs Step 10); (d) **Step 11** confirm Cloudflare SSL mode = **Full
-(strict)** (the site loads over HTTPS to the Origin CA cert, so it's Full or Full-strict —
-verify strict). **Follow-up (M1, non-blocking):** give `PSB-vault` an **initial commit/branch**
+browser by the user**. The `d9700a1` raw-hash fix is verified end-to-end.
+~~(b) **Step 10** `claude login` on the box~~ — **DONE 2026-07-12** (user ran
+`docker compose exec api claude login`; OAuth creds persisted on the CLI volume). Effect is
+**not observable in M0** — no chain caller exists — but persists for M3; see the Accept
+amendment above.
+~~(c) the accept criterion **"Claude-limit simulation → chain answers via Nebius and records
+it"**~~ — **DEFERRED to M3** (replan 2026-07-12): M0 has no chat surface / chain caller /
+`agent_runs` writer, so it can't be exercised live; satisfied for M0 by the 21 registry unit
+tests. See the Accept amendment above.
+~~(d) **Step 11** confirm Cloudflare SSL mode = **Full (strict)**~~ — **DONE + VERIFIED
+2026-07-12**: site loads `HTTP/2 200` via Cloudflare with health green and **no `526`**, so
+the edge validates the Origin CA cert (strict confirmed end-to-end from outside).
+
+**→ M0 / M0b ACCEPT COMPLETE (2026-07-12)** — all live clauses pass (HTTPS PWA, login,
+`/health` green, TLS Full-strict); the live claude-max chain-and-record clause is formally
+deferred to M3 per the amendment. Next milestone is **M1** (see below).
+
+**Follow-up (M1, non-blocking):** give `PSB-vault` an **initial commit/branch**
 so the auto-backup has a branch to push to (empty repo clones fine and health is green, but M1
 push needs a HEAD).
 

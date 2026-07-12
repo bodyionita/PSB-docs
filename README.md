@@ -6,11 +6,13 @@ implementation plus a `CLAUDE.md` that points here.
 
 **Status:** design approved 2026-07-12 (grilled decision-by-decision). **M0 grilled and
 recorded 2026-07-12** (see [ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md),
-[ADR-012](adr/012-m0-implementation-stack.md)). **M0 local-first build complete
-2026-07-12** — the code monorepo `../second-brain/` now exists and boots end-to-end
-locally (see [08-implementation-plan.md](08-implementation-plan.md) M0 progress). Paused
-per the [session protocol](09-session-protocol.md); remaining M0 work is the live
-provisioning session (VPS/Cloudflare/Supabase/GitHub + `claude login`).
+[ADR-012](adr/012-m0-implementation-stack.md)). **M0 / M0b ACCEPT COMPLETE 2026-07-12** —
+the code monorepo `../second-brain/` is **deployed live at `https://braindan.cc`**: PWA over
+HTTPS, login works, `/health` green (db/vault/git_remote), Cloudflare TLS **Full (strict)**,
+`claude login` done on the box. The one accept clause with no M0 surface — the *live*
+Claude-limit→Nebius chain-and-record — is formally **deferred to M3** (satisfied for M0 by
+unit tests); see [08-implementation-plan.md](08-implementation-plan.md) Accept amendment.
+**Next milestone: M1.** Paused per the [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
