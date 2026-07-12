@@ -88,10 +88,15 @@ secrets recorded here (ADR-016 / protocol §Security):
 **Remaining M0b:** ~~Step 7 R2 bucket + token~~ (done) → ~~Step 8 populate `production` secrets~~
 (done — all set **except `VPS_HOST`, intentionally held** so the deploy job stays dormant until
 the box is prepared; `ORIGIN_CERT_PEM`/`ORIGIN_KEY_PEM` in; `VPS_USER=deploy`; `SLACK_USER_TOKEN`
-deferred to M4) → **Step 9 (next)** run `provision.sh` as root (box prep + `deploy` user + SSH
-hardening + vault deploy key; pass the CI deploy pubkey as `CI_DEPLOY_PUBKEY`, `passwd deploy`) →
-set `VPS_HOST` → trigger deploy (`workflow_dispatch` now enabled) → Step 10 `claude login` →
-Step 11 Cloudflare **Full (strict)** + verify.
+deferred to M4) → **Step 9 (next)** run `provision.sh` **as root** — a two-pass vault-key bootstrap: bootstrap
+= `apt install git` + clone public `PSB` to `/srv/app`, then `CI_DEPLOY_PUBKEY=<psb_ci_deploy.pub>
+bash deploy/provision.sh`; **pass 1** installs Docker + `deploy` user + UFW + prints the vault
+deploy pubkey, then **defers hardening** (root stays enabled, since the vault can't clone until
+its key is on GitHub); add that pubkey to `PSB-vault` deploy keys (write); **pass 2** (re-run as
+root) clones the vault and hardens SSH (final). `passwd deploy` for sudo. Then set `VPS_HOST` →
+trigger deploy (`workflow_dispatch`) → Step 10 `claude login` → Step 11 Cloudflare **Full
+(strict)** + verify. Note: prod `/health` green requires the vault git remote present (verified
+in `system_health.py`), so the vault clone is not optional.
 
 CI trigger gap fixed 2026-07-12: `ci.yml` gained `workflow_dispatch` + deploy runs on it
 (`origin/main` `ff7ad4b`), matching `provision.sh`'s "Actions → Run workflow" instruction.
