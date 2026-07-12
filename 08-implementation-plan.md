@@ -108,6 +108,38 @@ Web-delivery gap fixed 2026-07-12 (`702c5f6`): `web/dist` is gitignored, so the 
 uploads it as an artifact and the `deploy` job downloads + `scp`s it to `/srv/app/web/dist`
 before `compose up` — otherwise the box would serve an API with no PWA (M0b "serves the PWA").
 
+**Steps 9–9.5 DONE — DEPLOY IS LIVE 2026-07-12.** `provision.sh` ran (two-pass, `deploy` user +
+SSH hardened + vault cloned); `VPS_HOST` set; the deploy workflow runs green. **The PWA is served
+over HTTPS at `https://braindan.cc`** and **`GET /api/v1/health` = 200, all three legs green**
+(`db` ✓ Supabase + migration 001 applied, `vault` ✓, `git_remote` ✓). Getting the first green
+deploy took a chain of fixes to things that were latent while CI never actually ran (the workflow
+had been **invalid YAML since the ADR-016 step** — `e30cdc0` — so no jobs executed):
+- `ci.yml` **invalid YAML** (unquoted colon in a step name) → nothing ran (`e30cdc0`).
+- **web CI** `pnpm` version not found (action can't read `web/package.json` through
+  working-directory) → pin `9.15.0`; **server CI** ruff/pytest are an *extra* that plain
+  `uv sync` skips → `uv sync --extra dev` (`682ca00`).
+- **scp** `tar: empty archive` (multiline `source:` didn't parse) → comma-separated list
+  (`a0bf990`); then `Permission denied` (`umask 077` → 600, scp container is another user) →
+  render 644 on the ephemeral runner, VPS chmod 600 stays (`5950c3e`).
+- **`alembic`** `TypeError: connect() got unexpected kwarg 'sslmode'` — SQLAlchemy+asyncpg forwards
+  `sslmode`; raw asyncpg (app) parses it fine, so only `migrations/env.py` needed to translate
+  `sslmode` → asyncpg `ssl=` connect_arg (`881346e`). DATABASE_URL secret unchanged.
+- **`/health` `git_remote:false`** — git **dubious ownership** (`deploy`-owned vault, root
+  container) → `Dockerfile` `git config --global --add safe.directory /srv/vault` (`ed4a7ff`);
+  also unblocks M1 vault backup.
+- **Compose interpolating the `$`-laden argon2 hash** (WARN spam; would corrupt
+  `API_PASSWORD_HASH`) → project interpolation uses non-secret `defaults.env` (`ed4a7ff`) **and**
+  the api `env_file` uses **`format: raw`** (`d9700a1`) so secrets pass literally.
+
+**Remaining for M0/M0b accept:** (a) **verify login** in the browser after the `d9700a1` redeploy
+(confirms the raw-hash fix end-to-end); (b) **Step 10** `claude login` on the box (lights up the
+real `claude-max` path); (c) the accept criterion **"Claude-limit simulation → chain answers via
+Nebius and records it"** (needs Step 10); (d) **Step 11** confirm Cloudflare SSL mode = **Full
+(strict)** (the site loads over HTTPS to the Origin CA cert, so it's Full or Full-strict —
+verify strict). **Follow-up (M1, non-blocking):** give `PSB-vault` an **initial commit/branch**
+so the auto-backup has a branch to push to (empty repo clones fine and health is green, but M1
+push needs a HEAD).
+
 **Open decisions — RESOLVED 2026-07-12 (planning pass, grilled):**
 - **TLS cert method** → **Cloudflare Origin CA**, cert+key CI-rendered via the ADR-016 path
   ([ADR-017](adr/017-tls-cloudflare-origin-ca.md)).
