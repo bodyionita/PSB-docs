@@ -448,13 +448,61 @@ Driven for now by the CLI; the in-process scheduler + `/health` 4th leg are **Sl
   bundle→R2→verify→clone→drill **round-trip** against actual git (skipped when git absent); CLI
   arg-handling + job wiring smoke; `boto3` confirmed **not** imported without creds.
 
-**Next M1 task — durability Slice B2:** wire the **in-process APScheduler** (`enable_scheduler`
-flag; cron per ADR-010 window — the 04:55 sweep + nightly `vault-backup`/`db-backup`/`data-sync`
-+ weekly `integrity-drill`, all `scheduler_tz`, configurable) into the app lifespan (start on the
-one prod instance, shut down cleanly), and add the **`/health` 4th leg** (`backups`: degraded when
-the latest `integrity-drill` run failed or is overdue >~8 days — ADR-014 §6; gated to prod like the
-`git_remote` leg). Then the web capture screen (06). Code committed locally (not pushed — user's
-call).
+**M1 progress — Task 3 / durability Slice B2 done (scheduler + `/health` backups leg, 2026-07-12).**
+The final durability piece — the in-process APScheduler and the `/health` 4th leg — committed
+locally (`1e3c420`, **not pushed — user's call**). This closes the durability task (Slices A + B1 +
+B2). Delivered:
+
+- **`BackupScheduler`** (`services/scheduler.py`) — wraps APScheduler's `AsyncIOScheduler`; the
+  job→schedule map is **pure data** (`job_specs()`, so it unit-tests without a loop), `start()`/
+  `shutdown()` are the only parts touching APScheduler. Registers the **five** durability jobs on
+  crontab windows in `scheduler_tz`, staggered inside the ADR-010 03:00–05:00 band and clear of the
+  reserved M4 slots (Slack 03:00 / rescan 03:40 / summary 04:10 / review 04:40): `data-sync` 03:10,
+  `db-backup` 03:25, `integrity-drill` Sun 04:30, **`vault-sweep` 04:55** (ADR-010), **`vault-backup`
+  bundle 04:57** (WORM right after the sweep, so the bundle includes it — ADR-014 §3 "checkpoint =
+  commit+push+bundle"). `misfire_grace_time` (default 1h) + `coalesce` + `max_instances=1` realise
+  ADR-010's "missed window ⇒ next night covers it" (a long outage skips, restart jitter still fires,
+  a job never overlaps itself on the 4GB VPS).
+- **Lifespan wiring** (`main.py`) — when `enable_scheduler` (off by default; exactly one prod
+  instance sets it), builds `BackupJobs` via the shared **`build_backup_jobs`** factory (moved from
+  `cli.py` into `backup_jobs.py` so CLI and scheduler share one constructor) and `start()`s it inside
+  the lifespan event loop; on shutdown **stops the scheduler first** (a job may enqueue a vault
+  commit), then drains the pipeline → flushes the backup → disconnects the DB.
+- **`/health` 4th leg** (`system_health.py`, `models.py`, `routers/health.py`) — `backups` degrades
+  when the latest `integrity-drill` run **failed** or the last **succeeded** one is **overdue**
+  (`integrity_drill_max_age_days`, default 8 = weekly + 1 night grace); a currently-*running* drill
+  doesn't flip health while the last success is fresh, and a DB-read blip degrades rather than errors
+  `/health` (rule 7). **Prod-gated exactly like `git_remote`** (reported always, gates `ok` only in
+  prod). Contract already recorded in [03-api](03-api.md).
+- **Settings** (rule 9 — no hardcoded schedules): five crontab strings + `scheduler_misfire_grace_
+  seconds` + `integrity_drill_max_age_days`, all in `.env.example`.
+
+- **Independent review** (fresh agent, diff vs Slice B2 spec + ADR-010/014 §6 + 03-api + CLAUDE.md
+  rules): **no must-fix.** Verified: all five jobs scheduled to the right coroutines; times in-window,
+  staggered, sweep@04:55, bundle-after-sweep; misfire/coalesce/max_instances consistent with ADR-010;
+  lifespan start/shutdown ordering correct + `enable_scheduler`-gated; backups-leg prod gating mirrors
+  `git_remote`; **no TZ bug** (`agent_runs.started_at` is `timestamptz` ⇒ asyncpg returns aware UTC);
+  DB-read error degrades, never crashes `/health`; all schedules/thresholds are settings. One minor
+  applied (folded the date-age computation inside the rule-7 `try` so the "never errors /health"
+  guarantee is robust even to a future naive `started_at`). **Logged follow-ups (non-blocking):**
+  (1) `shutdown(wait=False)` doesn't await an in-flight backup job, so a job finishing after
+  `db.disconnect()` could log an error on the closed pool — background task, idempotent, service
+  never crashes; guard `finish()` if clean teardown logs matter. (2) A freshly-provisioned prod box
+  reports `backups:false` (503) until the first weekly drill — **provisioning runbook should run
+  `python -m app.cli integrity-drill` once** to establish a green baseline. (3) The Sunday 04:30
+  drill could occasionally overlap the future M4 04:40 review if a clone runs long — an M4-era
+  scheduling concern, nothing now.
+- **Verification:** **116 server unit tests + `ruff` green** (was 105; +11: scheduler job-spec
+  mapping + real-APScheduler registration asserting ids/triggers/misfire wiring without firing a job,
+  and the backups-leg logic across never-ran / failed / fresh-success / overdue / running-while-fresh
+  / DB-error / prod-gated / dev-ignored). Plus an **out-of-band in-process smoke** driving a real
+  `AsyncIOScheduler` to actually fire a job coroutine end-to-end (records a `data-sync` `agent_run`),
+  confirming APScheduler awaits the async job methods through the full `agent_runs` path.
+
+**Next M1 task — the web capture screen (06):** record button + Web-Audio `AnalyserNode` visualizer,
+text input, optimistic confirm, recent-captures strip (`GET /captures?limit=20` + TanStack Query
+polling), pending-nudge inline answer. This is the last M1 surface — the whole server side (capture +
+durability) is done. Code committed locally (not pushed — user's call).
 
 ## M2 — Indexing & search
 

@@ -22,9 +22,11 @@ ff-only push + heal-on-reject merge, debounced commits, empty-repo bootstrap, gc
 `POST /admin/backup`), and durability **Slice B1** (the four R2/WORM jobs — `git bundle`→R2 +
 fingerprint, integrity drill, `pg_dump`→R2, `/srv/data`→R2 — `agent_runs` writer, boto3 object
 store, CLI) done, reviewed, and verified 2026-07-12** (see the *M1 progress* block in
-[08](08-implementation-plan.md)). **Next: durability Slice B2** — wire the in-process APScheduler +
-add the `/health` 4th leg — then the web capture screen. Code committed locally (not pushed —
-user's call). Paused per the [session protocol](09-session-protocol.md).
+[08](08-implementation-plan.md)). **Durability Slice B2 (in-process APScheduler + `/health` `backups`
+4th leg) done, reviewed (no must-fix), and verified 2026-07-12 — the durability task is complete
+(Slices A+B1+B2); 116 tests + ruff green.** **Next: the web capture screen (06)** — the last M1
+surface; the whole server side is done. Code committed locally (not pushed — user's call). Paused
+per the [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
