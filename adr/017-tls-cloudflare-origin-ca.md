@@ -27,8 +27,8 @@ real Let's Encrypt cert obtained via a DNS-01 challenge using a Cloudflare API t
    Two new **GitHub `production` secrets** hold the PEM material — `ORIGIN_CERT_PEM` and
    `ORIGIN_KEY_PEM` — entered once in the UI by the human, never seen by the agent, never in
    git. The deploy job writes them to `deploy/origin.crt` / `deploy/origin.key` and `scp`s
-   them to the VPS alongside `.env` (**mode 600**). Caddy mounts the directory read-only and
-   points `tls` at the two files.
+   them to the VPS alongside `.env` (**mode 600**). Caddy mounts the two files read-only and
+   points `tls` at them.
 3. **Firewall/ports:** origin needs **:443 only**. Drop the `:80` publish from the caddy
    service; Cloudflare handles HTTP→HTTPS at the edge (“Always Use HTTPS”). UFW stays 22+443.
 

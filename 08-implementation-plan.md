@@ -87,13 +87,23 @@ trigger deploy → Step 10 `claude login` → Step 11 Cloudflare **Full (strict)
   disabled, keys-only, automated + guarded in `provision.sh`
   ([ADR-018](adr/018-vps-ssh-hardening-non-root-deploy-user.md)).
 
-**Implied code tasks (not yet done — next implementation session):** Caddyfile → explicit
-`tls /etc/caddy/origin.crt /etc/caddy/origin.key`; `docker-compose.yml` → drop the `:80`
-publish, mount the cert dir into caddy; `ci.yml` deploy job → render + `scp` `origin.crt`/
-`origin.key` (mode 600) alongside `.env`; `provision.sh` → create `deploy`, populate
-`authorized_keys`, harden `sshd` (guarded, last), move vault key + `/srv/*` ownership under
-`deploy`; `.env.example` → document `ORIGIN_CERT_PEM`/`ORIGIN_KEY_PEM`. Follow the
-implementation-session loop (independent review before the pause).
+**Code for ADR-017/018 — DONE 2026-07-12 (implementation session; code committed, unpushed).**
+In `../second-brain/`: `deploy/Caddyfile` → explicit `tls /etc/caddy/origin.crt
+/etc/caddy/origin.key` (no ACME); `deploy/docker-compose.yml` → dropped `:80`, mounts the two
+cert files read-only; `.github/workflows/ci.yml` deploy job → renders `origin.crt`/`origin.key`
+(printf, no shell re-parse) and `scp`s them mode 600 alongside `.env`; `deploy/provision.sh` →
+creates the `deploy` user (docker+sudo, owns `/srv/*`), seeds `authorized_keys`, guarded sshd
+hardening as the final step; `deploy/.env.example` documents the two PEM secrets; `.gitignore`
++ `.githooks/pre-commit` make `origin.{crt,key}` untrackable.
+
+- **Independent review (fresh agent, diff vs ADR-016/017/018 + CLAUDE.md invariants): no
+  must-fix findings.** Secrets discipline holds, the cert path triangle (Caddy `tls` ↔ compose
+  mount ↔ scp target) is consistent, hardening is guarded/fail-safe. 6 minor items raised; 5
+  applied (widened the authorized_keys guard regex to cover FIDO2 `sk-`/options-prefixed keys;
+  warn when only the CI key is present; tolerate an sshd reload-command miss; `*.crt` added to
+  the pre-commit block; ADR-017 wording). **Logged follow-up (not blocking):** running the
+  *production* compose by hand before CI renders the cert files makes Docker create dirs at
+  `origin.{crt,key}` — harmless in the CI flow (scp precedes `up`), noted for manual use.
 
 ## M1 — Capture end-to-end (usable week 1)
 
