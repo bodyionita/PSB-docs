@@ -12,7 +12,9 @@ locally (see [08-implementation-plan.md](08-implementation-plan.md) M0 progress)
 per the [session protocol](09-session-protocol.md); remaining M0 work is the live
 provisioning session (VPS/Cloudflare/Supabase/GitHub + `claude login`).
 
-> **Every session starts with `/grilling` and follows [09-session-protocol.md](09-session-protocol.md).**
+> **Planning/replanning sessions start with `/grilling`; implementation sessions build
+> against the approved plan (no grilling). Every session follows
+> [09-session-protocol.md](09-session-protocol.md).**
 
 ## Reading order
 
@@ -46,9 +48,10 @@ Production vault lives on the VPS (see [ADR-001](adr/001-vault-on-vps-with-git-b
 
 If you are an AI (or human) picking this up with no prior context:
 
-0. Follow the [session protocol](09-session-protocol.md): run `/grilling` before any code,
-   record decisions to docs, and **pause before implementation** so the user can continue
-   or respawn. Commit + push docs at every pause.
+0. Follow the [session protocol](09-session-protocol.md): **planning/replanning** sessions
+   `/grilling` first, record decisions to docs, and **pause before implementation** so the
+   user can continue or respawn; **implementation** sessions build against the approved plan
+   (no grilling), pausing between tasks. Commit + push docs at every pause.
 1. Read the docs in the order above; skim every ADR — they are binding.
 2. The code monorepo `../second-brain/` **may not exist yet**. If missing, create it per
    [01-architecture.md](01-architecture.md) layout (`server/`, `web/`, `deploy/`), git-init
