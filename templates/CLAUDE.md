@@ -1,8 +1,13 @@
 # CLAUDE.md — Personal Second Brain (code monorepo)
 
-**Read `../second-brain-docs/` first** (order: README → 00…08 → adr/). The docs repo is
+**Read `../second-brain-docs/` first** (order: README → 00…09 → adr/). The docs repo is
 the contract; this file only enforces it. Do not contradict an ADR without writing a new
 one in the docs repo.
+
+**Every session follows the [session protocol](../second-brain-docs/09-session-protocol.md):**
+run `/grilling` before coding, record decisions to docs, **pause before implementation** and
+between major tasks, and **commit + push docs at every pause**. Commit code freely while
+implementing; **push code only when the user asks**.
 
 ## Hard rules
 
@@ -19,8 +24,11 @@ one in the docs repo.
    client's only server knowledge is the API base URL + OpenAPI-generated types. Anything
    that would break a future 2-repo split is a rejected design.
 5. **Layering (server).** Routers = validation + delegation. Services = business logic.
-   One DB module owns connections. Plain SQL via asyncpg — no ORM. Schema changes only as
-   new numbered files in `migrations/`.
+   One DB module owns connections. **Plain SQL via asyncpg — no ORM.** Schema changes are
+   **Alembic** revisions authored as explicit SQL (`op.execute`/`op.create_table`), no ORM,
+   no autogenerate ([ADR-011](../second-brain-docs/adr/011-alembic-migrations-plain-sql-no-orm.md));
+   applied via `alembic upgrade head` in CI/provisioning, never in the request path.
+   SQLAlchemy is a migration-only dependency and must not leak past `migrations/`.
 6. **Idempotency everywhere.** Reindexing, agent reruns, summary reruns, capture retries
    are always safe: content hashes, upserts, cursors advanced only past materialized work.
 7. **Everything visible** (vision P8). Agent/job work lands in `agent_runs` with a

@@ -4,7 +4,13 @@ This repository is the **single source of truth for product and architecture dec
 It lives outside the code on purpose: the code repo (`../second-brain/`) contains only
 implementation plus a `CLAUDE.md` that points here.
 
-**Status:** design approved 2026-07-12 (grilled decision-by-decision). Implementation not started.
+**Status:** design approved 2026-07-12 (grilled decision-by-decision). **M0 grilled and
+recorded 2026-07-12** (see [ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md),
+[ADR-012](adr/012-m0-implementation-stack.md)); M0 implementation not yet started —
+paused per the [session protocol](09-session-protocol.md) for the user to continue or
+respawn.
+
+> **Every session starts with `/grilling` and follows [09-session-protocol.md](09-session-protocol.md).**
 
 ## Reading order
 
@@ -19,6 +25,7 @@ implementation plus a `CLAUDE.md` that points here.
 | [06-web-app.md](06-web-app.md) | PWA screens, design language (premium, animated), auth UX |
 | [07-infrastructure.md](07-infrastructure.md) | VPS, Docker Compose, Caddy, Cloudflare, CI/CD, secrets, backups |
 | [08-implementation-plan.md](08-implementation-plan.md) | Phased delivery with acceptance criteria |
+| [09-session-protocol.md](09-session-protocol.md) | How every session runs: grill → record → pause → respawn-friendly commits |
 | [adr/](adr/) | Architecture Decision Records — the *why* behind every choice |
 | [templates/CLAUDE.md](templates/CLAUDE.md) | Ready-to-copy implementation rules for the code monorepo |
 
@@ -37,6 +44,9 @@ Production vault lives on the VPS (see [ADR-001](adr/001-vault-on-vps-with-git-b
 
 If you are an AI (or human) picking this up with no prior context:
 
+0. Follow the [session protocol](09-session-protocol.md): run `/grilling` before any code,
+   record decisions to docs, and **pause before implementation** so the user can continue
+   or respawn. Commit + push docs at every pause.
 1. Read the docs in the order above; skim every ADR — they are binding.
 2. The code monorepo `../second-brain/` **may not exist yet**. If missing, create it per
    [01-architecture.md](01-architecture.md) layout (`server/`, `web/`, `deploy/`), git-init

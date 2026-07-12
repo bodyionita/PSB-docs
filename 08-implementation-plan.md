@@ -3,6 +3,8 @@
 **Version:** 2.0 · **Status:** Approved 2026-07-12
 **Rule:** ship in phases; every phase ends usable. A phase starts only when the previous
 one's acceptance criteria pass. Code lives in `second-brain/` (monorepo, ADR-006).
+**Process:** every session runs under [09-session-protocol.md](09-session-protocol.md)
+(grill → record → pause; commit + push docs at pauses).
 
 ## M0 — Foundations
 
@@ -17,6 +19,16 @@ compose, Caddy config, provision.sh, GitHub Actions (lint/test/build + deploy on
 
 **Accept:** provisioned VPS serves the PWA over HTTPS; login works; `/health` green;
 a deliberate Claude-limit simulation makes the chain answer via Nebius and records it.
+
+**M0 build decisions (grilled 2026-07-12 — [ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md),
+[ADR-012](adr/012-m0-implementation-stack.md)):** M0 is split into (a) a **local-first
+build** — complete `server/`/`web/`/`deploy/`, verified to **boot end-to-end locally**
+(dockerized `pgvector` dev DB, `alembic upgrade head`, `/health` green, login/session,
+registry fallback unit-tested with fakes, web builds + shell clicks through) — and (b) a
+later **provisioning session** for the live VPS/Cloudflare/Supabase/GitHub + `claude login`
+that satisfies the remote half of the accept criteria. Stack: **uv**, Alembic + plain SQL
+(no ORM), Argon2id, **pnpm**; `claude-max` implemented but health-guarded. Deploy artifacts
+are written now but dormant until (b).
 
 ## M1 — Capture end-to-end (usable week 1)
 

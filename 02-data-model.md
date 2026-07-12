@@ -56,6 +56,12 @@ Rules ([ADR-005](adr/005-planes-and-atomic-notes.md)):
 Embedding dimension **1536** (`text-embedding-3-small`); model change = deliberate
 migration + full reindex ([ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md)).
 
+**Migrations:** managed by **Alembic**, authored as **explicit SQL** (`op.execute` /
+`op.create_table`) — **no ORM, no autogenerate** ([ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md)).
+Applied explicitly via `alembic upgrade head` in CI / `provision.sh`, never in the request
+path. The `vector` extension and `vector(1536)` columns are created in raw SQL. Query code
+stays plain asyncpg (no ORM). M0 ships revision 001 = the full schema below.
+
 ### Derived index (rebuildable from vault)
 
 **`notes`** — one row per indexed vault file

@@ -10,13 +10,28 @@ consumes only [03-api.md](03-api.md). Strictly decoupled from the server
 This is *not* an admin panel. It is "my memory as an app": **premium, beautiful,
 wow-factor**. Fluid animation is a first-class feature.
 
+**Product name:** **Braindan** (Bogdan + brain). Used in the PWA manifest, page title, and
+login header; kept as a single config constant so it's changeable at zero cost.
+
 - **Motion:** framer-motion throughout — page transitions, staggered feed entries, a
   living/breathing recording visualizer (waveform/orb reacting to voice), streaming-text
   reveal in chat, springy micro-interactions on every touch target. Animations must stay
   60fps on mid-range phones — transform/opacity only, no layout thrash.
-- **Look:** dark-first theme, deep background with subtle gradient/glow accents, glass
-  surfaces, one strong accent color; large expressive type for the capture screen; light
-  theme secondary.
+- **Look:** dark-first, deep background with subtle gradient/glow accents, glass surfaces,
+  one strong accent color per theme; large expressive type for the capture screen.
+- **Themes (switchable, remembered):** a theme switcher offers **5 palettes**; the choice
+  persists in `localStorage` (M0) and may later sync to `app_settings`. Default **Nebula**.
+
+  | # | Theme | Base | Accent |
+  |---|---|---|---|
+  | 1 | **Nebula** (default) | near-black, faint violet haze | violet→indigo `#7C5CFF` |
+  | 2 | **Aurora** | dark teal-slate | cyan/emerald `#2DD4BF` |
+  | 3 | **Ember** | warm charcoal | amber/gold `#F5B041` |
+  | 4 | **Rose Quartz** | dark plum | magenta/pink `#FF5C8A` |
+  | 5 | **Daylight** | off-white | indigo `#5B5BD6` (the light option) |
+
+  Themes are pure token swaps (CSS custom properties); no component knows a hard-coded
+  color. `prefers-reduced-motion` is an independent concern from theme.
 - **Feel:** capture is the hero action — reachable in one tap from anywhere, oversized
   record button, satisfying confirmation animation when a capture lands.
 - Respect `prefers-reduced-motion`.
