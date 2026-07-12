@@ -92,3 +92,9 @@ If you are an AI (or human) picking this up with no prior context:
 - Behavior changes in code **must** be reflected here first or alongside — docs are the contract.
 - New architectural choices get a new ADR; existing ADRs are never edited, only superseded.
 - Docs are written to be directly ingestible by an AI implementer (Claude Code).
+
+## License
+
+Source-available under the **PolyForm Noncommercial License 1.0.0** ([LICENSE.md](LICENSE.md)):
+free for any noncommercial purpose, attribution required (keep the `Required Notice:` line).
+**Commercial use requires a separate paid license** — see [COMMERCIAL.md](COMMERCIAL.md).
