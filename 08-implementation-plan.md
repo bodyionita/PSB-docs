@@ -636,6 +636,18 @@ All replan code is built and committed locally (**not pushed — user's call**):
    with the nudge appearing → note visible in the vault **and GitHub history** → organizer-down
    still yields an Inbox note → one nightly WORM bundle + the weekly drill pass. Then M1 closes.
 
+**Bug found during the live Accept — audio not durable across deploys (rule-2 violation; fixed).**
+A voice capture from before a redeploy could not be retried afterwards. Root cause: `data_path`
+defaults to the dev-relative `../data` and **prod never set `DATA_PATH`**, so the container wrote
+audio to its *ephemeral* `/data` (WORKDIR `/app` → `/app/../data`), **not** the persistent
+`/srv/data` bind mount — so a redeploy wiped un-processed audio and retry found no file. The R2
+audio-sync job reads the same `data_path`, so it was backing up the wrong (ephemeral) directory
+too. Fix: pin **`DATA_PATH=/srv/data`** in `deploy/defaults.env` (+ `.env.example`). **Requires a
+redeploy to take effect**; audio captured before the fix on the ephemeral path is unrecoverable if
+already wiped. Once deployed, audio persists on the R2-synced `/srv/data` volume and survives
+redeploys, so retry works across deploys (matches the recovery matrix in 02-data-model). The user's
+desired invariant ("if it can't process, store it somewhere between deploys") is exactly this fix.
+
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +
