@@ -76,10 +76,24 @@ secrets recorded here (ADR-016 / protocol §Security):
   **and pushed** — `origin/main` at `70f5d63`).
 
 **Remaining M0b:** Step 7 R2 bucket (`braindan-backups`) + API token → Step 8 populate the
-GitHub `production` secrets → Step 9 run `provision.sh` (box prep + vault deploy key) →
+GitHub `production` secrets (now incl. `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM`; `VPS_USER=deploy`) →
+Step 9 run `provision.sh` (box prep + `deploy` user + SSH hardening + vault deploy key) →
 trigger deploy → Step 10 `claude login` → Step 11 Cloudflare **Full (strict)** + verify.
-**Open decisions/gaps:** TLS cert method (Cloudflare **Origin CA** vs Caddy DNS-01) before
-Caddy serves; `provision.sh` SSH-hardening (non-root user, disable root login).
+
+**Open decisions — RESOLVED 2026-07-12 (planning pass, grilled):**
+- **TLS cert method** → **Cloudflare Origin CA**, cert+key CI-rendered via the ADR-016 path
+  ([ADR-017](adr/017-tls-cloudflare-origin-ca.md)).
+- **SSH hardening** → non-root **`deploy`** user (docker+sudo, owns `/srv/*`), root SSH
+  disabled, keys-only, automated + guarded in `provision.sh`
+  ([ADR-018](adr/018-vps-ssh-hardening-non-root-deploy-user.md)).
+
+**Implied code tasks (not yet done — next implementation session):** Caddyfile → explicit
+`tls /etc/caddy/origin.crt /etc/caddy/origin.key`; `docker-compose.yml` → drop the `:80`
+publish, mount the cert dir into caddy; `ci.yml` deploy job → render + `scp` `origin.crt`/
+`origin.key` (mode 600) alongside `.env`; `provision.sh` → create `deploy`, populate
+`authorized_keys`, harden `sshd` (guarded, last), move vault key + `/srv/*` ownership under
+`deploy`; `.env.example` → document `ORIGIN_CERT_PEM`/`ORIGIN_KEY_PEM`. Follow the
+implementation-session loop (independent review before the pause).
 
 ## M1 — Capture end-to-end (usable week 1)
 
