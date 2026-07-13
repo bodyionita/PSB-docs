@@ -1,10 +1,11 @@
 # Web App (PWA)
 
-**Version:** 1.2 · **Status:** Approved 2026-07-13 (1.2 = **M3 chat screen finalized** (reveal render,
-per-conversation picker, cited-only source cards, plane chips, "not in notes") + **Settings → Models**
-routing panel — [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md); 1.1 = M2 adds the
-Search + Admin screens —
-[ADR-022](adr/022-embeddings-self-hosted-nomic.md)/[023](adr/023-semantic-relatedness-graph.md)/[024](adr/024-tag-vocabulary-reuse-and-consolidation.md))
+**Version:** 2.0 · **Status:** Approved 2026-07-13 (2.0 = **mind-graph pivot**
+[ADR-026](adr/026-graph-native-storage-obsidian-removed.md)–[029](adr/029-conversational-ingestion-stance-gate-review-queue.md):
+nodes/graph vocabulary; new **Map** (M7) + **Review** (M6) screens; Activity becomes categorized
+tabs + the **ops console** (M8); chat = M4. The PWA is one of the thin surfaces over the service
+layer — its exclusives are the human affordances: voice (Romanian-capable STT), the map, review,
+settings [ADR-028](adr/028-one-service-layer-mcp-peer-surface.md). 1.x history in git.)
 **Stack:** React + Vite + TypeScript, installable PWA, served statically by Caddy on the
 VPS at **single origin** (`/` = web, `/api` = API — [ADR-013](adr/013-web-stays-on-vps-single-origin.md)),
 consumes only [03-api.md](03-api.md). Strictly decoupled from the server
@@ -51,27 +52,53 @@ login header; kept as a single config constant so it's changeable at zero cost.
 - Recent captures strip with live pipeline status (received → transcribing → … → indexed),
   animated state transitions; failed items expose retry.
 
-### 2. Chat (M3, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
+### 2. Chat (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
 - Conversation list (newest first, `GET /chat/sessions`) + thread view. **List / open / new**
-  only in M3 — rename + delete are deferred (no endpoints yet).
+  only in M4 — rename + delete are deferred (no endpoints yet).
 - Answer rendering is a **client-side reveal animation** over the full non-streaming response
   (true token streaming is post-v1) — respects `prefers-reduced-motion`.
 - **Model picker per conversation** (`GET /chat/models`, real ids + labels) — compact selector in
   the composer; overrides only the *active* model for this thread (fallback + effort inherited from
   the Settings **Chat** group). When the response's `fallback_used` is true, show a discreet banner
   "answered by <model>".
-- Source citations `[n]` rendered as **expandable cards** — only the **cited** notes
-  (`sources[]`), title + plane badge + snippet; tap to expand.
+- Source citations `[n]` rendered as **expandable cards** — only the **cited** nodes
+  (`sources[]`), title + type icon + plane badge + snippet; tap to expand.
 - **Plane-filter chips** in the composer (optional retrieval scoping → `POST /chat` `planes`).
-- **"Not in your notes"** answers render plainly, no source cards.
+- **"Not in your memories"** answers render plainly, no source cards.
+- **"Remember this" (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)):**
+  per-session action triggering immediate distillation (`POST /chat/sessions/{id}/remember`).
 
-### 3. Activity
-- The "what did my brain do" feed (`GET /activity`): agent runs, captures, errors —
-  high-level entries with staggered entrance animations; tap to expand per-note details
-  (`GET /activity/runs/{id}`). Fallback events visibly badged.
+### 3. Activity (categorized tabs — full restructure at M8)
+- "What did my brain do", as **multiple categorized tabs** (agents/jobs · conversations ·
+  manual actions), recording automatic **and** manual events; staggered entrance animations;
+  tap to expand run details (`GET /activity/runs/{id}`). Fallback events visibly badged.
+- **Auto-ingested stance items** ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
+  carry a flag + one-tap "that's wrong — remove".
+- **Ops console (M8):** every job listed by category with schedule + next run (`GET /agents`),
+  a manual **Run** button (no cron-only ghosts), and — while running — **live status + log
+  tail** (`GET /activity/runs/{id}/logs`).
+
+### 3b. Review (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
+- Badge-counted queue of stance-unclear candidates from all conversational sources, grouped by
+  conversation: proposed memory + short excerpt + **agree / disagree / maybe**. Agree ingests
+  through the organizer; disagree discards (logged); maybe stays (no expiry).
+
+### 3c. The Map (M7 — desktop-first)
+- **Neighborhood explorer** over `GET /nodes/{id}/neighbors` (the same service as MCP
+  `traverse`): enter from a search hit or node list; the node renders centered with edges one
+  hop out; **click to expand**. Node shape/icon = type, color = plane; solid edges = canonical
+  (labeled by `rel`), faint edges = derived similarity. Breadcrumb trail back.
+- Phone: degrades to the same node-with-edges as a tappable list (no canvas).
+- Growth path (post-M7): curated overviews — a custom-designed "world/continents" view (to be
+  designed together) — then an aerial whole-graph mode only if a performant, genuinely pleasant
+  rendering is found.
 
 ### 4. Settings
-- **Models section (M3, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):** two
+- **Vocabulary (M3, [ADR-027](adr/027-typed-vocabulary-governance.md)):** node + edge type
+  vocabularies with pending LLM proposals — approve/reject; approval queues the
+  retro-consolidation job.
+- **Connectors (M9):** per-connector config incl. the lookback override (default 6 months).
+- **Models section (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):** two
   routing groups — **Chat** and **Conspect** — each an active-model dropdown + fallback dropdown +
   an **effort selector shown only for models that support it** (Claude yes, Nebius no). Choices +
   effort levels come from `GET /settings` (registry-sourced, never hardcoded); saved via
@@ -81,20 +108,20 @@ login header; kept as a single config constant so it's changeable at zero cost.
   drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)
 - Session management (logout), theme, reduced motion override.
 
-### 5. Search (M2)
-Standalone semantic-search screen over the whole vault (`POST /search`, no LLM call):
-- Query box + **plane-filter chips** (scopes on `notes.planes` membership).
-- Results as **note cards** — title, plane badge, snippet (the best-matching chunk), tags,
-  score — ranked by relevance.
-- **Expand a card → read-only note preview** (`GET /notes/{id}`): the note body read live from
-  the vault, plus its **semantic neighbours** from the `note_links` relatedness graph
-  ([ADR-023](adr/023-semantic-relatedness-graph.md)). No in-app editing (Obsidian/git covers that).
+### 5. Search (M2; retargeted to nodes at M3)
+Standalone semantic-search screen over the whole graph (`POST /search`, no LLM call):
+- Query box + **plane-filter chips** (+ type filter, M3).
+- Results as **node cards** — title, type icon, plane badge, snippet (best-matching chunk),
+  tags, score — ranked by relevance.
+- **Expand a card → read-only node preview** (`GET /nodes/{id}`): body read live from the graph
+  store, plus its **edges** (canonical, labeled by `rel`, and derived similarity) — each a
+  jump-off point (and the entry into the Map from M7). No in-app editing (git covers that).
 
-### 6. Admin (M2)
-A lightweight operations panel (movable later) with a few buttons, each showing live run status:
-- **Reindex** (`POST /admin/reindex`) — async vault rescan + relatedness recompute; shows the
-  run's live counts (`indexed/skipped/deleted/failed`); single-flight (guarded against overlap).
-- **Backup now** (`POST /admin/backup`) — force an immediate vault commit + push.
+### 6. Admin (M2; absorbed into the M8 ops console)
+A lightweight operations panel with a few buttons, each showing live run status:
+- **Reindex** (`POST /admin/reindex`) — async store rescan + edge recompute; shows the run's
+  live counts (`indexed/skipped/deleted/failed`); single-flight (guarded against overlap).
+- **Backup now** (`POST /admin/backup`) — force an immediate store commit + push.
 - **Consolidate tags** (`POST /admin/tags/consolidate`) — two-step tag cleanup: **Propose** →
   review the merge plan → **Apply** ([ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md)).
 

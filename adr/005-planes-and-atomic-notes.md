@@ -1,6 +1,10 @@
 # ADR-005: Life planes as folders; multi-plane membership in frontmatter; split into atomic notes
 
 **Status:** Accepted · 2026-07-12
+**Partially superseded by [ADR-026](026-graph-native-storage-obsidian-removed.md) (2026-07-13):**
+planes survive as node attributes (`plane`/`planes[]` — filtering/scoping truth) and atomic
+splitting survives; **folder = plane is dead** (folders are node types now), and cross-linking is
+typed `edges` frontmatter, not wikilinks/`related:`.
 
 ## Context
 The second brain mirrors a life: professional, personal, family, friends, health, ideas.

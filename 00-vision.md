@@ -1,68 +1,88 @@
 # Personal Second Brain — Vision
 
-**Version:** 2.0 (supersedes v1.0 — architecture pivoted to always-available cloud service)
-**Status:** Approved 2026-07-12
+**Version:** 3.0 (supersedes v2.0 — pivot to a **typed mind graph**, Obsidian removed;
+[ADR-026](adr/026-graph-native-storage-obsidian-removed.md)–[029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
+**Status:** Approved 2026-07-13
 
 ## Vision
 
-A conversational second brain, available anywhere, any time. It captures everything —
-spoken thoughts, written notes, and (via automated agents) my digital conversations —
-organizes it across the planes of my life, and lets me question, explore and understand
-my own history. The goal is not storage; it is an extension of memory and a reflection
-partner: information → knowledge → understanding, compounding over time.
+A mind graph of my life, available anywhere, any time, to me and to my AI tools. It ingests
+everything — spoken thoughts, written notes, ideas, conversations with people across sources,
+and my discussions with LLMs — and holds it **organized, categorised, and mapped with meaningful
+relations**: memories linked to the people they involve, ideas linked to where they came from,
+conversations linked to what they decided. I can question it in chat, feed it and query it from
+any LLM via MCP, and walk it visually as a map of my own mind. The goal is not storage; it is an
+extension of memory and a reflection partner: information → knowledge → understanding,
+compounding over time.
 
 ## What it is, concretely
 
-- A **secure personal web app** (PWA on phone + desktop): talk or type to capture, chat
-  over the whole memory, watch what the system did overnight, choose the AI model that
-  answers.
-- A **Markdown knowledge vault** as the canonical memory, hosted on my own server, fully
-  versioned and recoverable, explorable in Obsidian whenever I want to wander manually.
-- A set of **ingestion agents** running on a schedule that pull in what I said and
-  discussed elsewhere (Slack first; more sources over time), distill it, and file it into
-  the right plane of my life.
-- **Background intelligence**: daily and weekly analysis that surfaces themes, decisions,
-  patterns and open questions — insight, not just summaries.
+- A **typed knowledge graph** as the canonical memory: nodes (`memory`, `person`, `idea`,
+  `conversation`, `insight` — a governed, growing vocabulary) connected by typed edges
+  (`involves`, `about`, `part_of`, `led_to`, `follows`), stored as plain Markdown files in a
+  git-versioned **graph store** on my own server, fully recoverable
+  ([ADR-026](adr/026-graph-native-storage-obsidian-removed.md), [027](adr/027-typed-vocabulary-governance.md)).
+- A **secure personal web app** (PWA on phone + desktop): talk or type to capture (voice in any
+  language, incl. Romanian), chat over the whole memory, review what conversations proposed to
+  remember, watch what the system did, choose the AI model that answers.
+- An **MCP server**: other LLMs (Claude anywhere, other clients) query the graph and feed it
+  with the same discipline as the app — one service layer, thin surfaces
+  ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)).
+- **Conversations become memory**: in-app LLM chats are distilled — anchored on *my* stance,
+  not the model's words — and people-conversations (Slack first) flow in through connectors;
+  anything with unclear stance waits in a review queue for my agree/disagree
+  ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)).
+- **The map**: point-and-click visual exploration of the graph — start anywhere, expand
+  outward, see the constellations around a person or an idea. Desktop-first.
+- **Background intelligence**: reflection over days/weeks/months/years (what went well, what to
+  work on), schedule/goal awareness — agents that produce insight, not just summaries, every
+  run observable live.
 
 ## Planes of life
 
-The vault is organized into **planes** — configurable top-level life areas:
+Nodes carry **planes** — configurable life areas used for scoping, filtering and coloring
+(no longer folders — [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)):
 
 `Professional` · `Personal` · `Family` · `Friends` · `Health` · `Ideas` (initial set; config-driven)
 
-- Every note has exactly one **primary plane** (its folder) and may declare additional
-  planes in frontmatter — membership truth is frontmatter, folders are navigation.
-- One source (e.g. a Slack conversation) may yield **multiple atomic notes** in different
-  planes, cross-linked and sharing a source reference ([ADR-005](adr/005-planes-and-atomic-notes.md)).
-- The classifier may say "don't know" → the note lands in a global `Inbox/`, never guessed.
+- Every node has one primary `plane` + full `planes[]` membership; membership truth is
+  frontmatter ([ADR-005](adr/005-planes-and-atomic-notes.md), the surviving half).
+- One source may yield multiple atomic nodes in different planes, connected by typed edges.
+- The organizer may say "don't know" → the node lands in `inbox/`, never guessed.
 
 ## Principles
 
 | # | Principle | Consequence |
 |---|-----------|-------------|
-| P1 | **The vault is the single source of truth** | Markdown files on the VPS, git-versioned. Database holds only derived/rebuildable index + operational state. |
+| P1 | **The graph store is the single source of truth** | Typed-node Markdown files on the VPS, git-versioned. Database holds only derived/rebuildable index + operational state. |
 | P2 | **Always available, no personal machine required** | Everything runs on an always-on VPS; my laptop being off changes nothing. |
-| P3 | **Frictionless capture** | < 10 seconds from thought to captured, from any device. No titles/tags/folders asked. |
-| P4 | **AI organizes, not me** | Planes, titles, tags, splitting and linking are pipeline work. |
-| P5 | **Agents feed the brain** | New sources = new connectors implementing one contract; the rest of the system doesn't change. |
+| P3 | **Frictionless capture** | < 10 seconds from thought to captured, from any device or any LLM (MCP). No titles/types/planes asked. |
+| P4 | **AI organizes, not me** | Typing, entity resolution, edges, planes, titles, tags and splitting are pipeline work — and the **organizer is the single writer of graph structure**, whatever the surface ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)). |
+| P5 | **Everything feeds the brain** | New sources = new connectors implementing one contract (default 6-month lookback, UI-overridable); my own chats feed it too, stance-gated ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)). |
 | P6 | **Model independence with a preference** | Claude (Max subscription, Agent SDK) is the primary mind; automatic fallback to Nebius; every model call goes through the provider registry. |
 | P7 | **The data is mine and recoverable** | Plain Markdown + git history + managed Postgres. Any component can burn down without memory loss. |
-| P8 | **Transparency** | Everything the system does in the background is visible in the activity feed. |
+| P8 | **Transparency** | Every background job is visible **while it runs** (live status + logs), manually triggerable, and its schedule inspectable — no cron-only ghosts; activity is recorded for automatic *and* manual actions. |
+| P9 | **The brain records my stance, not the model's output** | LLM statements become memory only through my uptake; unclear stance goes to review, never guessed. |
 
 ## Non-goals (v1)
 
 - Multi-user, collaboration, public sharing.
 - Native mobile apps (the PWA is the app).
-- Instagram and other connectors beyond Slack ([ADR-009](adr/009-instagram-connector-deferred.md)) — the contract anticipates them.
-- Editing notes from the web app (Obsidian/git covers manual editing for now).
+- Connectors beyond Slack in v1 ([ADR-009](adr/009-instagram-connector-deferred.md)) — the
+  contract anticipates WhatsApp, Instagram, LLM-chat exports, email, calendar.
+- Editing node bodies from the web app (git covers manual editing for now).
 - Local/offline LLMs.
 
 ## Success criteria
 
-- Capture in < 10s from phone lock screen to confirmation.
+- Capture in < 10s from phone lock screen to confirmation — and equally from any MCP-connected LLM.
 - Any memory findable in seconds via chat, with correct source citations.
-- Slack ingestion runs nightly unattended; a morning glance at the activity feed tells me
-  what was learned.
-- Zero data loss tolerated: raw captures always preserved; vault restorable from git;
+- Ask about a person and get their whole constellation: shared memories, conversations,
+  decisions, ideas — assembled from typed edges, not text search luck.
+- The map answers "what does my mind look like around X?" by pointing and clicking.
+- Conversational ingestion runs unattended; a morning glance at the activity surfaces tells me
+  what was learned, what was skipped, and what awaits my review.
+- Zero data loss tolerated: raw captures always preserved; graph store restorable from git;
   index restorable by reindex.
-- Insights I wouldn't have produced myself: weekly reviews surface patterns across planes.
+- Insights I wouldn't have produced myself: reflection agents surface patterns across planes
+  and timescales.

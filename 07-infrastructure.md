@@ -1,6 +1,10 @@
 # Infrastructure & Operations
 
-**Version:** 1.2 · **Status:** Approved 2026-07-13 (1.2 = M2 Accept adds the `ollama-init` one-shot that auto-pulls the embedding model — no manual `ollama pull`; 1.1 = M2 adds the `ollama` embeddings sidecar — [ADR-022](adr/022-embeddings-self-hosted-nomic.md))
+**Version:** 1.3 · **Status:** Approved 2026-07-13 (1.3 = **mind-graph pivot**
+[ADR-026](adr/026-graph-native-storage-obsidian-removed.md): vault → **graph store** (`/srv/graph-store`,
+`GRAPH_STORE_PATH`) with a **fresh GitHub repo** (old `PSB-vault` archived, its R2 bundles retained);
+Obsidian references removed — renames land with M3. 1.2 = M2 Accept `ollama-init`; 1.1 = `ollama` sidecar
+[ADR-022](adr/022-embeddings-self-hosted-nomic.md))
 **Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [003](adr/003-single-service-on-vps.md) · [007](adr/007-auth-password-session-cloudflare.md) · [022](adr/022-embeddings-self-hosted-nomic.md)
 
 ## Hosting
@@ -41,7 +45,8 @@
 deploy/docker-compose.yml
 ├── caddy      # :443 — serves web/dist statically, proxies /api → api:8000
 ├── api        # FastAPI + scheduler + agents (single app container, ADR-003)
-│              # volumes: /srv/vault (vault git repo), /srv/data (audio files),
+│              # volumes: /srv/graph-store (graph-store git repo — /srv/vault pre-M3),
+│              #          /srv/data (audio files),
 │              #          claude CLI credentials volume
 ├── ollama     # M2 — self-hosted embeddings (nomic-embed-text-v1.5), ADR-022
 │              # OpenAI-compatible /v1/embeddings on the internal network;
@@ -68,17 +73,20 @@ deploy/docker-compose.yml
   class of manual-step gap for good.)*
 - `ENABLE_SCHEDULER=true` on exactly one instance (there is only one).
 
-## Vault backup & history durability (ADR-001 + [ADR-014](adr/014-vault-history-durability.md))
+## Graph-store backup & history durability (ADR-001 + [ADR-014](adr/014-vault-history-durability.md) — machinery unchanged by the pivot)
 
 **Live copy — GitHub (rewritable primary):**
-- `/srv/vault` is a git repo with a private GitHub remote (deploy key, write access).
+- `/srv/graph-store` is a git repo with a private GitHub remote (deploy key, write access) —
+  a **fresh repo** created at M3 ([ADR-026](adr/026-graph-native-storage-obsidian-removed.md);
+  the old `PSB-vault` repo is archived read-only, its R2 WORM bundles retained).
 - Auto commit+push: after every pipeline write batch (debounced ~60s) + a 04:55 sweep +
-  `POST /admin/backup`. Commit messages: `capture: 2 notes` / `slack-ingest: 3 notes` etc.
+  `POST /admin/backup`. Commit messages: `capture: 2 nodes` / `chat-distill: 1 node` etc.
 - The server only fast-forward pushes — **never force/rebase/reset**; on non-fast-forward it
   pulls (merge) and re-pushes (healing GitHub if a client rewound it). gc/reflog pinned:
   `gc.pruneExpire=never`, `gc.reflogExpire=never`, `gc.reflogExpireUnreachable=never`, auto-gc off.
-- `.gitignore` excludes **only** `.obsidian/workspace*` + OS cruft — **not `.trash`, not notes**
-  (indexer `vault_ignore` ≠ git ignore; soft-deleted notes stay committed).
+- `.gitignore` excludes **only** OS cruft — **not `.trash`, not nodes** (indexer `store_ignore`
+  ≠ git ignore; soft-deleted nodes stay committed). The `*.md eol=lf` `.gitattributes` is kept
+  (correct regardless of editor).
 
 **Immutable copy — Cloudflare R2 (WORM, the never-lose guarantee):**
 - Nightly `git bundle --all` (full history, self-contained, `git bundle verify`-able) →
@@ -98,8 +106,9 @@ deploy/docker-compose.yml
 - Nightly sync of `/srv/data` raw inputs (audio) → R2 so un-transcribed input isn't VPS-disk-only.
 
 **Recovery:** `git clone` (GitHub or the R2 bundle) → mount → `POST /admin/reindex`
-(+ `pg_dump` restore for operational history). Occasional manual exploration: clone/pull the
-same repo on laptop/phone, open in Obsidian (obsidian-git, **merge-only**, never force-push).
+(+ `pg_dump` restore for operational history). Occasional manual exploration/editing: clone the
+repo with any editor — any external client must be **merge-only, never force-push**
+(ADR-014 §4, generalized by [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)).
 
 ## CI/CD (GitHub Actions on the code monorepo)
 
@@ -129,7 +138,10 @@ same repo on laptop/phone, open in Obsidian (obsidian-git, **merge-only**, never
   `BRAINDAN_DOMAIN`, `PLANES`, `NEBIUS_CHAT_MODEL`, `CLAUDE_MAX_MODEL`, `CLAUDE_MAX_EFFORT`
   (default `medium`, M1 replan), `STT_CHAIN` (default `groq,openai`), `GROQ_BASE_URL`,
   `GROQ_STT_MODEL` (default `whisper-large-v3`) — all [ADR-020](adr/020-stt-fallback-chain-groq-primary.md)/replan —
-  `SCHEDULER_TZ`, `VAULT_PATH`, `SESSION_COOKIE_SECURE`, `ENVIRONMENT`, `R2_BUCKET`.
+  `SCHEDULER_TZ`, `GRAPH_STORE_PATH` (ex-`VAULT_PATH`, renamed at M3 —
+  [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)), `SESSION_COOKIE_SECURE`,
+  `ENVIRONMENT`, `R2_BUCKET`; **M5 adds the MCP bearer-token secret**
+  ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) to the Actions secrets set.
 - **Deploy renders** `.env = defaults.env + secrets`, `scp`s it to the VPS mode 600, then
   `compose up`. It **also renders the origin TLS files** `deploy/origin.crt` / `origin.key`
   from `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM` and `scp`s them mode 600 for Caddy to mount

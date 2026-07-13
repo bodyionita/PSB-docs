@@ -13,11 +13,16 @@ freely while implementing but **push code only when the user asks**.
 
 ## Hard rules
 
-1. **Vault is truth** (ADR-001). Postgres holds only rebuildable index + operational
-   state; `POST /admin/reindex` must always be able to restore search from the vault.
-2. **Never lose input.** Raw audio/text/connector items are persisted before any model
-   call and never deleted by pipeline code. Model failures degrade (Inbox fallback note),
-   they never drop data.
+1. **The graph store is truth** (ADR-001 + ADR-026). Postgres holds only rebuildable
+   index (`nodes`/`chunks`/`edges`) + operational state; `POST /admin/reindex` must always
+   be able to restore search/traverse from the store. Derived similarity lives in the DB
+   only — never written into files.
+2. **Never lose input.** Raw audio/text/sessions/connector items are persisted before any
+   model call and never deleted by pipeline code. Model failures degrade (`inbox/` fallback
+   node), they never drop data.
+2b. **The organizer is the single writer of graph structure** (ADR-028). Every surface —
+   REST, MCP, connectors, chat distillation — funnels node/edge creation through it;
+   vocabulary is governed (ADR-027), stance is gated (ADR-029), never guessed.
 3. **Provider boundary** (ADR-004). Only `server/…/providers/` may import vendor SDKs
    (`openai`, Agent SDK). Everything else depends on the registry interfaces. Every
    LLM/STT/embedding call goes through the registry; fallback resolution is recorded
@@ -47,8 +52,10 @@ freely while implementing but **push code only when the user asks**.
 
 ## Conventions
 
-- Python 3.12, `pathlib`, vault paths stored `/`-separated relative to `VAULT_PATH`.
-  UTC timestamps in DB; `TZ` only for scheduling and vault-facing formatting.
+- Python 3.12, `pathlib`, store paths `/`-separated relative to `GRAPH_STORE_PATH`.
+  UTC timestamps in DB; `TZ` only for scheduling and store-facing formatting.
+- **Vocabulary (ADR-026):** nodes, edges, the graph, the graph store — never "note"/"vault"
+  in new code, endpoints, or docs (superseded ADRs and old logs excepted).
 - Web: React + Vite + TS strict, TanStack Query for server state, framer-motion for all
   motion (respect `prefers-reduced-motion`), feature-folder structure, design-system
   primitives in `ui/`.

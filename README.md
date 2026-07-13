@@ -4,25 +4,21 @@ This repository is the **single source of truth for product and architecture dec
 It lives outside the code on purpose: the code repo (`../second-brain/`) contains only
 implementation plus a `CLAUDE.md` that points here.
 
-**Status (2026-07-13).** Design approved 2026-07-12 (grilled decision-by-decision).
-**M0 / M0b ACCEPT COMPLETE** — the code monorepo `../second-brain/` is **deployed live at
-`https://braindan.cc`** (PWA over HTTPS, login, `/health` green, Cloudflare TLS Full-strict).
-**M1 (capture end-to-end) ACCEPT COMPLETE** — voice/text capture → organized atomic notes with
-full ADR-014 vault durability; its backup tail closed at the M2 Accept (WORM bundle in R2 +
-integrity-drill green, `/health backups:true`). **M2 (indexing & search) ACCEPT COMPLETE** — all 9
-tasks done (nomic-via-Ollama embeddings, chunker, indexer, `/search` + note preview, the
-materialized `note_links` relatedness graph, the combined nightly `reindex` job + async
-single-flight `POST /admin/reindex`, organizer tag reuse + the two-step
-`POST /admin/tags/consolidate`, the web **Search + Admin tabs** with `GET /planes` +
-`GET /activity/runs/{id}`, and the **live Accept** — paraphrased search, DB-wipe→reindex recovery,
-git-push pickup all verified on prod; four prod issues surfaced + fixed: `ollama-init` model
-auto-pull, the co-capture `## Related` embedding leak, `db-backup` pg_dump, `data-sync` WORM).
-**M3 (chat) GRILLED to build-ready detail (2026-07-13, planning)** — chat pipeline (non-streaming +
-client-side reveal, hybrid grounding, LLM query-condensation, cited-only `[n]`, prompt-driven "not in
-notes", sessions) **+** UI-editable per-group model routing / per-task effort engine
-([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)); no migration (all tables exist).
-**Next: implement M3** (start at task 1 — the model routing engine — in
-[08 §M3](08-implementation-plan.md)).
+**Status (2026-07-13).** **THE MIND-GRAPH PIVOT approved (2026-07-13, grilled decision-by-decision)**
+— the vision is reframed as a **typed mind graph**: Obsidian removed entirely, the note vault
+becomes a **graph store** of typed nodes (`memory`/`person`/`idea`/`conversation`/`insight`) with
+typed edges, governed vocabulary growth, MCP as a peer surface (query + store), conversational
+ingestion with a stance gate + review queue, a visual map, and an ops-console/observability
+contract — **[ADR-026](adr/026-graph-native-storage-obsidian-removed.md) ·
+[027](adr/027-typed-vocabulary-governance.md) · [028](adr/028-one-service-layer-mcp-peer-surface.md) ·
+[029](adr/029-conversational-ingestion-stance-gate-review-queue.md)**; new roadmap **M3–M11** in
+[08](08-implementation-plan.md). **M0 / M1 / M2 ACCEPT COMPLETE** on the pre-pivot note model —
+deployed live at `https://braindan.cc` (capture → organize → index/search, full ADR-014
+durability); that system stays live until M3 lands (fresh start: the old vault is archived, no
+data migration). The previously grilled chat plan ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
+is carried intact to **M4**, retargeted to nodes.
+**Next: grill M3 (graph core) to build-ready detail in a planning session** — entity-resolution
+mechanics, migration 005 DDL, proposal storage, bootstrap + archive procedure ([08 §M3](08-implementation-plan.md)).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
@@ -37,11 +33,11 @@ notes", sessions) **+** UI-editable per-group model routing / per-task effort en
 | Doc | Contents |
 |---|---|
 | [00-vision.md](00-vision.md) | Why the system exists, principles, planes, non-goals, success criteria |
-| [01-architecture.md](01-architecture.md) | High-level architecture: PWA client, VPS service, agents, storage |
-| [02-data-model.md](02-data-model.md) | Vault layout (planes), note frontmatter contract, database schema |
-| [03-api.md](03-api.md) | HTTP API contract (the only seam between web and server) |
-| [04-pipelines.md](04-pipelines.md) | Capture, ingestion, indexing, chat, analysis pipelines + scheduling |
-| [05-connectors.md](05-connectors.md) | Connector contract, Slack connector spec, deferred connectors |
+| [01-architecture.md](01-architecture.md) | High-level architecture: PWA + MCP surfaces, VPS service, agents, graph store |
+| [02-data-model.md](02-data-model.md) | Graph-store layout, typed-node frontmatter contract, database schema |
+| [03-api.md](03-api.md) | HTTP API contract (the web↔server seam) + the MCP tool surface |
+| [04-pipelines.md](04-pipelines.md) | Capture, ingestion, chat-distillation, indexing, chat, agent pipelines + scheduling |
+| [05-connectors.md](05-connectors.md) | Connector contract (6-month lookback, stance gate), Slack spec, deferred connectors |
 | [06-web-app.md](06-web-app.md) | PWA screens, design language (premium, animated), auth UX |
 | [07-infrastructure.md](07-infrastructure.md) | VPS, Docker Compose, Caddy, Cloudflare, CI/CD, secrets, backups |
 | [08-implementation-plan.md](08-implementation-plan.md) | Phased delivery: per-milestone scope, acceptance, build decisions + a **task tracker** (done/open) |
@@ -56,10 +52,12 @@ notes", sessions) **+** UI-editable per-group model routing / per-task effort en
 PersonalSecondBrain/          # workspace folder, not a repo
 ├── second-brain-docs/        # THIS repo — documentation
 ├── second-brain/             # code monorepo: server/ + web/ + deploy/
-└── ObisidanVault/            # local dev vault (scratch, not canonical)
+└── (local graph-store clone) # optional dev scratch; ObisidanVault/ + PSB-vault/ are
+                              # pre-pivot artifacts, archived (ADR-026)
 ```
 
-Production vault lives on the VPS (see [ADR-001](adr/001-vault-on-vps-with-git-backup.md)).
+The production graph store lives on the VPS ([ADR-001](adr/001-vault-on-vps-with-git-backup.md) +
+[ADR-026](adr/026-graph-native-storage-obsidian-removed.md)).
 
 ## Cold start — instructions for a fresh implementation session
 
@@ -77,9 +75,10 @@ If you are an AI (or human) picking this up with no prior context:
    starting at the first milestone whose acceptance criteria don't pass yet. Do not skip ahead.
 4. Anything ambiguous or contradictory: fix the docs first (new ADR if architectural),
    then implement. Never silently diverge from these documents.
-5. Things intentionally NOT decided yet (ask the user when reached): domain name,
-   Cloudflare account setup, Supabase project credentials, Slack app creation,
-   GitHub repo names for vault backup and code.
+5. Things intentionally NOT decided yet (ask the user when reached): the new GitHub repo
+   name for the graph store (created at M3; old `PSB-vault` gets archived then), Slack app
+   creation (M9), MCP token distribution (M5). Already provisioned: domain (`braindan.cc`),
+   Cloudflare, Supabase, code repo.
 
 ## Rules of this repo
 

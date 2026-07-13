@@ -1,6 +1,10 @@
 # ADR-023: Semantic relatedness graph — `note_links` (canonical) + rendered vault wikilink block
 
 **Status:** Accepted · 2026-07-13 (M2 planning)
+**Partially superseded by [ADR-026](026-graph-native-storage-obsidian-removed.md) (2026-07-13):**
+the derived similarity graph in the DB stands (as derived `similar` edges); the rendered
+`sb:related` wikilink block, its churn-gating, and the content-hash exclusion are **deleted** —
+similarity is never written into files anymore.
 **Relates to:** [005 planes & atomic notes](005-planes-and-atomic-notes.md) · [002 Supabase/pgvector](002-supabase-pgvector-for-index.md) · [022 embeddings](022-embeddings-self-hosted-nomic.md) · [014 vault durability](014-vault-history-durability.md) · updates [02-data-model](../02-data-model.md), [03-api](../03-api.md), [04-pipelines](../04-pipelines.md), [08-implementation-plan §M2](../08-implementation-plan.md)
 
 ## Context

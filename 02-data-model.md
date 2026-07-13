@@ -1,223 +1,178 @@
 # Data Model
 
-**Version:** 2.4 · **Status:** Approved 2026-07-13 (2.4 = **M3, no migration**: `app_settings`
-`model_routing` key documented + `chat_messages.model`/`sources` semantics [ADR-025]; all M3 tables
-already exist at revision 001. 2.3 = M2 migration 004: embeddings resized
-1536→**768** for self-hosted nomic [ADR-022], new `notes.embedding` + `note_links` table for the
-relatedness graph [ADR-023]; 2.2 = M1 replan: migration 003 = `capture_interactions` view,
-`agent="capture"` runs [ADR-021]; 2.1 = M1 migration 002: capture follow-up columns; new
-`agent_runs` agent names)
-**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [002](adr/002-supabase-pgvector-for-index.md) · [005](adr/005-planes-and-atomic-notes.md) · [020](adr/020-stt-fallback-chain-groq-primary.md) · [021](adr/021-capture-interactions-agent-runs-logging.md) · [022](adr/022-embeddings-self-hosted-nomic.md) · [023](adr/023-semantic-relatedness-graph.md) · [024](adr/024-tag-vocabulary-reuse-and-consolidation.md)
+**Version:** 3.0 · **Status:** Approved 2026-07-13 (3.0 = **mind-graph pivot**
+[ADR-026](adr/026-graph-native-storage-obsidian-removed.md)/[027](adr/027-typed-vocabulary-governance.md):
+typed-node **graph store** replaces the note vault (fresh start — old vault archived); `nodes`/`edges`
+replace `notes`/`note_links`; wikilinks, `sb:related` blocks and folder-=-plane are deleted. The
+concrete migration (005) is authored at M3 implementation; **exact DDL details are finalized at the
+M3 build-ready grilling**. 2.x history: M3 chat/routing keys, M2 embeddings 768 + relatedness graph,
+M1 capture columns — see git history.)
+**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [002](adr/002-supabase-pgvector-for-index.md) · [005](adr/005-planes-and-atomic-notes.md) (surviving half) · [022](adr/022-embeddings-self-hosted-nomic.md) · [025](adr/025-ui-editable-model-routing-and-per-task-effort.md) · **[026](adr/026-graph-native-storage-obsidian-removed.md) · [027](adr/027-typed-vocabulary-governance.md) · [029](adr/029-conversational-ingestion-stance-gate-review-queue.md)**
 
-## 1. Vault layout
+## 1. Graph store layout
 
 ```
-<VAULT_PATH>/                      # on the VPS; git repo pushed to private GitHub
-├── Inbox/                         # classifier said "don't know" or capture fallback
-├── Professional/
-├── Personal/
-├── Family/
-├── Friends/
-├── Health/
-├── Ideas/
-│   └── 2026-07-12 Second brain connector idea.md
-├── Summaries/
-│   ├── Daily/2026-07-12.md
-│   └── Weekly/2026-W28.md
-└── .obsidian/ …                   # ignored by the indexer
+<GRAPH_STORE_PATH>/                # on the VPS; git repo pushed to private GitHub
+├── memory/                        # node types = top-level folders (config-driven)
+│   └── 2026-07-13--dinner-with-alex--018f3c2e.md
+├── person/
+│   └── alex-marsh--018f4a11.md
+├── idea/
+├── conversation/
+├── insight/
+└── inbox/                         # system folder: organizer-fallback nodes, until re-organized
 ```
 
-- Top-level folders = **planes**, defined in config (`PLANES=` list) — adding a plane is
-  config, not code. `Inbox/` and `Summaries/` are system folders, always present.
-- The indexer indexes every `*.md` except `VAULT_IGNORE` prefixes (default:
-  `.obsidian`, `.trash`, `.git`, `templates`).
+- **Folder = node type** ([ADR-026](adr/026-graph-native-storage-obsidian-removed.md)). The type
+  vocabulary is config + approved additions ([ADR-027](adr/027-typed-vocabulary-governance.md));
+  adding a type is config/approval, not code. `inbox/` is the one system folder — nodes the
+  organizer couldn't classify land there (never guessed) and move out on re-organize.
+- **Planes are attributes, not folders** — `plane`/`planes[]` frontmatter is membership truth
+  (the surviving half of [ADR-005](adr/005-planes-and-atomic-notes.md)).
+- **Identity = frontmatter `id`** (uuid). **Filename = `slug--shortid.md`** (memory nodes prefix
+  the date for readability) — a readable projection, rename-safe; the indexer keys on `id`,
+  never on path.
+- The indexer indexes every `*.md` except `STORE_IGNORE` prefixes (default: `.trash`, `.git`,
+  `templates`).
 
-## 2. Note frontmatter contract
+## 2. Node frontmatter contract
 
-Pipeline-written notes always carry:
+Pipeline-written nodes always carry:
 
 ```yaml
 ---
-id: 018f3c2e-…                  # capture id / ingest item id
-created: 2026-07-12T09:14:03+02:00
-source: voice | text | slack | summary-daily | summary-weekly   # extensible per connector
-source_ref: "slack:C0123/p1720771234.5678"   # opaque locator within the source (optional)
-plane: professional             # primary plane == folder
-planes: [professional, friends] # full membership; superset of `plane`
-tags: [standup, planning]
-related: ["Friends/2026-07-12 Dinner plans with Alex.md"]  # sibling notes from same source
+id: 018f3c2e-…                  # THE identity (capture id / ingest item id)
+type: memory                    # memory | person | idea | conversation | insight | …
+created: 2026-07-13T21:40:00+02:00
+source: voice                   # voice | text | slack | chat | mcp | agent | …
+source_ref: "slack:C0123/p1720771234.5678"   # opaque locator (optional)
+plane: personal                 # primary plane (attribute, not folder)
+planes: [personal, friends]     # full membership; superset of `plane`
+tags: [dinner, catching-up]
+edges:                          # canonical typed edges, target = node id
+  - {rel: involves, to: 018f4a11-…}
+  - {rel: part_of,  to: 018f6c33-…}
 ---
+(Markdown prose body — the memory itself)
 ```
 
-Rules ([ADR-005](adr/005-planes-and-atomic-notes.md)):
-- **Primary plane = folder** (one physical home); **membership truth = `planes:`** —
-  analysis/queries filter on frontmatter, never on folder.
-- One source may produce **several atomic notes** (split per plane); siblings share
-  `source_ref` and cross-link via `related` + `[[wikilinks]]` in the body.
-- **English-only vault (M1, `organizer-v2`).** Pipeline-written note titles, bodies, and tags
-  are always **English** — a non-English capture is *translated* by the organizer, not stored
-  in its original language. (The capture's raw input is preserved verbatim in `captures.raw_text`,
-  and the UI follow-up **nudge** still mirrors the capture's language — it's conversational, not
-  vault content. Existing non-English notes are migrated via `POST /admin/captures/{id}/reorganize`.)
-- **Tags are valid Obsidian tags:** English, lower-case, a single word or hyphenated, **no
-  spaces** (`personal-growth`, not `personal growth`); allowed chars `a–z 0–9 _ - /`, and a
-  tag must contain a letter (purely-numeric dropped). Enforced by `_slugify_tag` in the
-  organizer, not just the prompt.
-- User-created notes may have no frontmatter; every field is optional at read time.
-  Title = H1 if present, else filename stem.
+Rules:
+- **Edge vocabulary** (starter: `involves`, `about`, `part_of`, `led_to`, `follows`) is governed
+  like node types — LLM proposes, user approves, consolidation retrofits
+  ([ADR-027](adr/027-typed-vocabulary-governance.md)). Edges are directional, written on the
+  source node. **Similarity is never written into files** — derived `similar` edges live only
+  in the DB.
+- One source may produce **several atomic nodes** (split per plane/topic); siblings share
+  `source_ref` and are connected by typed edges (no wikilinks, no `related:` field).
+- **English-only store** (organizer translates; raw input preserved verbatim in
+  `captures.raw_text`; conversational UI mirrors the user's language).
+- **Tag slug rules kept on their own merits** (ex-"Obsidian tags"): English, lower-case, single
+  word or hyphenated, no spaces, chars `a–z 0–9 _ - /`, must contain a letter; enforced by
+  `_slugify_tag`.
+- Hand-created nodes may omit any field; every field is optional at read time. Title = H1 if
+  present, else filename stem. Missing `type` = `memory`.
 
 ## 3. Database schema (Supabase Postgres + pgvector)
 
-Embedding dimension **768** (self-hosted **`nomic-embed-text-v1.5`** via Ollama —
-[ADR-022](adr/022-embeddings-self-hosted-nomic.md), superseding the original OpenAI
-`text-embedding-3-small`/1536 in [ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md));
-`embedding_dim` / `embedding_model` are settings, so a provider change = deliberate migration +
-full reindex, never a code edit. **M0 revision 001 created the vector columns at 1536; M2 revision
-004 resizes them to 768** while the index is empty (near-zero cost).
+Embedding dimension **768** (self-hosted `nomic-embed-text-v1.5` via Ollama,
+[ADR-022](adr/022-embeddings-self-hosted-nomic.md)); `embedding_dim`/`embedding_model` are
+settings — provider change = deliberate migration + reindex.
 
-**Migrations:** managed by **Alembic**, authored as **explicit SQL** (`op.execute` /
-`op.create_table`) — **no ORM, no autogenerate** ([ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md)).
-Applied explicitly via `alembic upgrade head` in CI / `provision.sh`, never in the request
-path. The `vector` extension and `vector(1536)` columns are created in raw SQL. Query code
-stays plain asyncpg (no ORM). M0 ships revision 001 = the full schema below; **M1 adds
-revision 002** (`captures.follow_up_question` / `follow_up_answer` — [ADR-019](adr/019-conversational-capture-minimal-in-m1.md))
-and **revision 003** (the `capture_interactions` view — [ADR-021](adr/021-capture-interactions-agent-runs-logging.md);
-a view only, no table/column change).
+**Migrations:** Alembic, explicit SQL, no ORM ([ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md)).
+**M3 (pivot) ships migration 005**: drops the note-model derived tables, creates `nodes`/`edges`,
+renames `captures.note_paths → node_paths` (fresh start — no data migrated, old vault archived).
 
-### Derived index (rebuildable from vault)
+### Derived graph index (rebuildable from the graph store)
 
-**`notes`** — one row per indexed vault file
+**`nodes`** — one row per indexed node file
 | column | type | notes |
 |---|---|---|
-| id | uuid pk | |
-| vault_path | text unique | `/`-separated, vault-relative |
+| id | uuid pk | = frontmatter `id` (identity; paths are projections) |
+| store_path | text unique | `/`-separated, store-relative |
+| type | text | node type (folder) |
 | title | text | |
-| plane | text | primary plane (folder) |
-| planes | text[] | membership from frontmatter (fallback: `{plane}`) |
+| plane / planes | text / text[] | attribute membership (fallback: `{plane}`) |
 | tags | text[] | |
-| source | text null | frontmatter `source` |
-| source_ref | text null | |
-| content_hash | text | sha256 of **frontmatter + body, excluding the `sb:related` machine block** ([ADR-023](adr/023-semantic-relatedness-graph.md)); unchanged ⇒ skip reindex. Excluding the block prevents the graph's own writes from re-triggering reindex; including frontmatter means tag/plane edits still reindex |
-| embedding | vector(768) null | **note-level vector = mean-pool of the note's chunk embeddings** ([ADR-023](adr/023-semantic-relatedness-graph.md)); powers `note_links` k-NN. HNSW, cosine |
-| note_created_at | timestamptz null | frontmatter `created`, else file mtime |
+| source / source_ref | text null | |
+| content_hash | text | sha256 of the **whole file** (no exclusions — the `sb:related` machinery is gone); unchanged ⇒ skip reindex |
+| embedding | vector(768) null | mean-pool of chunk embeddings; powers similar-edge k-NN. HNSW, cosine |
+| node_created_at | timestamptz null | frontmatter `created`, else mtime |
 | indexed_at | timestamptz | |
 
-**`chunks`**
+**`chunks`** — as before, `note_id` → **`node_id`** (fk → nodes, cascade); unique
+`(node_id, chunk_index)`; content + `vector(768)`.
+
+**`edges`** — the graph, both origins in one table
 | column | type | notes |
 |---|---|---|
-| id | uuid pk | |
-| note_id | uuid fk → notes on delete cascade | |
-| chunk_index | int | unique (note_id, chunk_index) |
-| content | text | retrieval cache; canonical text is the file |
-| embedding | vector(768) | HNSW, cosine |
+| src_id / dst_id | uuid fk → nodes, cascade | directional |
+| rel | text | `involves`, `about`, … for canonical; `similar` for derived |
+| origin | text | `canonical` (materialized from frontmatter at index time) \| `derived` (recomputed nightly from embeddings, top-K over cosine ≥ floor — the surviving half of [ADR-023](adr/023-semantic-relatedness-graph.md)) |
+| score | real null | derived edges only |
+| | | pk `(src_id, dst_id, rel, origin)`. Both origins rebuildable: canonical from files, derived from vectors — the whole table is derived-tier |
 
-**`note_links`** — semantic relatedness graph (migration 004, [ADR-023](adr/023-semantic-relatedness-graph.md); derived/rebuildable, recomputed nightly)
-| column | type | notes |
-|---|---|---|
-| note_id | uuid fk → notes on delete cascade | |
-| related_note_id | uuid fk → notes on delete cascade | |
-| score | real | cosine similarity |
-| | | pk `(note_id, related_note_id)`; directional rows (each note's own top-K above `RELATED_MIN_SCORE`). Distinct from co-capture `related:` frontmatter — this is **topical** relatedness. Also projected into each note body as a delimited `sb:related` `## Related notes` wikilink block (Obsidian-visible) |
+### Operational state (not rebuildable — why the DB is managed/backed up)
 
-### Operational state (not rebuildable — this is why the DB is managed/backed up)
+**`captures`** — unchanged except `note_paths → node_paths`; follow-up columns
+([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)) and interaction logging
+([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over.
 
-**`captures`** — user capture pipeline state
-| column | type |
-|---|---|
-| id uuid pk · kind (`voice`\|`text`) · status (`received→transcribing→organizing→written→indexed` \| `failed`) · raw_text · audio_path · note_paths text[] · follow_up_question text null · follow_up_answer text null · error · created_at · updated_at |
+**`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). The
+chat-distiller registers here like any connector ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)).
 
-`follow_up_question` / `follow_up_answer` are added by **migration 002** (M1,
-[ADR-019](adr/019-conversational-capture-minimal-in-m1.md)): a single "dig deeper" nudge
-generated after a successful organize; answering re-organizes and **replaces** the capture's
-notes. Question-present + answer-absent = "nudge pending" (no separate status).
+**`agent_runs`** — unchanged shape; agent names grow with the roadmap (`chat-distill`,
+`consolidate`, `reflection`, …). Plus (M8 ops console) a **schedule registry** surface: each
+registered job's cadence + next-run time is queryable (implementation detail at M8 grilling).
 
-**`connector_cursors`** — incremental sync position per connector
-| column | type | notes |
-|---|---|---|
-| connector | text pk | e.g. `slack` |
-| cursor | jsonb | connector-defined (e.g. per-channel `latest_ts`) |
-| updated_at | timestamptz | |
+**`review_queue`** (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)) —
+stance-unclear distillation candidates: proposed memory + conversation excerpt + source/
+source_ref + status (`pending` | `agreed` | `discarded`), no expiry. Exact DDL at the M6 grilling.
 
-**`agent_runs`** — powers the activity feed (high-level entry + expandable details)
-| column | type | notes |
-|---|---|---|
-| id | uuid pk | |
-| agent | text | `capture` (M1, [ADR-021](adr/021-capture-interactions-agent-runs-logging.md)), `slack-ingest`, `daily-summary`, `weekly-review`, `reindex`, `vault-backup`, `integrity-drill`, `db-backup`, `data-sync` (last three added M1, [ADR-014](adr/014-vault-history-durability.md)) |
-| status | text | `running` \| `success` \| `partial` \| `failed` |
-| started_at / finished_at | timestamptz | |
-| model_used | text null | resolved model after fallback |
-| fallback_used | boolean | true ⇒ primary (Claude) was unavailable/limited |
-| summary | text | human-readable one-liner for the feed |
-| details | jsonb | per-item events: notes written, items skipped, errors |
-| error | text null | |
+**Vocabulary proposals** ([ADR-027](adr/027-typed-vocabulary-governance.md)) — pending node/edge
+type proposals (name, definition, examples, status). Table vs `app_settings` decided at the M3
+grilling; approved vocabulary lives in config + `app_settings`.
 
-**`capture_interactions`** (view, migration 003, [ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) —
-flattens `agent_runs` rows where `agent='capture'` into readable columns for the Supabase
-dashboard / MCP and the future M4 activity feed: `capture_id, kind, stt_provider, stt_fallback,
-organize_model, inbox_fallback, fallback_used, status, error, started_at, duration_ms`. Read-only
-projection over `agent_runs.details`; no data of its own. (`inbox_fallback` = organize chain was
-exhausted and the capture degraded to an Inbox note — a *success*, not a failure; see
-[ADR-021](adr/021-capture-interactions-agent-runs-logging.md).)
+**`summaries`** — retired at the pivot; daily/weekly output becomes `insight` nodes produced by
+the reflection agent (M10). (Table kept until M10 replaces it; no new writers.)
 
-**`summaries`** — daily/weekly analysis registry
-| period (`daily`\|`weekly`) + period_start date, unique · content · note_path · created_at |
+**`chat_sessions` / `chat_messages`** — unchanged ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):
+`chat_messages.model` records the resolved model; `sources` = cited **nodes** (renumbered).
+Chat-distiller cursor tracks session activity for nightly distillation.
 
-**`chat_sessions`** / **`chat_messages`** (M3 chat, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
-| sessions: id uuid pk · title (first-message truncation in M3; LLM titles = fast-follow) · created_at · last_model text |
-| messages: id uuid pk · session_id fk · role (`user`\|`assistant`) · content · model text null · sources jsonb null · created_at |
+**`auth_sessions`** — unchanged. **MCP bearer token**: stored as a hash in env/settings
+(single-user), revocable independently ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)).
 
-`chat_messages.model` on an assistant row = the **resolved** chat model (`model_used` after fallback) —
-this is where the deferred M0 clause's "records it" lands; chat does **not** write `agent_runs`.
-`sources` = the **cited** notes only (renumbered `[1..m]`, matching the `[n]` in `content`). Existing
-tables (revision 001) — **M3 adds no migration**.
-
-**`auth_sessions`** — login sessions (httpOnly cookie → hashed token)
-| id uuid pk · token_hash text unique · user_agent · created_at · last_seen_at · expires_at · revoked boolean |
-
-**`app_settings`** — UI-editable runtime settings (key text pk · value jsonb · updated_at)
-Namespaced keys. **M3 ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):**
-`model_routing` = `{ chat: { active, fallback, effort: {<provider>: level} }, conspect: {…} }` —
-per-group active/fallback model + per-provider effort; env config (`chat_chain`/`distill_chain`/
-`CLAUDE_MAX_EFFORT`) is the default when a field is unset. Read (cached) by `ModelRoutingService` in
-the request path — a bad/unknown model id degrades to the config default chain, never a hard failure.
+**`app_settings`** — unchanged shape; keys grow (`model_routing` [ADR-025], vocabulary,
+connector lookback overrides — default **6 months** per connector, UI-overridable).
 
 ## 4. Chunking policy
 
-Split on headings, then paragraphs; target `CHUNK_SIZE` (1200 chars), overlap
-`CHUNK_OVERLAP` (200) on hard splits. **For chunking/embedding, the frontmatter, the `sb:related`
-machine block, *and* the M1 co-capture `## Related` wikilink section are stripped**
-([ADR-023](adr/023-semantic-relatedness-graph.md)) — a note's *embedded* identity is its human
-content only, **never links to other notes** (embedding a sibling's title/path couples co-captured
-notes in cosine search — an M2-Accept finding, 2026-07-13). Only a *pure* `## Related` + `- [[…]]`
-bullet list is stripped, never a prose section; the co-capture link survives in the `related:`
-frontmatter. **`content_hash` differs deliberately:** it covers **frontmatter + body minus the
-`sb:related` block** (§3) — the machine block is excluded (so the graph's own writes never
-re-trigger a reindex) but frontmatter **and the co-capture section are *kept*** (so tag/plane and
-sibling edits still reindex). So only the `sb:related` block is stripped from both paths;
-frontmatter and the co-capture `## Related` list are stripped from the embed path but not the hash.
-The embedded text is `"search_document: {title}\n\n{chunk}"`
-and search queries are embedded as `"search_query: {q}"` — the **asymmetric nomic task prefixes are
-mandatory** ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)), or retrieval quality drops.
-`notes.embedding` = mean-pool of the note's chunk vectors (no extra embed call).
+Split on headings, then paragraphs; target `CHUNK_SIZE` (1200 chars), overlap `CHUNK_OVERLAP`
+(200) on hard splits. **The embed path strips frontmatter only** — a node's embedded identity is
+its human prose; edges live in frontmatter, so "never embed links" is now structural (no
+special-case stripping, the M2 `## Related`/`sb:related` rules are gone). `content_hash` covers
+the whole file. Embedded text = `"search_document: {title}\n\n{chunk}"`; queries =
+`"search_query: {q}"` — the asymmetric nomic prefixes stay **mandatory**
+([ADR-022](adr/022-embeddings-self-hosted-nomic.md)). `nodes.embedding` = mean-pool of chunk
+vectors.
 
 ## 5. Rebuild & recovery matrix
 
-Durability tiers ([ADR-014](adr/014-vault-history-durability.md)): the **vault is the only
-never-lose tier** (memory content); operational state gets a cheap second independent copy
-and may restore-to-last-nightly. All memory content reaches the vault regardless (every
-capture ends as a note — organized, or an Inbox fallback), so total DB loss never loses memory.
+Durability tiers ([ADR-014](adr/014-vault-history-durability.md) — machinery unchanged by the
+pivot): the **graph store is the only never-lose tier**; operational state gets a second
+independent copy and may restore-to-last-nightly. Every capture ends as a node (organized or
+`inbox/` fallback), so total DB loss never loses memory.
 
 | Loss | Recovery | Tier |
 |---|---|---|
-| Derived tables (`notes`,`chunks`) | `POST /admin/reindex` from vault | rebuildable |
-| Operational state (`agent_runs`, `chat_*`, `captures`, cursors, settings) | Supabase backup, or nightly `pg_dump` in R2 (second independent copy) → restore-to-last-nightly | operational (not never-lose) |
-| Whole database | as above; worst case reindex restores search/chat, losing at most the current day's operational log | operational |
-| Vault on VPS | `git clone` from GitHub **or** `git clone` the latest **R2 WORM bundle** (`git bundle --all`, object-locked) | **never-lose** |
-| Vault history rewritten (force-push/rebase) on GitHub | Restore from R2 WORM bundle; server heals GitHub by merge-push (never resets to remote) | **never-lose** |
-| GitHub account/repo lost or taken down | R2 WORM bundle holds full history; re-create remote and push | **never-lose** |
-| Un-transcribed audio (`/srv/data`) | Nightly-synced to R2 (no longer VPS-disk-only) | input-safety |
-| Whole VPS | Reprovision (scripted, [07-infrastructure.md](07-infrastructure.md)) + clone vault (GitHub/R2) + `pg_dump` restore + reindex | mixed |
+| Derived tables (`nodes`,`chunks`,`edges`) | `POST /admin/reindex` from the store | rebuildable |
+| Operational state (`agent_runs`, `chat_*`, `captures`, `review_queue`, cursors, settings) | Supabase backup, or nightly `pg_dump` in R2 → restore-to-last-nightly | operational |
+| Whole database | as above; worst case reindex restores search/traverse/chat, losing at most the day's operational log + pending review items (re-derivable from persisted sessions) | operational |
+| Graph store on VPS | `git clone` from GitHub **or** the latest R2 WORM bundle | **never-lose** |
+| Store history rewritten on GitHub | Restore from R2 WORM bundle; server heals GitHub by merge-push | **never-lose** |
+| GitHub account/repo lost | R2 WORM bundle holds full history; re-create remote and push | **never-lose** |
+| Un-transcribed audio (`/srv/data`) | nightly-synced to R2 | input-safety |
+| Whole VPS | reprovision ([07](07-infrastructure.md)) + clone store + `pg_dump` restore + reindex | mixed |
 
-Recovery is **verified**, not assumed: a weekly integrity drill (`git bundle verify` +
-fingerprint check — HEAD sha, monotonic commit count, file count — on both R2 and GitHub)
-runs on the VPS and degrades `/health` on failure ([ADR-014](adr/014-vault-history-durability.md) §6).
+Recovery is verified: the weekly integrity drill (bundle verify + fingerprint check on R2 and
+GitHub) degrades `/health` on failure ([ADR-014](adr/014-vault-history-durability.md) §6).
