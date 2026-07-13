@@ -17,6 +17,11 @@ deployed live at `https://braindan.cc` (capture → organize → index/search, f
 durability); that system stays live until M3 lands (fresh start: the old vault is archived, no
 data migration). The previously grilled chat plan ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
 is carried intact to **M4**, retargeted to nodes.
+**ADR-033 (2026-07-13): `obsidian-second-brain` review adopted in full** — identity capsule,
+contradiction sweep, freshness stamps + staleness interviews, reflection enrichments (emerge
+taxonomy/challenge/belief timeline), graph-health, research-via-MCP pattern, **Telegram capture
+promoted into M9** (pull-forward eligible); storage-model ideas explicitly rejected (safeguarded
+in the ADR).
 **Prior-art research pass adopted in full (2026-07-13, [ADR-032](adr/032-prior-art-adoptions.md))** —
 field survey validated the design (several areas ahead of SOTA); adoptions: edge `until`,
 exact-alias short-circuit, observation-style profiles, day/night effort, RRF hybrid retrieval +

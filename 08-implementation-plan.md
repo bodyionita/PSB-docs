@@ -1,6 +1,11 @@
 # Implementation Plan
 
-**Version:** 3.3 · **Status:** Approved 2026-07-13 (3.3 = **prior-art research pass adopted in full**
+**Version:** 3.4 · **Status:** Approved 2026-07-13 (3.4 = **ADR-033 external inspirations adopted
+in full** (obsidian-second-brain review): identity capsule (M4/M5), contradiction sweep (M6),
+freshness stamps + staleness interviews (M3-profiles/M8/M10), reflection enrichments (M10),
+graph-health (M8), research-via-MCP pattern (M5), **Telegram capture promoted into M9 as a
+must-have ingestion surface** (pull-forward eligible); rejections safeguarded in the ADR.
+3.3 = **prior-art research pass adopted in full**
 ([ADR-032](adr/032-prior-art-adoptions.md)): edge `until`, resolution short-circuit + entropy
 guard, observation profiles, day/night effort, RRF + English condensation + recency + expansion
 guards, MCP pagination + `build_context`, M6 augment/re-split/salience, M7 rendering guidance,
@@ -111,9 +116,10 @@ nothing left to implementer discretion:
   `stance-candidate` M6; `dedup-proposal` M6+): one lifecycle, items decidable in place;
   minimal admin Review list now, polished UX M6. Vocab proposals = a queue kind (no table).
 - **Entity lifecycle:** thin canonical hubs + **derived profiles** (nightly for touched
-  entities, DB-side, embedded, in `GET /nodes/{id}`; **format = categorized observation lines**,
-  ADR-032); currency via edge `since` **+ optional `until`** (close a superseded relation —
-  invalidate, never delete; ADR-032).
+  entities, DB-side, embedded, in `GET /nodes/{id}`; **format = categorized observation lines
+  carrying `(as of …)` stamps** — ADR-032/[033](adr/033-external-inspirations-obsidian-second-brain.md));
+  currency via edge `since` **+ optional `until`** (close a superseded relation — invalidate,
+  never delete; ADR-032).
 - **Merge + backfill:** `POST /admin/entities/merge` propose→apply, immediate apply after a
   forced commit+push; permanent `merged_into` tombstones; nightly backfill scan.
 - **Contract:** `occurred`/`occurred_end` partial-ISO (ranges in DB, `occurred ?? created`,
@@ -166,6 +172,10 @@ function **PPR-swappable**). (b) **hybrid FTS leg** — Postgres `tsvector` ⊍ 
 by RRF (rank-based, k=60)**, degenerate-signal suppression, FTS→0 on non-English raw queries.
 (c) **condensation renders the query in English** (one prompt line). (d) **mild recency prior**
 on `occurred ?? created`. (e) **temporal filters** (`as_of`/date-window) on `/search`.
+(f) **identity capsule** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)) —
+the derived ~200-token "who I am / current state" preamble (sleep-cycle-refreshed) injected
+into the chat system prompt. (g) **challenge mode** — a chat preset that argues against an idea
+using the user's own cited history (ADR-033 #4).
 LLM-free at read time throughout — no reranker, no retrieval-loop LLM (ADR-032 rejections).
 
 **Accept:** questions over known graph content answered with correct `[n]` node citations on
@@ -187,8 +197,13 @@ registry fallback unit tests).
 (+temporal filters), `get_node`, `traverse` (center+depth+rel, **cursor-paginated**),
 `build_context` (get_node+traverse in one round-trip — [ADR-032](adr/032-prior-art-adoptions.md)),
 `list_planes`/`list_types`, `capture` (full organizer pipeline, `source: mcp`, burst-queued).
+`build_context` level-0 serves the **identity capsule** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)).
 No logic of its own; smallest milestone, biggest compounding effect (external LLMs start
-feeding the brain early).
+feeding the brain early). **Canonical usage pattern documented at M5 (ADR-033 #6):
+research-via-MCP** — the calling LLM queries the graph for what's known, finds gaps, does
+external research on its own plan, submits the distillate via `capture` with source refs
+(zero marginal cost; a server-side research connector is backlog only if this proves
+insufficient).
 **Accept (draft):** from a Claude conversation on any device: a `capture` lands as organized
 nodes; `search`+`get_node`+`traverse` answer a question about known graph content; token
 revocation locks it out; MCP-driven runs visible in activity.
@@ -217,8 +232,11 @@ re-distillation. (b) **review-queue ergonomics** — salience score, batch actio
 queue** — near-duplicate candidates (high cosine + shared entities + overlapping `occurred`)
 become "possible duplicate — merge / keep / link" review items, using M3's merge primitive.
 (d) **inbox drainer** — a nightly job re-attempts organization of `inbox/` nodes with the
-now-richer entity registry. Umbrella framing for the whole 03:00–05:00 roster: **the sleep
-cycle** (capture fast by day; consolidate, link, dedup, drain, reflect by night).
+now-richer entity registry. (e) **contradiction sweep** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md) #2)
+— nightly reconciler: clear supersession → close the old edge with `until` + profile refresh +
+feed flag (one-tap revert); ambiguous → review kind **`contradiction`**. Umbrella framing for
+the whole 03:00–05:00 roster: **the sleep cycle** (capture fast by day; consolidate, link,
+dedup, reconcile, drain, reflect by night).
 
 ## M7 — The map (neighborhood explorer)
 
@@ -244,21 +262,31 @@ triggerable by category, **live status + log tail while running**
 (`GET /activity/runs/{id}/logs`), schedule registry (cadence + next run, `GET /agents`);
 activity becomes **categorized tabs** (agents/jobs · conversations · manual actions) recording
 automatic and manual events; merged `GET /activity`.
+**+ ADR-033 #5: a `graph-health` job + panel card** — orphan nodes, `inbox/` depth,
+pending-review aging, memories missing `occurred`, alias-less entities, tombstone integrity,
+freshness flags (stale `(as of …)` observations).
 **Accept (draft):** every registered job (9+ already) is listed with schedule + next run and can
 be run now; a running reindex streams its log live; a review verdict and a manual backup both
 appear in the right activity tab.
 
 - [ ] M8 grilled to build-ready detail · tasks defined there
 
-## M9 — Slack connector (the old M4, stance-gated)
+## M9 — Connectors: Slack (stance-gated) + Telegram capture
 
-**Scope.** Connector contract implementation for Slack ([05-connectors.md](05-connectors.md)):
-user-token fetch/normalize, shared stance-gated distillation into typed nodes
-(`conversation`/`person` edges), cursors, **6-month default lookback** (UI-overridable), volume
-guard.
+**Scope.** (a) **Slack** connector ([05-connectors.md](05-connectors.md)): user-token
+fetch/normalize, shared stance-gated distillation into typed nodes (`conversation`/`person`
+edges), cursors, **6-month default lookback** (UI-overridable), volume guard.
+(b) **Telegram capture** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md) #7 —
+**must-have ingestion surface**, user 2026-07-13): a private bot polled **from the VPS**;
+voice/text messages enter the **same capture pipeline** (STT chain, organizer, never-lose;
+`source: telegram`). **Small and independent — depends only on the M3 capture pipeline and may
+be pulled forward ahead of the rest of M9 at the user's call.** Open question for its grilling:
+**image capture** (vision-routed photos — new scope, decide there; ADR-033 references the
+prior-art implementation).
 **Accept (draft):** nightly run distills yesterday's Slack into plane-correct, entity-resolved
 nodes; unclear-stance items appear in Review; rerun after forced failure resumes from cursor
-without duplicates; feed shows the run.
+without duplicates; feed shows the run; **a voice note sent to the Telegram bot from the phone
+becomes organized nodes with no PWA open**.
 
 - [ ] M9 grilled to build-ready detail · tasks defined there
 
@@ -268,6 +296,11 @@ without duplicates; feed shows the run.
 — what went well, what to work on, improvements — producing `insight` nodes through the
 organizer; **absorbs the old daily-summary/weekly-review** (retire `summaries`); **PWA push
 notifications** (morning digest) land here.
+**+ ADR-033 #3/#4 enrichments:** the emerge taxonomy (recurring themes 3+ never named ·
+energize-vs-drain patterns · unstated implications · emerging directions; prompt law: *"surface
+what they haven't named yet, don't restate what they know"*) · **belief timeline** ("how my view
+of X evolved" — `occurred`-ordered memories + `until`-closed edges) · **staleness interviews**
+("Is Alex still at Google?" — from stale `(as of …)` profile observations) · catch-up on demand.
 **Accept (draft):** the morning after a captured day: a push notification links to a fresh
 reflection `insight` retrievable via chat; weekly/monthly views on demand; reruns overwrite.
 
