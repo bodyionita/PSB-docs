@@ -142,14 +142,18 @@ nothing left to implementer discretion:
 - [x] 1 — migration 005 + config/vocab plumbing (`GRAPH_STORE_PATH/REPO`, `NODE_TYPES`,
       `EDGE_RELS`, `ENTITY_MATCH_MIN_CONF`, burst/profile settings) — done 2026-07-13,
       review clean, verified vs real pgvector; commit `f2b9549` (log: task 1)
-- [ ] 2 — graph-store service + code rename (store writer: type folders, slug+short-id,
-      new frontmatter contract; bootstrap; ADR-014 machinery untouched)
-- [ ] 3 — organizer v3 (typed nodes, occurred, entity resolution vs alias index, edges
-      conf/since, hygiene, vocab proposals, organizer_version, English-only carried)
+- [x] 2 — graph-store service + code rename (store writer: type folders, slug+short-id,
+      new frontmatter contract; bootstrap; ADR-014 machinery untouched) — done 2026-07-13
+      (**combined 2+3+5**, user's call), review clean, commit `2798412`+`c54fed2` (log: task 2)
+- [x] 3 — organizer v3 (typed nodes, occurred, entity resolution vs alias index, edges
+      conf/since, hygiene, vocab proposals, organizer_version, English-only carried) — done
+      2026-07-13 (combined with 2+5); review clean; **fuzzy + alias-accretion are follow-ups**
 - [ ] 4 — review queue (table + service + minimal admin Review list; resolution materializes
-      pending edges; vocab-approve queues consolidation)
-- [ ] 5 — indexer/search retarget (id-keyed, whole-file hash, canonical-edge materialization,
-      derived `similar` edges, `types` filter, `GET /nodes/{id}` with edges+profile+tombstone)
+      pending edges; vocab-approve queues consolidation) — **write path done in task 3**
+      (`PgReviewQueue.enqueue` for `entity-ambiguity`/`vocab-proposal`); read/resolve UI open
+- [x] 5 — indexer/search retarget (id-keyed, whole-file hash, canonical-edge materialization,
+      derived `similar` edges, `types` filter, `GET /nodes/{id}` with edges+tombstone) — done
+      2026-07-13 (combined with 2+3); `profile` stubbed null (job = task 6)
 - [ ] 6 — entity services (merge propose/apply + tombstones, backfill scan job, profile-refresh
       job)
 - [ ] 7 — vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, consolidation job)

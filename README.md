@@ -32,9 +32,12 @@ sync-full organize + MCP burst queue; alias/disambig entity substrate with bound
 kind-generic review queue in M3; thin hubs + derived profiles; merge/backfill; `occurred`;
 9 types / 6 edge rels; edge `{conf,since}` + `organizer_version`; injection hygiene; repo
 **`PSB-graph`** with a zero-manual-VPS cutover. M4/M6 addenda ratified (re-check at kickoff).
-**M3 in progress: task 1 done** (migration 005 + config, 2026-07-13, review clean —
-[08-logs/m3.md](08-logs/m3.md)). **Next: task 2** — graph-store service + code rename
-([08 §M3](08-implementation-plan.md)).
+**M3 in progress: tasks 1 + 2 + 3 + 5 done** (2026-07-13; tasks 2/3/5 combined by user call —
+store writer + rename + bootstrap, organizer v3 + entity resolution, indexer/search retarget; 240
+tests green, real-DB smoke passed, independent review clean — [08-logs/m3.md](08-logs/m3.md)).
+**Next: task 4** — review-queue read/resolve surface (write path already in; then 6 entity services,
+7 vocab surface, 8 web, 9 deploy, 10 live Accept). One review follow-up to wire before Accept:
+cross-capture **alias accretion** (Alex/Alexandru → one node). Code committed, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
