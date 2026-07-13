@@ -21,7 +21,8 @@ is carried intact to **M4**, retargeted to nodes.
 contradiction sweep, freshness stamps + staleness interviews, reflection enrichments (emerge
 taxonomy/challenge/belief timeline), graph-health, research-via-MCP pattern, **Telegram capture
 promoted into M9** (pull-forward eligible); storage-model ideas explicitly rejected (safeguarded
-in the ADR).
+in the ADR). **ADR-034: round-2 repo review** — **evidence-tiered profiles** (stub/snapshot/full
+by graph degree) into the M3 profile job; ecosystem references saved; the rest skipped.
 **Prior-art research pass adopted in full (2026-07-13, [ADR-032](adr/032-prior-art-adoptions.md))** —
 field survey validated the design (several areas ahead of SOTA); adoptions: edge `until`,
 exact-alias short-circuit, observation-style profiles, day/night effort, RRF hybrid retrieval +

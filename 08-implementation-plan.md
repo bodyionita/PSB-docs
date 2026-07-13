@@ -1,6 +1,10 @@
 # Implementation Plan
 
-**Version:** 3.4 · **Status:** Approved 2026-07-13 (3.4 = **ADR-033 external inspirations adopted
+**Version:** 3.5 · **Status:** Approved 2026-07-13 (3.5 = [ADR-034](adr/034-external-inspirations-round-2-profile-tiering.md)
+round-2 review (3 repos): **evidence-tiered profiles** adopted into the M3 profile job (stub/
+snapshot/full by graph degree — caps nightly LLM spend); awesome-second-brain + COG two-way-sync
+saved as grilling references; NicholasSpisak variant skipped outright.
+3.4 = **ADR-033 external inspirations adopted
 in full** (obsidian-second-brain review): identity capsule (M4/M5), contradiction sweep (M6),
 freshness stamps + staleness interviews (M3-profiles/M8/M10), reflection enrichments (M10),
 graph-health (M8), research-via-MCP pattern (M5), **Telegram capture promoted into M9 as a
@@ -117,7 +121,9 @@ nothing left to implementer discretion:
   minimal admin Review list now, polished UX M6. Vocab proposals = a queue kind (no table).
 - **Entity lifecycle:** thin canonical hubs + **derived profiles** (nightly for touched
   entities, DB-side, embedded, in `GET /nodes/{id}`; **format = categorized observation lines
-  carrying `(as of …)` stamps** — ADR-032/[033](adr/033-external-inspirations-obsidian-second-brain.md));
+  carrying `(as of …)` stamps** — ADR-032/[033](adr/033-external-inspirations-obsidian-second-brain.md);
+  **evidence-tiered by graph degree** — stub (no LLM) → snapshot (3+) → full profile (8+, config
+  `PROFILE_TIER_*`) — [ADR-034](adr/034-external-inspirations-round-2-profile-tiering.md));
   currency via edge `since` **+ optional `until`** (close a superseded relation — invalidate,
   never delete; ADR-032).
 - **Merge + backfill:** `POST /admin/entities/merge` propose→apply, immediate apply after a
@@ -309,7 +315,10 @@ reflection `insight` retrievable via chat; weekly/monthly views on demand; rerun
 ## M11 — Life-manager agent
 
 **Scope (deliberately thin — full grilling session required before build).** Schedule, tasks,
-goals across professional/personal planes. Open questions parked for its planning session:
+goals across professional/personal planes. Grilling references:
+[ADR-034](adr/034-external-inspirations-round-2-profile-tiering.md) (COG's pre-approved
+two-way external sync — input to "advisor vs state-manager"). Open questions parked for its
+planning session:
 `task`/`goal` node types? calendar integration? advisor vs state-manager?
 
 - [ ] M11 planning session (full grill) · everything else defined there
