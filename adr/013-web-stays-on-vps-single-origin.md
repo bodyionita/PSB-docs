@@ -1,6 +1,8 @@
 # ADR-013: Web PWA stays on Caddy-on-VPS, single origin (Vercel/Pages/Netlify rejected)
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** read
+"vault" as **graph store**; decision unchanged.
 **Relates to:** [003 single-service-on-VPS](003-single-service-on-vps.md) · [006 monorepo-decoupled](006-monorepo-with-strict-server-web-decoupling.md) · [007 auth-cookie](007-auth-password-session-cloudflare.md)
 
 ## Context

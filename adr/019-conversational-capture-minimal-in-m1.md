@@ -1,6 +1,9 @@
 # ADR-019: Conversational capture (minimal) in M1 — one follow-up nudge, replace-on-answer
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** the
+nudge + replace-on-answer mechanism survives the mind-graph pivot — read "notes" as **nodes**
+(`captures.note_paths` → `node_paths` at M3).
 **Relates to:** [005 planes/atomic notes](005-planes-and-atomic-notes.md) · [004 provider registry](004-provider-registry-claude-primary-nebius-fallback.md) · [014 vault durability](014-vault-history-durability.md) · updates [04-pipelines](../04-pipelines.md), [03-api](../03-api.md), [02-data-model](../02-data-model.md), [08-implementation-plan §M1](../08-implementation-plan.md)
 **Supersedes scope of:** the "conversational capture" v2-backlog item (08) — a **minimal** form is pulled into M1; the full multi-turn interviewer stays v2.
 

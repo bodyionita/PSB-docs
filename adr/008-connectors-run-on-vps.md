@@ -1,6 +1,10 @@
 # ADR-008: Ingestion agents run on the VPS under one connector contract
 
 **Status:** Accepted · 2026-07-12 · (supersedes the Supabase-Edge-Functions direction)
+**Partially superseded by [ADR-026](026-graph-native-storage-obsidian-removed.md)/[ADR-028](028-one-service-layer-mcp-peer-surface.md) (2026-07-13):**
+"vault" → graph store, and connectors **no longer write files directly** — they fetch/normalize
+and hand items to the shared distiller → the **organizer**, the single writer of graph structure.
+The connectors-on-VPS + one-contract decision stands unchanged.
 
 ## Context
 Ingestion agents were initially imagined as Supabase Edge Functions on cron (born when no

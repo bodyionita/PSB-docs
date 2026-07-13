@@ -1,6 +1,10 @@
 # Implementation Plan
 
-**Version:** 3.0 · **Status:** Approved 2026-07-13 (3.0 = **THE MIND-GRAPH PIVOT** — vision/direction
+**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = deep re-review pass: **grilling agendas**
+added to M3/M4/M6 — proposals from the 2026-07-13 re-review (entity substrate, thin-hub+derived-
+profile, `occurred`, vocabulary seeds, edge metadata, tiered organizing, graph-aware retrieval,
+FTS leg, session segmentation, dedup, drainers) — **recorded as agenda, not yet decided**; plus
+consistency fixes. 3.0 = **THE MIND-GRAPH PIVOT** — vision/direction
 change grilled decision-by-decision ([ADR-026](adr/026-graph-native-storage-obsidian-removed.md) ·
 [027](adr/027-typed-vocabulary-governance.md) · [028](adr/028-one-service-layer-mcp-peer-surface.md) ·
 [029](adr/029-conversational-ingestion-stance-gate-review-queue.md)): Obsidian removed, typed-node
@@ -90,7 +94,38 @@ canonical **and** derived edges identically.
 **Before implementation: an M3 build-ready grilling session** (entity-resolution mechanics,
 migration 005 DDL, proposal storage, bootstrap details, archive procedure).
 
-- [ ] M3 grilled to build-ready detail (planning session)
+**M3 grilling agenda (from the 2026-07-13 deep re-review — PROPOSALS, each needs a user
+decision; they are contract-level and cheap now, LLM re-walks over the whole graph later):**
+1. **Entity resolution substrate** — `aliases[]` + one-line `disambig` frontmatter on
+   person/idea nodes; a DB alias index for *retrieval-bounded* candidate generation (organizer
+   sees only matching candidates as structured data, never the registry, never node bodies);
+   ambiguous/low-confidence matches → the review queue, never guessed.
+2. **Entity merge + backfill primitive** — duplicates are inevitable: define
+   `merge(loser→survivor)` (DB reverse-index → batch-rewrite inbound edges in the agent window
+   under an ADR-014 checkpoint → tombstone `merged_into:` → reindex) + retroactive edge
+   backfill when a new entity matches older unlinked/inbox nodes.
+3. **Entity lifecycle: thin hub + derived profile** — hub files stay thin/canonical (identity,
+   aliases, edges); the readable "who is Alex now" **profile is derived** (regenerated from the
+   1-hop neighborhood, DB-side, embeddable, shown by `get_node`/map) — never LLM
+   read-modify-write on capture. Fact currency via edge metadata (`since`) or a `supersedes`
+   edge, decided here.
+4. **Event time** — organizer-extracted `occurred` (+ granularity: day/month/year/range)
+   alongside `created`; reflection windows and map timelines run on `occurred ?? created`.
+5. **Vocabulary seeds** — add `place` (+ `happened_at`-style edge) and a container type
+   (`event`/`project`) at M3; decide `topic` vs `idea` and whether `about` needs splitting
+   before it becomes the misc-bucket of edges.
+6. **Edge metadata + organizer versioning** — edges become `{rel, to, conf?, since?}`;
+   nodes/captures stamped with `organizer_version` so later quality-retrofits are targetable.
+7. **Organizer economics (pipeline shape)** — tiered organizing: cheap synchronous pass at
+   capture (never-lose write, type guess, alias-index candidate match, inbox fallback, nudge)
+   + a **nightly batch organize** in the agent window (full ER/edges/splitting with the whole
+   day in view — better ER + enables dedup, and caps Claude-Max window spend). Decide sync-all
+   vs tiered.
+8. **Injection hygiene** — all organizer prompt injections retrieval-bounded (never O(corpus));
+   ingested text (Slack/MCP) treated as untrusted data behind hard delimiters; node bodies
+   never fed to the resolver.
+
+- [ ] M3 grilled to build-ready detail (planning session over the agenda above)
 - [ ] Tasks defined at that grilling; 08-logs/m3.md created at implementation
 
 ## M4 — Chat (the grilled old-M3 plan, carried + retargeted to nodes)
@@ -100,7 +135,15 @@ All build decisions from the 2026-07-13 chat grilling stand
 per-group/per-provider effort, non-streaming + client-side reveal, LLM query-condensation,
 hybrid grounding, cited-only `[n]` renumbering, implicit sessions, Settings → Models panel.
 **Retarget only:** retrieval returns nodes; source cards show type + plane; "not in your
-memories". Retrieval stays **passive top-k** (graph-aware expansion = backlog).
+memories". Retrieval stays **passive top-k** (full agentic traversal = backlog).
+
+**M4 grilling addendum (2026-07-13 deep re-review — PROPOSALS, user decision pending):**
+(a) **graph-aware retrieval lite** — after top-k, inject each hit's 1-hop canonical-edge
+neighbors as `{rel, title, type}` lines (pure SQL, no extra LLM call) + entity-seeded expansion
+(query resolves to a person/idea → union in its `involves`/`about` neighborhood); without this
+the typed graph is unused on the primary read surface. (b) **hybrid FTS leg** — a Postgres
+`tsvector` union with vector top-k (nomic is English-only and weak on proper nouns — this is a
+graph full of names).
 
 **Accept:** questions over known graph content answered with correct `[n]` node citations on
 both Claude and Nebius; "not in your memories" verified; sessions persist; **plus the deferred
@@ -137,7 +180,17 @@ endorsed/rejected/unclear), `review_queue` table + endpoints, the web **Review**
 (feed-flagged, removable); a pure-retrieval session is skipped and logged; a stance-unclear
 candidate waits in Review and ingests only on agree.
 
-- [ ] M6 grilled to build-ready detail · tasks defined there
+**M6 grilling addendum (2026-07-13 deep re-review — PROPOSALS, user decision pending):**
+(a) **segment sessions before the salience gate** (a real session = 90% retrieval + one buried
+decision across planes; per-session granularity skips the gem or distills the noise); bias
+sarcasm/hedged/affect-laden statements toward review rather than auto-endorse; idempotent
+re-distillation. (b) **review-queue ergonomics** — salience score, batch actions, periodic
+"maybe" digest (no-expiry stands, but an untriaged pile stalls the feature). (c) **dedup via the
+queue** — near-duplicate candidates (high cosine + shared entities + overlapping `occurred`)
+become "possible duplicate — merge / keep / link" review items, using M3's merge primitive.
+(d) **inbox drainer** — a nightly job re-attempts organization of `inbox/` nodes with the
+now-richer entity registry. Umbrella framing for the whole 03:00–05:00 roster: **the sleep
+cycle** (capture fast by day; consolidate, link, dedup, drain, reflect by night).
 
 ## M7 — The map (neighborhood explorer)
 

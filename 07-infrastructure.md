@@ -23,7 +23,7 @@ Obsidian references removed — renames land with M3. 1.2 = M2 Accept `ollama-in
 | VPS — Hetzner CX23 (x86, 4GB) | ~5.49 |
 | IPv4 | 0.50 |
 | Web hosting (Caddy on the same box — [ADR-013](adr/013-web-stays-on-vps-single-origin.md)) | 0 |
-| Vault WORM bundle + DB `pg_dump` + raw-input sync — Cloudflare R2 ([ADR-014](adr/014-vault-history-durability.md)) | 0 (free tier) |
+| Graph-store WORM bundle + DB `pg_dump` + raw-input sync — Cloudflare R2 ([ADR-014](adr/014-vault-history-durability.md)) | 0 (free tier) |
 | Database — Supabase | 0 (free tier) |
 | DNS / TLS / proxy — Cloudflare | 0 (free tier) |
 | Domain (~€10–12/yr, amortized) | ~1 |
@@ -148,7 +148,7 @@ repo with any editor — any external client must be **merge-only, never force-p
   ([ADR-017](adr/017-tls-cloudflare-origin-ca.md)). `.env.example` documents the full key set.
 
 Not in this flow: **Claude Max** credentials live only in the CLI volume (`claude login`);
-the vault git **deploy key** (`GITHUB_DEPLOY_KEY`, a file) is generated on the VPS and its
+the graph-store git **deploy key** (`GITHUB_DEPLOY_KEY`, a file) is generated on the VPS and its
 private half never leaves the box. The monthly CI restore drill (fast-follow) reuses the
 GitHub `R2_*` + `OPENAI_API_KEY` secrets.
 
@@ -157,7 +157,7 @@ GitHub `R2_*` + `OPENAI_API_KEY` secrets.
 - Structured logs (JSON) from the api container → `docker logs` / journald.
 - The product-level view is the **activity feed** (`agent_runs`) — operational visibility
   is a feature, not an afterthought (vision P8).
-- `GET /health` checks db + vault + git remote; Cloudflare health notification (free) or
+- `GET /health` checks db + store + git remote (+ `backups`, [03-api](03-api.md)); Cloudflare health notification (free) or
   UptimeRobot pings it.
 
 ## Provisioning (scripted, reproducible)
@@ -167,7 +167,7 @@ GitHub `R2_*` + `OPENAI_API_KEY` secrets.
 `authorized_keys`), **harden SSH** (`PermitRootLogin no`, `PasswordAuthentication no`, keys-only —
 applied last, guarded: verify `authorized_keys` non-empty → `sshd -t` → reload → warn to test a
 second session) per [ADR-018](adr/018-vps-ssh-hardening-non-root-deploy-user.md), UFW (**443/22**),
-install Docker, clone repos, generate + register the vault deploy key, restore vault from GitHub,
+install Docker, clone repos, generate + register the graph-store deploy key, restore the graph store from GitHub,
 `claude login`. It **does not write `deploy/.env`** — CI is the sole writer
 ([ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md)). **App start comes from the
 deploy workflow**, so **disaster recovery = provision the box + trigger the deploy** (renders

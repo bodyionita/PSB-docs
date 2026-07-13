@@ -1,6 +1,9 @@
 # ADR-011: Alembic for migrations, authored as plain SQL (no ORM)
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** derived
+tables are now `nodes`/`chunks`/`edges`; "vault" → graph store. The Alembic / plain-SQL / no-ORM
+decision stands unchanged.
 **Supersedes:** the "schema changes only as numbered `.sql` files" clause of
 [templates/CLAUDE.md](../templates/CLAUDE.md) rule 5 and the migration-mechanism
 implication of [02-data-model.md](../02-data-model.md). The **no-ORM** and

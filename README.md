@@ -17,8 +17,12 @@ deployed live at `https://braindan.cc` (capture → organize → index/search, f
 durability); that system stays live until M3 lands (fresh start: the old vault is archived, no
 data migration). The previously grilled chat plan ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
 is carried intact to **M4**, retargeted to nodes.
-**Next: grill M3 (graph core) to build-ready detail in a planning session** — entity-resolution
-mechanics, migration 005 DDL, proposal storage, bootstrap + archive procedure ([08 §M3](08-implementation-plan.md)).
+**Next: grill M3 (graph core) to build-ready detail in a planning session** — over the **M3
+grilling agenda** recorded in [08 §M3](08-implementation-plan.md) (2026-07-13 deep re-review:
+entity-resolution substrate + merge primitive, thin-hub/derived-profile lifecycle, `occurred`
+event time, vocabulary seeds, edge metadata, tiered organizing, injection hygiene) plus
+migration 005 DDL, proposal storage, bootstrap + archive procedure. M4/M6 carry smaller
+re-review addenda in their sections.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
@@ -52,8 +56,10 @@ mechanics, migration 005 DDL, proposal storage, bootstrap + archive procedure ([
 PersonalSecondBrain/          # workspace folder, not a repo
 ├── second-brain-docs/        # THIS repo — documentation
 ├── second-brain/             # code monorepo: server/ + web/ + deploy/
-└── (local graph-store clone) # optional dev scratch; ObisidanVault/ + PSB-vault/ are
-                              # pre-pivot artifacts, archived (ADR-026)
+└── _archive/                 # pre-pivot artifacts (ADR-026): ObisidanVault/ (dead dev
+                              # scratch) + PSB-vault/ (local clone of the pre-pivot vault
+                              # repo — the GitHub repo stays ACTIVE until the M3 cutover;
+                              # see _archive/README.md)
 ```
 
 The production graph store lives on the VPS ([ADR-001](adr/001-vault-on-vps-with-git-backup.md) +

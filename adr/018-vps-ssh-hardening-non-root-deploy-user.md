@@ -1,6 +1,8 @@
 # ADR-018: VPS SSH hardening — non-root `deploy` user; root login disabled; automated in provision.sh
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** read
+"vault deploy key" as **graph-store deploy key**; decision unchanged.
 **Relates to:** [003 single service on VPS](003-single-service-on-vps.md) · [015 compute tier Hetzner CX23](015-compute-tier-hetzner-cx23.md) · [016 secrets via GitHub Actions](016-secrets-via-github-actions-ci-renders-env.md) · [09-session-protocol §Security](../09-session-protocol.md). **Updates** [07-infrastructure](../07-infrastructure.md) §Provisioning.
 
 ## Context

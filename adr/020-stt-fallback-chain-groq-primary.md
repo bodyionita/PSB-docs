@@ -1,6 +1,8 @@
 # ADR-020: STT fallback chain — Groq (Whisper large-v3) primary, OpenAI fallback
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** read
+"note" as **node**; decision unchanged.
 **Relates to:** [004 provider registry](004-provider-registry-claude-primary-nebius-fallback.md) (extends it to the STT task) · updates [04-pipelines](../04-pipelines.md), [02-data-model](../02-data-model.md), [07-infrastructure](../07-infrastructure.md), [08-implementation-plan §M1](../08-implementation-plan.md)
 
 ## Context

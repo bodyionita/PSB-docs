@@ -1,6 +1,9 @@
 # ADR-003: Single FastAPI service on a Hetzner VPS (Docker Compose), no PaaS, no worker fleet
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** read
+"vault" as **graph store**; the single-service-on-VPS decision stands unchanged (the M5 MCP server
+is a surface inside the same service, [ADR-028](028-one-service-layer-mcp-peer-surface.md)).
 **Tier updated by:** [ADR-015](015-compute-tier-hetzner-cx23.md) — the specific plan is now
 **Hetzner CX23** (CX22 retired in Hetzner's 2026 refresh); this ADR's core decision
 (single service on an always-on VPS, no PaaS/worker fleet) stands unchanged.

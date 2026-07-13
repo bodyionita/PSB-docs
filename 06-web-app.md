@@ -102,9 +102,10 @@ login header; kept as a single config constant so it's changeable at zero cost.
   routing groups — **Chat** and **Conspect** — each an active-model dropdown + fallback dropdown +
   an **effort selector shown only for models that support it** (Claude yes, Nebius no). Choices +
   effort levels come from `GET /settings` (registry-sourced, never hardcoded); saved via
-  `PUT /settings/models`. This is where the M0/M3 model-and-effort control lives; the chat composer
+  `PUT /settings/models`. This is where the M0/M4 model-and-effort control lives; the chat composer
   picker is a per-conversation override of the Chat group's active model.
-- **Agents (M4):** connector list with last-run status and "run now". (The conspect model that was
+- **Jobs & connectors:** the roster (last-run status, "run now", schedules) lives in the **M8 ops
+  console** (screen 3); per-connector *config* lands here at M9. (The conspect model that was
   drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)
 - Session management (logout), theme, reduced motion override.
 

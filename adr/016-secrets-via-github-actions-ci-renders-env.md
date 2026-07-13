@@ -1,6 +1,10 @@
 # ADR-016: Secrets in GitHub Actions; CI renders `deploy/.env`; non-secret config in git
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):**
+`VAULT_PATH` → `GRAPH_STORE_PATH` (renamed at M3); "vault deploy key" → graph-store deploy key;
+**M5 adds the MCP bearer-token secret** ([ADR-028](028-one-service-layer-mcp-peer-surface.md)).
+The secrets-in-Actions / CI-renders-`.env` decision stands unchanged.
 **Relates to:** [003 single-service-on-VPS](003-single-service-on-vps.md) · [006 monorepo + unified CI/CD](006-monorepo-with-strict-server-web-decoupling.md) · [012 M0 stack (deploy job dormant)](012-m0-implementation-stack.md) · [09-session-protocol §Security & secrets discipline](../09-session-protocol.md) (v1.4). **Updates** [07-infrastructure](../07-infrastructure.md) §Secrets and §Provisioning.
 
 ## Context

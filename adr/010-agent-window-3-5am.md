@@ -1,6 +1,10 @@
 # ADR-010: All scheduled agent work runs 03:00–05:00 Europe/Bucharest
 
 **Status:** Accepted · 2026-07-12
+**Scope/terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md)–[029](029-conversational-ingestion-stance-gate-review-queue.md), 2026-07-13):**
+the window stands; the stagger example is illustrative — Slack ingest is now **M9**, daily-summary/
+weekly-review become the **M10** reflection agent's `insight` runs, "vault-backup" → store backup;
+the **chat-distiller (M6)** joins the window.
 
 ## Context
 The primary LLM provider is the user's Claude Max subscription (ADR-004), whose usage

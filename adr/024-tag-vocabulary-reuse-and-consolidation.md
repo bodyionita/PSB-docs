@@ -1,6 +1,10 @@
 # ADR-024: Tag vocabulary reuse (forward) + manual consolidation tool
 
 **Status:** Accepted · 2026-07-13 (M2 planning)
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md)/[027](027-typed-vocabulary-governance.md), 2026-07-13):**
+survives the pivot — read "notes" as **nodes**; the "valid Obsidian tags" slug rules are kept **on
+their own merits** (nothing Obsidian remains); the propose→apply consolidation shape here is
+**generalized** by ADR-027 into node/edge-type vocabulary governance.
 **Relates to:** [005 planes & atomic notes](005-planes-and-atomic-notes.md) · [019 conversational capture](019-conversational-capture-minimal-in-m1.md) · [02-data-model §2 (tags)](../02-data-model.md) · updates [03-api](../03-api.md), [04-pipelines](../04-pipelines.md), [08-implementation-plan §M2](../08-implementation-plan.md)
 
 ## Context

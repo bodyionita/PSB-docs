@@ -1,6 +1,10 @@
 # ADR-022: Embeddings on self-hosted nomic-embed-text (Ollama), single-provider, 768-dim
 
-**Status:** Accepted · 2026-07-13 (M2 planning) · **Supersedes the embedding-provider choice in**
+**Status:** Accepted · 2026-07-13 (M2 planning)
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):**
+`notes`/`notes.embedding` → `nodes`/`nodes.embedding`; "note" → node. The self-hosted-nomic /
+768-dim / single-provider decision stands unchanged.
+· **Supersedes the embedding-provider choice in**
 [ADR-004](004-provider-registry-claude-primary-nebius-fallback.md) (which named OpenAI
 `text-embedding-3-small`, 1536-dim)
 **Relates to:** [002 Supabase/pgvector](002-supabase-pgvector-for-index.md) · [004 provider registry](004-provider-registry-claude-primary-nebius-fallback.md) · [ADR-023 relatedness graph](023-semantic-relatedness-graph.md) · updates [02-data-model](../02-data-model.md), [04-pipelines](../04-pipelines.md), [07-infrastructure](../07-infrastructure.md), [08-implementation-plan §M2](../08-implementation-plan.md)

@@ -1,6 +1,9 @@
 # ADR-021: Capture model interactions logged to `agent_runs` + Supabase-native exploration
 
 **Status:** Accepted · 2026-07-12
+**Terminology/milestone note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):**
+"note" → node, `note_paths` → `node_paths`, "vault" → graph store; the in-app activity UI this ADR
+calls "M4" is now the **M8** ops-console/activity restructure. The logging decision stands unchanged.
 **Relates to:** vision **P8 "everything visible"** · [CLAUDE.md rule 3 (fallback recorded) + rule 7 (agent work in `agent_runs`)] · [002 Supabase/pgvector](002-supabase-pgvector-for-index.md) · [020 STT fallback chain](020-stt-fallback-chain-groq-primary.md) · updates [04-pipelines](../04-pipelines.md), [02-data-model](../02-data-model.md), [08-implementation-plan §M1](../08-implementation-plan.md)
 
 ## Context

@@ -1,6 +1,10 @@
 # ADR-025: UI-editable per-group model routing + per-group/per-provider effort
 
 **Status:** Accepted · 2026-07-13 (M3 planning)
+**Pivot note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** this plan
+carries **intact** to the renumbered **M4 (chat)** — read "notes" as **nodes**, "not in your
+notes" as "not in your memories"; retrieval/sources retarget to node-grouped results. Everything
+else (routing groups, effort, transport, condensation, citations, sessions) is unchanged.
 **Relates to / supersedes clauses of:** [004 provider registry](004-provider-registry-claude-primary-nebius-fallback.md) · [010 agent window](010-agent-window-3-5am.md) · updates [02-data-model §3 (app_settings)](../02-data-model.md), [03-api (Chat/Settings)](../03-api.md), [04-pipelines §4](../04-pipelines.md), [06-web-app (Chat/Settings)](../06-web-app.md), [08-implementation-plan §M3](../08-implementation-plan.md)
 
 ## Context

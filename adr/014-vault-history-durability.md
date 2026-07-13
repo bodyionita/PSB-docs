@@ -1,6 +1,10 @@
 # ADR-014: Vault history durability — WORM snapshots, rewrite protection, restore drills
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** every
+mechanism here **survives the mind-graph pivot unchanged** — read "vault" as **graph store**,
+"note" as **node**; obsidian-git-specific wording generalizes to *any external git client,
+merge-only*; the `.gitignore` loses only its `.obsidian/` entry.
 **Extends:** [ADR-001](001-vault-on-vps-with-git-backup.md) (vault-on-VPS + git backup — its core decision stands; this hardens durability)
 **Relates to:** [002 supabase](002-supabase-pgvector-for-index.md) · [010 agent-window](010-agent-window-3-5am.md) · updates [02-data-model §5](../02-data-model.md) and [07-infrastructure](../07-infrastructure.md)
 

@@ -1,6 +1,8 @@
 # ADR-015: Compute tier pinned to Hetzner CX23 (4GB); free/sub-4GB tiers rejected
 
 **Status:** Accepted · 2026-07-12
+**Terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md), 2026-07-13):** read
+"vault" as **graph store**; decision unchanged.
 **Updates the tier in:** [ADR-003](003-single-service-on-vps.md) (CX22 → CX23). ADR-003's
 core decision — single FastAPI service on an always-on VPS, no PaaS, no worker fleet —
 stands unchanged.
