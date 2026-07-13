@@ -148,9 +148,11 @@ nothing left to implementer discretion:
 - [x] 3 — organizer v3 (typed nodes, occurred, entity resolution vs alias index, edges
       conf/since, hygiene, vocab proposals, organizer_version, English-only carried) — done
       2026-07-13 (combined with 2+5); review clean; **fuzzy + alias-accretion are follow-ups**
-- [ ] 4 — review queue (table + service + minimal admin Review list; resolution materializes
-      pending edges; vocab-approve queues consolidation) — **write path done in task 3**
-      (`PgReviewQueue.enqueue` for `entity-ambiguity`/`vocab-proposal`); read/resolve UI open
+- [x] 4 — review queue read/resolve (`GET /review` + `POST /review/{id}`: entity pick/new/maybe
+      materializes the pending edge file+DB via writer+reindex; vocab approve = verdict + queued
+      `vocab-consolidation` marker, **mutation deferred to task 7** — user call) — done 2026-07-14;
+      write path enriched with `pending_edges` (src node ids); 265 tests, real-DB SQL smoke, review
+      clean; commit `c53eadc` (log: task 4)
 - [x] 5 — indexer/search retarget (id-keyed, whole-file hash, canonical-edge materialization,
       derived `similar` edges, `types` filter, `GET /nodes/{id}` with edges+tombstone) — done
       2026-07-13 (combined with 2+3); `profile` stubbed null (job = task 6)

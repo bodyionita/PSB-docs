@@ -32,12 +32,17 @@ sync-full organize + MCP burst queue; alias/disambig entity substrate with bound
 kind-generic review queue in M3; thin hubs + derived profiles; merge/backfill; `occurred`;
 9 types / 6 edge rels; edge `{conf,since}` + `organizer_version`; injection hygiene; repo
 **`PSB-graph`** with a zero-manual-VPS cutover. M4/M6 addenda ratified (re-check at kickoff).
-**M3 in progress: tasks 1 + 2 + 3 + 5 done** (2026-07-13; tasks 2/3/5 combined by user call —
-store writer + rename + bootstrap, organizer v3 + entity resolution, indexer/search retarget; 240
-tests green, real-DB smoke passed, independent review clean — [08-logs/m3.md](08-logs/m3.md)).
-**Next: task 4** — review-queue read/resolve surface (write path already in; then 6 entity services,
-7 vocab surface, 8 web, 9 deploy, 10 live Accept). One review follow-up to wire before Accept:
-cross-capture **alias accretion** (Alex/Alexandru → one node). Code committed, **not pushed**.
+**M3 in progress: tasks 1 + 2 + 3 + 4 + 5 done** (2026-07-13/14; tasks 2/3/5 combined by user call —
+store writer + rename + bootstrap, organizer v3 + entity resolution, indexer/search retarget). Task
+4 (2026-07-14): review-queue **read/resolve** surface — `GET /review` + `POST /review/{id}` (entity
+pick/new/maybe materializes the pending edge file+DB via writer+reindex; vocab approve = verdict +
+queued `vocab-consolidation` marker, **mutation deferred to task 7** per user call); the task-3 write
+path was enriched to carry `pending_edges` (source node ids). 265 tests green, real-DB SQL smoke
+passed, independent review clean — [08-logs/m3.md](08-logs/m3.md).
+**Next: task 6** — entity services (merge propose/apply + tombstones, backfill scan, profile-refresh
+job); then 7 vocab surface, 8 web, 9 deploy, 10 live Accept. One review follow-up to wire before
+Accept: cross-capture **alias accretion** (Alex/Alexandru → one node). Code committed, **not
+pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
