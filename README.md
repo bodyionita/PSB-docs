@@ -83,9 +83,16 @@ note + replace chunks) + `notes.embedding` mean-pool`; `index_paths` (capture pa
 lets embeddings pass as plain float lists. Wired into the capture pipeline (best-effort — vault is
 truth, so an index failure never fails a written capture; outcome logged to `agent_runs`). 173
 pytest + ruff green; **verified end-to-end against a real pgvector DB** (codec round-trip, per-note
-tx, mean-pool, hash-skip, cosine query, deletion reconcile). See the *M2 progress* block in
-[08](08-implementation-plan.md). Next: `/search` + `GET /notes/{id}` (search-side `search_query:`
-prefix + note-grouped results).
+tx, mean-pool, hash-skip, cosine query, deletion reconcile). **Task 4 (`POST /search` note-grouped
++ `GET /notes/{id}` preview) done, independently reviewed (no must-fix; one consistency fix),
+committed locally (server `6e0fa21`, not pushed) 2026-07-13** — `search_query:`-prefixed query
+embed → pgvector cosine over `chunks`, `DISTINCT ON` best-chunk-per-note snippet, `planes`
+array-overlap filter, `top_k`/`min_score`; `GET /notes/{id}` = metadata + vault-file body +
+`note_links` neighbours (empty until the graph task). Session-gated router (503 on embed-down, 422
+bad uuid, 404 unknown). 186 pytest + ruff green; **verified end-to-end against real pgvector**
+(dedupe, cosine order, planes overlap, min_score floor, get_note). See the *M2 progress* block in
+[08](08-implementation-plan.md). Next: relatedness graph recompute + `sb:related` render
+(materialize `note_links` from top-K over `notes.embedding`).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

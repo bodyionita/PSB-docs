@@ -875,12 +875,38 @@ Search + Admin tabs → live M2 Accept (which also confirms the M1 backup tail).
     head 004): `vector` codec round-trips (768-dim `list` in/out), per-note transaction lands
     note+chunks, mean-pool stored, hash-skip on unchanged reindex, cosine query runs over the HNSW
     index, and `reindex_all` reconciles a deleted file's row away.
-- **Remaining M2 tasks** (unchanged order): `/search` + `GET /notes/{id}` (search side embeds with
-  the `search_query:` prefix — still deferred) → relatedness graph recompute + `sb:related` render
-  (materializes `note_links`, uses the indexer's `notes.embedding`) → nightly combined `reindex`
-  job (calls `reindex_all` + graph, single-flight; `POST /admin/reindex` async wrapper) → tag reuse
-  + `/admin/tags/consolidate` → web Search + Admin tabs → live M2 Accept (also confirms the M1
-  backup tail).
+- **Task 4 — `/search` + `GET /notes/{id}` — DONE** (server commit `6e0fa21`, local, **not
+  pushed**). The read side of the index (03-api §Search, 04 §4, [ADR-022](adr/022-embeddings-self-hosted-nomic.md)/[ADR-023](adr/023-semantic-relatedness-graph.md)):
+  - **`app/search/store.py`** — `SearchStore` protocol + `PgSearchStore`. `search_chunks` =
+    pgvector cosine over `chunks`, **`DISTINCT ON (note)` best chunk = snippet**, `planes` **array
+    overlap** (`&&`, membership not folder — [ADR-005](adr/005-planes-and-atomic-notes.md)),
+    re-ranked by score desc, `top_k`, optional `min_score` floor. `get_note` = note metadata +
+    `note_links` neighbours.
+  - **`app/search/service.py`** — `SearchService`. Embeds the query with the **mandatory
+    `search_query:` prefix** (ADR-022 — the asymmetric counterpart of the indexer's
+    `search_document:`), clamps `top_k` to `SEARCH_MAX_TOP_K`, trims each hit's best chunk to a
+    snippet. `get_note` reads the note **body from the vault file** (fidelity — reflects Obsidian
+    edits, frontmatter stripped) + attaches neighbours. A down embedder surfaces as
+    `ProviderUnavailable` (single provider, no hot fallback).
+  - **`routers/search.py`** — `POST /search` (**503** when embeddings unavailable — it's a request
+    path) + `GET /notes/{id}` (`uuid.UUID` path → **422** on malformed, **404** on unknown).
+    Session-gated. New wire models (`SearchRequest`/`SearchResultItem`/`NotePreviewResponse`/
+    `RelatedNoteItem`) + settings (`SEARCH_TOP_K_DEFAULT`/`SEARCH_MAX_TOP_K`/`SEARCH_MIN_SCORE`/
+    `SEARCH_SNIPPET_MAX_CHARS`, rule 9). Wired into `main.py` + `dependencies`.
+  - **Independent review (`/code-review` high): no must-fix.** One consistency fix applied:
+    `search_chunks` reached past the `Database` abstraction with `self._db.pool.fetch` — switched to
+    the `acquire()` context manager like every other store.
+  - **186 pytest + ruff green** (13 new across `test_search_service` + `test_search_router`).
+    **Verified end-to-end against a real pgvector DB** (dev compose): note dedupe (one row/note),
+    cosine ordering, `planes` overlap filter, `min_score` floor, and `get_note` metadata/related.
+  - **Note:** `note_links` is still empty (graph recompute is the next task), so `related` is `[]`
+    until then — the endpoint reads whatever the graph has materialised.
+- **Remaining M2 tasks** (unchanged order): relatedness graph recompute + `sb:related` render
+  (materializes `note_links` from top-K over the indexer's `notes.embedding`, renders the
+  Obsidian-visible block, churn-gated) → nightly combined `reindex` job (calls `reindex_all` +
+  graph, single-flight; `POST /admin/reindex` async wrapper) → tag reuse +
+  `/admin/tags/consolidate` → web Search + Admin tabs → live M2 Accept (also confirms the M1 backup
+  tail).
 
 ## M3 — Chat
 
