@@ -40,10 +40,18 @@ alias auto-link of recent memories, watermark-bounded) and a nightly **profile-r
 entity profiles **tiered by graph degree** — stub/snapshot/full, ADR-034 — into a new `node_profiles`
 table, served by `GET /nodes/{id}`); migration 006. 294 tests green, independent review clean (3
 minors fixed) — [08-logs/m3.md](08-logs/m3.md).
-**Next: task 7** — vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, the consolidation job
-consuming the queued `vocab-consolidation` markers); then 8 web, 9 deploy, 10 live Accept. Wire before
-Accept (log follow-ups): real-DB SQL smoke of the task-6 SQL, profile-embedding-in-search, and
-cross-capture **alias accretion** (Alex/Alexandru → one node). Code committed, **not pushed**.
+**Task 7a done (2026-07-14):** vocabulary governance core — `PgVocabularyStore` over `app_settings`,
+an `EffectiveVocabulary` provider (config seeds ∪ approved additions) threaded into every writer so an
+approved type is **forward-live**, `GET /types`, `PUT /settings/vocabulary`, the vocab-proposal branch
+delegated to one `VocabularyService` (shared with `POST /review/{id}`), and a feed-visible
+`vocab-consolidation` run on approve (replaces task 4's SKIPPED marker). Scope split by
+**[ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)** (edges apply / nodes propose-only). 317
+tests green (+23), ruff clean, self-reviewed — [08-logs/m3.md](08-logs/m3.md) task 7a; commit `dd3c5be`.
+**Next: task 7b** — edge retro-consolidation apply (`NodeWriter.retype_edge`, LLM re-walk propose +
+`POST /admin/vocab/consolidate`); then the **independent-agent review** at the task-7 boundary, then 8
+web, 9 deploy, 10 live Accept. Wire before Accept (log follow-ups): real-DB SQL smoke of the task-6 +
+task-7a SQL, profile-embedding-in-search, cross-capture **alias accretion** (Alex/Alexandru → one
+node). Code committed, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

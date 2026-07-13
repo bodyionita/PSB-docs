@@ -164,15 +164,24 @@ nothing left to implementer discretion:
       migration 006; 294 tests, review clean (3 minors fixed); commits `f5795fe`/`9e544c3`/`f6f0678`
       (log: task 6). **Open before Accept:** real-DB SQL smoke + profile-embedding-in-search +
       alias-accretion (log follow-ups)
-- [ ] 7 — vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, consolidation job).
-      **Scope fixed by [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md):** approval writes
-      the addition to `app_settings` (effective vocab = seeds ∪ approved, read via a provider at the
-      organizer / `GET /types` / entity-substrate call sites), then the `vocab-consolidation` job
-      re-walks — **edges propose→apply** (confirm-gated frontmatter rewrites, ADR-024 envelope),
-      **nodes propose-only** (candidate re-typings surfaced; the folder-move/re-slug/`node_paths`
-      apply machinery is a deferred follow-up + own ADR). `PUT /settings/vocabulary` and the task-4
-      `POST /review/{id}` vocab-proposal path share one `VocabularyService` (replacing task 4's
-      queued-marker stub with a real run)
+- Vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, consolidation job).
+  **Scope fixed by [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md):** approval writes
+  the addition to `app_settings` (effective vocab = seeds ∪ approved, read via a provider at the
+  organizer / `GET /types` / entity-substrate call sites), then the `vocab-consolidation` job
+  re-walks — **edges propose→apply** (confirm-gated frontmatter rewrites, ADR-024 envelope),
+  **nodes propose-only**. Split into 7a/7b at build:
+  - [x] 7a — **governance core** (forward-live): `PgVocabularyStore` over `app_settings`,
+        `EffectiveVocabulary` provider threaded into the organizer/validate + resolver + backfill/
+        merge/profile + review mint, `GET /types`, `PUT /settings/vocabulary`, review-branch
+        delegation to one `VocabularyService`, and the `vocab-consolidation` run an approval opens
+        (records the now-live mutation, feed-visible — replaces task 4's SKIPPED marker). Done
+        2026-07-14; 317 tests (+23), ruff clean; self-reviewed; commit `dd3c5be` (log: task 7a).
+        **Open:** independent-agent review at the task-7 boundary; real-DB smoke of the
+        `PgVocabularyStore` SQL.
+  - [ ] 7b — **edge retro-consolidation apply**: `NodeWriter.retype_edge`, the LLM re-walk propose
+        + `POST /admin/vocab/consolidate` confirm-apply (edges only); node re-typing stays
+        propose-only (its folder-move/re-slug/`node_paths` apply machinery is a deferred follow-up +
+        own ADR, ADR-035).
 - [ ] 8 — web retarget (capture strip node_paths, search type icons, node preview with
       edges/profile, Review list, Settings → Vocabulary)
 - [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step,

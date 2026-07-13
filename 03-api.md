@@ -63,7 +63,7 @@ Non-streaming; the web animates a client-side reveal. Retrieval = passive node-g
 | `GET /nodes/{id}` | node detail: `{ node_id, store_path, type, title, plane, planes[], tags[], aliases[], disambig, occurred, body, profile, edges: [{ rel, dir, node_id, type, title, origin, score?, since? }] }` — body from the store file; `profile` = the **derived** entity profile ([ADR-030](adr/030-entity-substrate-and-lifecycle.md), null for content nodes); edges = canonical + derived, both directions. Tombstones 302-resolve to `merged_into`. `404` if unknown |
 | `GET /nodes/{id}/neighbors` | **(M7 map; same service as MCP `traverse`)** one-hop expansion for the explorer: grouped by rel/origin, paginated |
 | `GET /planes` | plane vocabulary for filter chips: `{ planes: [..], inbox: "inbox" }` |
-| `GET /types` | **(M3)** node + edge type vocabularies (config + approved additions) + pending proposals ([ADR-027](adr/027-typed-vocabulary-governance.md)) |
+| `GET /types` | **(M3)** effective vocabularies + pending proposals ([ADR-027](adr/027-typed-vocabulary-governance.md)): `{ node_types[], edge_rels[], entity_like_types[], proposals: [{ id, vocab, value, excerpt, created_at }] }`. Lists = config seeds ∪ approved additions (`app_settings`); `proposals` = still-pending `vocab-proposal` review items (resolve by their `id`) |
 
 ## Review queue (**M3** minimal + M6 full UX — [ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
 
@@ -90,7 +90,7 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 |---|---|
 | `GET /settings` | model routing per group + available models/providers (registry-sourced) |
 | `PUT /settings/models` | save one group's routing; `422` on unknown id; busts the routing cache |
-| `PUT /settings/vocabulary` | **(M3)** approve/reject a proposed node/edge type; approval queues the retro-consolidation job |
+| `PUT /settings/vocabulary` | **(M3)** `{ review_id, verdict: "approve"\|"reject" }` → resolve a pending type proposal. Approve writes the type to the live vocabulary (`app_settings`, forward-live) + opens the `vocab-consolidation` job; reject discards. Returns the updated review item. Same choke point as `POST /review/{id}` for a `vocab-proposal` (ADR-027 §4 / [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)). `404`/`409`/`400` as `POST /review/{id}` |
 | `PUT /settings/connectors/{name}` | **(M9)** per-connector config incl. lookback override (default 6 months) |
 
 ## Admin
