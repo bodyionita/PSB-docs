@@ -65,8 +65,13 @@ provider, Nebius cold-swap), a full materialized `note_links` graph rendered as 
 wikilink blocks, note-grouped `/search` + read-only preview, async single-flight `/admin/reindex`,
 a combined nightly pull+rescan+graph job, forward tag reuse + a manual consolidate tool, and a web
 Search + Admin surface. **Overnight snapshot recorded** (box up; nudge/Inbox-fallback live-verified;
-scheduled-backup evidence pending the next cycle — not chased). Paused before implementation per the
-[session protocol](09-session-protocol.md).
+scheduled-backup evidence pending the next cycle — not chased). **M2 implementation IN PROGRESS:
+Task 1 (migration 004 + Ollama/nomic provider wiring) done, independently reviewed (no must-fix),
+committed locally (server `c66b562`, not pushed) 2026-07-13** — `vector(768)` resize +
+`notes.embedding` + `note_links` (verified up/down/up on real pgvector), self-hosted
+nomic-via-Ollama as the sole embedding provider (keyless localhost), OpenAI now STT-only, `ollama`
+compose sidecar; 134 pytest + ruff green. See the *M2 progress* block in
+[08](08-implementation-plan.md). Next: Task 2 — the pure chunker.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

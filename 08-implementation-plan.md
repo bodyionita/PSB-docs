@@ -799,6 +799,33 @@ step replacing the M1 stub) → `/search` + `GET /notes/{id}` → relatedness gr
 `sb:related` render) → nightly combined `reindex` job → tag reuse + `/admin/tags/consolidate` → web
 Search + Admin tabs → live M2 Accept (which also confirms the M1 backup tail).
 
+**M2 progress (implementation) — Task 1 done, reviewed, committed 2026-07-13.**
+- **Task 1 — migration 004 + Ollama/nomic provider wiring — DONE** (server commit `c66b562`,
+  local, **not pushed**). Migration 004 (`004_embeddings_768_and_note_links.py`): resizes the
+  still-empty `chunks.embedding` + adds `notes.embedding` at **`vector(768)`**, creates the
+  directional scored **`note_links`** table (PK `(note_id, related_note_id)`, both FKs cascade),
+  recreates HNSW cosine indexes at 768 — **verified up→down→up against a real pgvector DB** (dev
+  compose). Provider wiring ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)): `embedding_model`
+  → `nomic-embed-text`, `embedding_dim` → **768**, new `embedding_provider_id` (default `ollama`,
+  the cold-swap seam) + `ollama_base_url` settings; `OpenAICompatibleProvider` gained a
+  `requires_api_key` flag so the **keyless localhost** Ollama endpoint skips the key guard +
+  Authorization header (keyed OpenAI/Nebius/Groq fallback semantics unchanged); the registry
+  registers `ollama` as the **sole** embedding provider and OpenAI is **STT-only** now. Deploy:
+  `ollama` sidecar in compose (expose-only, persistent model volume, `depends_on` start-order),
+  `defaults.env`/`.env.example` wiring, a provision model-pull step. The asymmetric
+  `search_document:`/`search_query:` **prefixes are deferred** to the indexer/search tasks (the
+  generic provider stays prefix-free). **134 pytest + ruff green.**
+  - **Independent review: no must-fix.** Verified migration/schema against 02 §3 + ADR-023, the
+    provider-boundary + keyless change (no regression to keyed providers), config/secrets
+    discipline, and scope (prefixes correctly deferred). Fixed one trivial docstring typo.
+    **Logged follow-up (non-blocking):** `note_links` has no index on `related_note_id`, so a
+    note-delete cascade seq-scans — negligible at M2 scale (small, rebuildable, nightly-recomputed);
+    add only if reverse-neighbor queries or graph size warrant it later.
+- **Remaining M2 tasks** (unchanged order): pure chunker → indexer service (real index step) →
+  `/search` + `GET /notes/{id}` → relatedness graph recompute + `sb:related` render → nightly
+  combined `reindex` job → tag reuse + `/admin/tags/consolidate` → web Search + Admin tabs → live
+  M2 Accept (also confirms the M1 backup tail).
+
 ## M3 — Chat
 
 Chat endpoints + retrieval + citations + sessions + per-conversation model picker +
