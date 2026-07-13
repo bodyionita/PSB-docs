@@ -1,9 +1,11 @@
 # Data Model
 
-**Version:** 2.2 · **Status:** Approved 2026-07-12 (2.2 = M1 replan: migration 003 =
-`capture_interactions` view, `agent="capture"` runs [ADR-021]; 2.1 = M1 migration 002: capture
-follow-up columns; new `agent_runs` agent names)
-**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [002](adr/002-supabase-pgvector-for-index.md) · [005](adr/005-planes-and-atomic-notes.md) · [020](adr/020-stt-fallback-chain-groq-primary.md) · [021](adr/021-capture-interactions-agent-runs-logging.md)
+**Version:** 2.3 · **Status:** Approved 2026-07-13 (2.3 = M2 migration 004: embeddings resized
+1536→**768** for self-hosted nomic [ADR-022], new `notes.embedding` + `note_links` table for the
+relatedness graph [ADR-023]; 2.2 = M1 replan: migration 003 = `capture_interactions` view,
+`agent="capture"` runs [ADR-021]; 2.1 = M1 migration 002: capture follow-up columns; new
+`agent_runs` agent names)
+**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [002](adr/002-supabase-pgvector-for-index.md) · [005](adr/005-planes-and-atomic-notes.md) · [020](adr/020-stt-fallback-chain-groq-primary.md) · [021](adr/021-capture-interactions-agent-runs-logging.md) · [022](adr/022-embeddings-self-hosted-nomic.md) · [023](adr/023-semantic-relatedness-graph.md) · [024](adr/024-tag-vocabulary-reuse-and-consolidation.md)
 
 ## 1. Vault layout
 
@@ -64,8 +66,12 @@ Rules ([ADR-005](adr/005-planes-and-atomic-notes.md)):
 
 ## 3. Database schema (Supabase Postgres + pgvector)
 
-Embedding dimension **1536** (`text-embedding-3-small`); model change = deliberate
-migration + full reindex ([ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md)).
+Embedding dimension **768** (self-hosted **`nomic-embed-text-v1.5`** via Ollama —
+[ADR-022](adr/022-embeddings-self-hosted-nomic.md), superseding the original OpenAI
+`text-embedding-3-small`/1536 in [ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md));
+`embedding_dim` / `embedding_model` are settings, so a provider change = deliberate migration +
+full reindex, never a code edit. **M0 revision 001 created the vector columns at 1536; M2 revision
+004 resizes them to 768** while the index is empty (near-zero cost).
 
 **Migrations:** managed by **Alembic**, authored as **explicit SQL** (`op.execute` /
 `op.create_table`) — **no ORM, no autogenerate** ([ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md)).
@@ -89,7 +95,8 @@ a view only, no table/column change).
 | tags | text[] | |
 | source | text null | frontmatter `source` |
 | source_ref | text null | |
-| content_hash | text | sha256; unchanged ⇒ skip reindex |
+| content_hash | text | sha256 of **frontmatter + body, excluding the `sb:related` machine block** ([ADR-023](adr/023-semantic-relatedness-graph.md)); unchanged ⇒ skip reindex. Excluding the block prevents the graph's own writes from re-triggering reindex; including frontmatter means tag/plane edits still reindex |
+| embedding | vector(768) null | **note-level vector = mean-pool of the note's chunk embeddings** ([ADR-023](adr/023-semantic-relatedness-graph.md)); powers `note_links` k-NN. HNSW, cosine |
 | note_created_at | timestamptz null | frontmatter `created`, else file mtime |
 | indexed_at | timestamptz | |
 
@@ -100,7 +107,15 @@ a view only, no table/column change).
 | note_id | uuid fk → notes on delete cascade | |
 | chunk_index | int | unique (note_id, chunk_index) |
 | content | text | retrieval cache; canonical text is the file |
-| embedding | vector(1536) | HNSW, cosine |
+| embedding | vector(768) | HNSW, cosine |
+
+**`note_links`** — semantic relatedness graph (migration 004, [ADR-023](adr/023-semantic-relatedness-graph.md); derived/rebuildable, recomputed nightly)
+| column | type | notes |
+|---|---|---|
+| note_id | uuid fk → notes on delete cascade | |
+| related_note_id | uuid fk → notes on delete cascade | |
+| score | real | cosine similarity |
+| | | pk `(note_id, related_note_id)`; directional rows (each note's own top-K above `RELATED_MIN_SCORE`). Distinct from co-capture `related:` frontmatter — this is **topical** relatedness. Also projected into each note body as a delimited `sb:related` `## Related notes` wikilink block (Obsidian-visible) |
 
 ### Operational state (not rebuildable — this is why the DB is managed/backed up)
 
@@ -158,8 +173,12 @@ exhausted and the capture degraded to an Inbox note — a *success*, not a failu
 ## 4. Chunking policy
 
 Split on headings, then paragraphs; target `CHUNK_SIZE` (1200 chars), overlap
-`CHUNK_OVERLAP` (200) on hard splits. Frontmatter stripped; `"{title}\n\n{chunk}"` is what
-gets embedded.
+`CHUNK_OVERLAP` (200) on hard splits. **Both frontmatter and the `sb:related` machine block are
+stripped** before hashing/chunking/embedding ([ADR-023](adr/023-semantic-relatedness-graph.md)) —
+a note's identity is its human content only. The embedded text is `"search_document: {title}\n\n{chunk}"`
+and search queries are embedded as `"search_query: {q}"` — the **asymmetric nomic task prefixes are
+mandatory** ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)), or retrieval quality drops.
+`notes.embedding` = mean-pool of the note's chunk vectors (no extra embed call).
 
 ## 5. Rebuild & recovery matrix
 

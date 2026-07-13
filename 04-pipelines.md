@@ -1,7 +1,9 @@
 # Pipelines & Scheduling
 
-**Version:** 2.2 · **Status:** Approved 2026-07-12 (2.2 = M1 replan: STT fallback chain [ADR-020],
-capture interactions → `agent_runs` [ADR-021], `claude_max_effort`; 2.1 = M1 capture follow-up nudge, ADR-019)
+**Version:** 2.3 · **Status:** Approved 2026-07-13 (2.3 = M2 indexing/search: nomic embeddings +
+prefixes [ADR-022], nightly combined `reindex` job + relatedness graph [ADR-023], organizer tag
+reuse [ADR-024]; 2.2 = M1 replan: STT fallback chain [ADR-020], capture interactions → `agent_runs`
+[ADR-021], `claude_max_effort`; 2.1 = M1 capture follow-up nudge, ADR-019)
 
 Five pipelines, decoupled: each fails, retries and evolves independently. Every step
 transition is persisted (`captures.status`, `agent_runs`) — nothing silent
@@ -32,6 +34,8 @@ POST /capture/{voice,text}
 ORGANIZE — LLM, JSON out                           status=organizing
    │ { notes: [ { title, plane, planes[], tags[], body } ] }
    │ may SPLIT into multiple atomic notes (ADR-005); "don't know" plane → Inbox
+   │ tag reuse: existing vault tag vocabulary injected into the prompt —
+   │ prefer an existing tag, coin new only if none fits (ADR-024, M2)
    ▼
 WRITE NOTES to vault (frontmatter contract)        status=written
    ▼
@@ -82,17 +86,33 @@ finish agent_runs (summary + details per note, model_used, fallback_used)
 Idempotency: cursor advances only past successfully-materialized items; re-running a
 failed window reprocesses it; `source_ref` lets the distiller skip already-noted items.
 
-## 3. Indexing pipeline
+## 3. Indexing pipeline (M2 — [ADR-022](adr/022-embeddings-self-hosted-nomic.md), [ADR-023](adr/023-semantic-relatedness-graph.md))
 
-Triggers: capture/ingestion writes · nightly full rescan · `POST /admin/reindex`.
+Triggers: capture/ingestion writes · the nightly combined `reindex` job · `POST /admin/reindex`.
 
 ```
-file → read → sha256 ── unchanged? skip
+file → read → strip frontmatter + sb:related block → sha256 ── unchanged? skip
      → parse frontmatter (plane/planes/tags/source/created)
-     → chunk (docs/02 §4) → embed (batched) → transactional upsert notes+chunks
+     → chunk (docs/02 §4) → embed batched via nomic ("search_document: …")
+     → per-note TRANSACTION: delete old chunks + upsert note + insert chunks
+       + notes.embedding = mean-pool(chunk vectors)
 ```
 
-Deletions reconciled on rescan (DB rows without files are removed). Fully idempotent.
+- **Embedding provider = self-hosted nomic (Ollama), single-provider, no hot fallback**
+  ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)). One index = one vector space.
+- **Robustness ([ADR-022](adr/022-embeddings-self-hosted-nomic.md) / M2):** per-note transaction (a
+  note is never half-indexed); on an embed failure, **skip-and-continue** — leave the note's
+  existing rows intact, log it, keep going, mark the run **`partial`**; batch-embed a note's chunks
+  in one call with 429 backoff. Retry re-indexes only still-stale notes (hash-skip). Never crashes
+  the job (rule 7).
+- **Deletions** reconciled on rescan (DB rows without files removed, `chunks`/`note_links` cascade);
+  a rename = delete old `vault_path` + insert new. Fully idempotent.
+- **Relatedness graph** ([ADR-023](adr/023-semantic-relatedness-graph.md)) is recomputed **nightly
+  only** (and on `/admin/reindex`), never on the real-time capture write: top-K over
+  `notes.embedding` cosine above `RELATED_MIN_SCORE` → `note_links` → render changed `sb:related`
+  blocks (churn-gated by block-diff). The capture path leaves the graph untouched.
+- **`/admin/reindex` is async + single-flight** ([03-api](03-api.md)): `202`, an `agent="reindex"`
+  run, `409` if a reindex/rescan is already running.
 
 ## 4. Chat / search pipeline (interactive)
 
@@ -113,7 +133,7 @@ say explicitly when the context lacks the answer; reply in the user's language.
 | Job | Schedule (Europe/Bucharest) | Behavior |
 |---|---|---|
 | Slack ingest | 03:00 | pipeline §2 |
-| Full rescan | 03:40 | pipeline §3 over whole vault |
+| Full rescan (`reindex`) | 03:40 | **one combined job** (M2, [ADR-023](adr/023-semantic-relatedness-graph.md)): `git pull` vault (external/other-device edits) → pipeline §3 over whole vault → recompute `note_links` → render `sb:related` blocks → commit+push (one vault git lock). Writes `agent="reindex"` (`details.trigger="nightly"`). Single-flight with `/admin/reindex`. |
 | Daily summary | 04:10 | notes with `note_created_at` = yesterday → LLM: themes, decisions, open questions, **sectioned per plane** → `Summaries/Daily/YYYY-MM-DD.md` → upsert `summaries` → index. Skips silently when no notes. |
 | Weekly review | Sunday 04:40 | inputs = week's daily summaries (fallback: week's notes) → patterns, recurring themes, cross-plane insights, suggested questions → `Summaries/Weekly/YYYY-Www.md` |
 | Vault backup | after every write batch + 04:55 sweep | git add/commit/push ([ADR-001](adr/001-vault-on-vps-with-git-backup.md)) |

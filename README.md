@@ -56,7 +56,16 @@ siblings) and flagged **semantic relatedness linking** as a future-scope questio
 *M1 polish batch* block in [08](08-implementation-plan.md). **M1 close POSTPONED to end of M2
 (2026-07-13):** the Accept's nightly-WORM-bundle + weekly-integrity-drill tail needs real
 overnight/weekly cycles, so the app is left running overnight and **M2 starts now**; the M1 Accept
-confirmation (backup evidence + any overnight findings) folds into the M2 close. Paused per the
+confirmation (backup evidence + any overnight findings) folds into the M2 close. **M2 grilled to
+build-ready detail 2026-07-13** (see [ADR-022](adr/022-embeddings-self-hosted-nomic.md) self-hosted
+nomic embeddings, [ADR-023](adr/023-semantic-relatedness-graph.md) materialized relatedness graph,
+[ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md) tag reuse, and the M2 build-decisions
+block in [08](08-implementation-plan.md)): local nomic-via-Ollama embeddings (768-dim, single
+provider, Nebius cold-swap), a full materialized `note_links` graph rendered as Obsidian-visible
+wikilink blocks, note-grouped `/search` + read-only preview, async single-flight `/admin/reindex`,
+a combined nightly pull+rescan+graph job, forward tag reuse + a manual consolidate tool, and a web
+Search + Admin surface. **Overnight snapshot recorded** (box up; nudge/Inbox-fallback live-verified;
+scheduled-backup evidence pending the next cycle — not chased). Paused before implementation per the
 [session protocol](09-session-protocol.md).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build

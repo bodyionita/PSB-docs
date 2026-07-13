@@ -1,7 +1,11 @@
 # API Contract
 
-**Version:** 2.1 · **Status:** Approved 2026-07-12 (2.1 = M1 capture additions: `GET /captures`
-list, `POST /captures/{id}/follow-up`, follow-up fields, `/health` `backups` leg)
+**Version:** 2.2 · **Status:** Approved 2026-07-13 (2.2 = M2 indexing/search: `POST /search`
+now note-grouped, `POST /admin/reindex` async→`202`+run, new `GET /notes/{id}` preview,
+`POST /admin/tags/consolidate` — [ADR-022](adr/022-embeddings-self-hosted-nomic.md),
+[ADR-023](adr/023-semantic-relatedness-graph.md), [ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md);
+2.1 = M1 capture additions: `GET /captures` list, `POST /captures/{id}/follow-up`, follow-up
+fields, `/health` `backups` leg)
 
 This HTTP API is the **only** seam between `web/` and `server/`
 ([ADR-006](adr/006-monorepo-with-strict-server-web-decoupling.md)). The server publishes
@@ -40,11 +44,12 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | `GET /chat/sessions` · `GET /chat/sessions/{id}` | history for the UI |
 | `POST /chat` | `{ "message", "session_id"?: uuid, "model"?: id, "top_k"?: int }` → `{ "session_id", "answer", "model_used", "fallback_used", "sources": [{ note_path, title, snippet, score, planes }] }` — `model_used` may differ from requested when fallback fired (UI shows banner) |
 
-## Search
+## Search & notes
 
 | | |
 |---|---|
-| `POST /search` | `{ "query", "top_k"?, "planes"?: [..] }` → scored chunks, no LLM call |
+| `POST /search` | `{ "query", "top_k"?: int=10, "planes"?: [..] }` → **note-grouped** scored results, no LLM call. Query embedded with the `search_query:` prefix ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)); pgvector cosine over `chunks`, **deduped to one row per note** (best-scoring chunk = snippet). `planes` filters on **`notes.planes` membership** (array overlap, not folder — [ADR-005](adr/005-planes-and-atomic-notes.md)). Response: `[{ note_id, vault_path, title, plane, planes[], tags[], snippet, score }]`, ranked by best chunk. No hard score floor by default (`SEARCH_MIN_SCORE` setting, off = 0). |
+| `GET /notes/{id}` | read-only note preview for the search UI expand: `{ note_id, vault_path, title, plane, planes[], tags[], body, related: [{ note_id, vault_path, title, score }] }`. `body` is read from the **vault file** (fidelity, incl. any Obsidian edits); `related` = this note's semantic neighbours from `note_links` ([ADR-023](adr/023-semantic-relatedness-graph.md)). `404` if unknown. No in-app editing (v2). |
 
 ## Activity feed
 
@@ -75,7 +80,8 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 |---|---|
 | `GET /agents` | registered connectors/jobs + schedule + last run |
 | `POST /agents/{name}/run` | trigger on demand (e.g. `slack-ingest`, `daily-summary`); `409` if already running |
-| `POST /admin/reindex` | vault reconciliation → `{ indexed, skipped, deleted }` |
+| `POST /admin/reindex` | vault reconciliation, **async** ([ADR-023](adr/023-semantic-relatedness-graph.md)): `202 { run_id }`, work runs in the background and opens an `agent="reindex"` run (`details.trigger="manual"`) — counts (`indexed, skipped, deleted, failed`) land in the run's `details`; `partial` on embed failures (skip-and-continue). **Single-flight**: `409` if a reindex or the nightly rescan is already running. Runs the full pass (rescan → recompute `note_links` → render `## Related notes` blocks → commit+push). |
+| `POST /admin/tags/consolidate` | tag-vocabulary cleanup, two-step ([ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md)). **Propose** (`{ "apply": false }` / default) → `{ plan_id, merges: [{ canonical, variants[] }] }`, no writes. **Apply** (`{ "apply": true, "plan": [{ canonical, variants[] }] }`) → rewrites affected notes' frontmatter tags + reindexes them → `202 { run_id }`. Never-lose (git-tracked, revertible). |
 | `POST /admin/backup` | force vault git commit+push → `{ committed, pushed }` |
 | `POST /admin/captures/{id}/reorganize` | maintenance re-run: re-organize a capture's stored raw text and **replace** its notes (e.g. re-deriving notes after the English-only organizer change). `202` → `{ capture_id }`; `404` if unknown. Raw input untouched (never-lose); notes replaced only on a successful organize, kept on the Inbox-fallback |
 | `GET /health` | no auth: `{ status, db, vault, git_remote, backups }`, `503` when degraded. `backups` (M1, [ADR-014](adr/014-vault-history-durability.md) §6) is false when the latest `integrity-drill` run failed or is overdue (>~8 days) |

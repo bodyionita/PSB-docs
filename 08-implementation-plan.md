@@ -1,7 +1,8 @@
 # Implementation Plan
 
-**Version:** 2.1 · **Status:** Approved 2026-07-12 (2.1 = M1 grilled to build-ready detail; v2
-backlog additions)
+**Version:** 2.2 · **Status:** Approved 2026-07-13 (2.2 = M2 grilled to build-ready detail —
+[ADR-022](adr/022-embeddings-self-hosted-nomic.md)/[023](adr/023-semantic-relatedness-graph.md)/[024](adr/024-tag-vocabulary-reuse-and-consolidation.md);
+M1 close folded into M2; 2.1 = M1 grilled to build-ready detail; v2 backlog additions)
 **Rule:** ship in phases; every phase ends usable. A phase starts only when the previous
 one's acceptance criteria pass. Code lives in `second-brain/` (monorepo, ADR-006).
 **Process:** every session runs under [09-session-protocol.md](09-session-protocol.md)
@@ -715,10 +716,88 @@ scheduled-backup evidence and any overnight findings. Start M2 without waiting.
 ## M2 — Indexing & search
 
 Chunking (pure, tested), indexer (hash skip, transactional upsert), full rescan +
-`/admin/reindex`, `/search` with plane filters. Web: search UI (can ship inside chat screen).
+`/admin/reindex`, `/search` with plane filters. Web: standalone search screen + admin controls.
 
 **Accept:** reindex over a seeded vault; paraphrased query finds the right note; DB wipe +
 reindex restores search; editing a note via git push is picked up by nightly pull+rescan.
+**M2 also closes M1** (postponed 2026-07-13): fold in the M1 backup tail (a nightly WORM bundle +
+the weekly integrity drill pass the fingerprint check) once the overnight/weekly cycles have run.
+
+**M2 build decisions (grilled 2026-07-13 — [ADR-022](adr/022-embeddings-self-hosted-nomic.md),
+[ADR-023](adr/023-semantic-relatedness-graph.md), [ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md)).**
+Build-ready detail below; nothing left to implementer discretion. Facts confirmed against the M1
+code: the registry already exposes `embed()`; `notes`/`chunks` exist (migration 001, currently
+empty — the M1 index step is a no-op stub); chunking policy is in [02 §4](02-data-model.md).
+
+- **Embeddings — self-hosted nomic ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)).**
+  `nomic-embed-text-v1.5` via an **Ollama** sidecar (OpenAI-compatible; drop-in
+  `OpenAICompatibleProvider`, base-URL only), **768-dim**, **single-provider, no hot fallback** (one
+  index = one vector space). **Asymmetric prefixes mandatory**: `search_document:` when indexing,
+  `search_query:` when searching. Nebius `Qwen3-Embedding` (multilingual) is the documented
+  **cold-swap** (one config + reindex) if English-centric search disappoints; a same-model
+  hosted-nomic **hot fallback is a noted future** (option B). Migration 004 resizes the empty
+  `vector(1536)` columns → 768.
+- **Indexer.** `file → strip frontmatter + `sb:related` block → sha256 (skip if unchanged) → parse
+  frontmatter → chunk ([02 §4](02-data-model.md)) → batch-embed → **per-note transaction** (delete
+  old chunks + upsert note + insert chunks) + `notes.embedding = mean-pool(chunk vectors)`. On embed
+  failure: **skip-and-continue → run `partial`** (leave existing rows, retry re-indexes stale notes),
+  429 backoff. Deletions reconciled (cascade); rename = new path. Fully idempotent.
+- **`content_hash`** covers **frontmatter + body minus the `sb:related` block** — metadata edits
+  reindex; the graph's own writes never re-trigger reindex (feedback-loop fix,
+  [ADR-023](adr/023-semantic-relatedness-graph.md)).
+- **Relatedness graph ([ADR-023](adr/023-semantic-relatedness-graph.md)) — full materialized graph.**
+  Canonical **`note_links`** table (directional, `score`) **+** a rendered, delimited `sb:related`
+  `## Related notes` wikilink block in each note body (Obsidian-visible), **distinct** from the
+  co-capture `related:` field. Similarity = top-K over `notes.embedding` cosine above a floor;
+  **`RELATED_TOP_K`=5**, **`RELATED_MIN_SCORE`=0.5**, both settings **tuned live** during Accept.
+  **Recomputed nightly only** (+ on `/admin/reindex`); the real-time capture path never touches it.
+  Churn-gated (rewrite a file only when its block changed).
+- **Search.** `POST /search` → **note-grouped** results (best chunk = snippet), `top_k`=10,
+  `planes` = `notes.planes` membership overlap ([ADR-005](adr/005-planes-and-atomic-notes.md)), no
+  hard floor (`SEARCH_MIN_SCORE` off by default). `GET /notes/{id}` = read-only preview (body from
+  the vault file + the note's `note_links` neighbours).
+- **Reindex.** `POST /admin/reindex` **async**: `202 {run_id}`, `agent="reindex"` run
+  (`details.trigger="manual"`, counts + `partial` in `details`), **single-flight** (409 if a
+  reindex/rescan is running). The **one combined nightly `reindex` job** (03:40, existing scheduler)
+  = `git pull` → rescan → recompute graph → render blocks → commit+push (one vault lock),
+  `details.trigger="nightly"`.
+- **Tags ([ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md)).** Forward-only reuse: the
+  live tag vocabulary (distinct `notes.tags`) is injected into the organizer (+ M4 distiller) prompt
+  — *prefer existing, coin new only if none fits*. Existing cruft: a **manual** two-step
+  `POST /admin/tags/consolidate` (propose → apply, reusing the reorganize vault-write path); **not**
+  wired into the nightly job.
+- **Web (online-only).** A standalone **Search tab** (query box, plane-filter chips, note cards with
+  title/plane/snippet/tags/score, **read-only preview on expand** via `GET /notes/{id}`) + a
+  lightweight **Admin tab** with buttons: **Reindex** (shows the run's live status/counts),
+  **Backup now** (`/admin/backup`), **Consolidate tags** (Propose → review → Apply). Admin tab is
+  movable later.
+- **API/contract additions** ([03-api](03-api.md)): `POST /search` note-grouped, `GET /notes/{id}`,
+  `POST /admin/reindex` async, `POST /admin/tags/consolidate`. Schema ([02](02-data-model.md)):
+  migration 004 (`notes.embedding`, `note_links`, resize to 768). Infra ([07](07-infrastructure.md)):
+  `ollama` sidecar.
+
+**Overnight snapshot at M2 start (2026-07-13).** The M1-tail collection ran before starting M2:
+- **Box up** — `braindan.cc` root `200`; `/health` `db`/`vault`/`git_remote` green. `backups:false`
+  → `503` (`degraded`) — the expected "no green integrity-drill baseline yet" state.
+- **M1 non-scheduled paths confirmed working live:** `agent_runs` shows capture runs (4 succeeded /
+  3 failed); the **Inbox-fallback** path fired (a capture → `Inbox/…`), **nudges** generated on 3
+  captures, **2 answered** (Pass-2 follow-up works end-to-end). So nudge + Inbox-fallback are
+  live-verified; the co-capture note→GitHub-history half of the M1 Accept was already satisfied.
+- **Scheduled-backup evidence still pending, no action taken.** Zero `agent_runs` for
+  `vault-backup`/`db-backup`/`data-sync`/`integrity-drill`. This is **consistent with no scheduled
+  window (03:10–04:57; drill Sunday 04:30) having elapsed** since the app was left running — *not*
+  evidence the scheduler is broken. Decision: **don't chase it preemptively**; let the next real
+  overnight cycle produce the rows, check `agent_runs` then, and diagnose (likely just verify
+  `ENABLE_SCHEDULER` in the prod `.env`, and seed a baseline with `python -m app.cli integrity-drill`)
+  **only if it's actually empty**. The M1 close folds into the M2 close either way.
+
+**Paused after grilling (2026-07-13) — recorded, not yet implemented** per the
+[session protocol](09-session-protocol.md). Next: an **implementation session** builds M2 against
+this spec (no grilling), pausing between tasks with an independent review at each. Suggested task
+order: migration 004 + Ollama/nomic provider wiring → pure chunker → indexer service (real index
+step replacing the M1 stub) → `/search` + `GET /notes/{id}` → relatedness graph (`note_links` +
+`sb:related` render) → nightly combined `reindex` job → tag reuse + `/admin/tags/consolidate` → web
+Search + Admin tabs → live M2 Accept (which also confirms the M1 backup tail).
 
 ## M3 — Chat
 

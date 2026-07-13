@@ -1,7 +1,7 @@
 # Infrastructure & Operations
 
-**Version:** 1.0 · **Status:** Approved 2026-07-12
-**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [003](adr/003-single-service-on-vps.md) · [007](adr/007-auth-password-session-cloudflare.md)
+**Version:** 1.1 · **Status:** Approved 2026-07-13 (1.1 = M2 adds the `ollama` embeddings sidecar — [ADR-022](adr/022-embeddings-self-hosted-nomic.md))
+**Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [003](adr/003-single-service-on-vps.md) · [007](adr/007-auth-password-session-cloudflare.md) · [022](adr/022-embeddings-self-hosted-nomic.md)
 
 ## Hosting
 
@@ -40,14 +40,24 @@
 ```
 deploy/docker-compose.yml
 ├── caddy      # :443 — serves web/dist statically, proxies /api → api:8000
-└── api        # FastAPI + scheduler + agents (single container, ADR-003)
-               # volumes: /srv/vault (vault git repo), /srv/data (audio files),
-               #          claude CLI credentials volume
+├── api        # FastAPI + scheduler + agents (single app container, ADR-003)
+│              # volumes: /srv/vault (vault git repo), /srv/data (audio files),
+│              #          claude CLI credentials volume
+└── ollama     # M2 — self-hosted embeddings (nomic-embed-text-v1.5), ADR-022
+               # OpenAI-compatible /v1/embeddings on the internal network;
+               # model volume; not exposed off-box (no published port)
 ```
 
 - The `api` image includes Python 3.12, the app, git, and the **Claude Code CLI**
   (provider `claude-max` shells the Agent SDK; OAuth done once via
   `docker compose exec api claude login`, credentials persisted on a volume).
+- **`ollama` (M2, [ADR-022](adr/022-embeddings-self-hosted-nomic.md)):** an infra sidecar (not an
+  app-logic split — consistent with [ADR-003](adr/003-single-service-on-vps.md), which is about the
+  *application* being one service). The `api` container reaches it as an `OpenAICompatibleProvider`
+  at `http://ollama:11434/v1` (base-URL config, no API key). Provisioning pulls the model once
+  (`ollama pull nomic-embed-text`); resident ~0.1–0.3 GB on the 4 GB box. The app **tolerates
+  ollama-not-ready** — a capture's index step fails retryably and the next rescan converges; a
+  transient outage never corrupts the index (single-provider, one vector space).
 - `ENABLE_SCHEDULER=true` on exactly one instance (there is only one).
 
 ## Vault backup & history durability (ADR-001 + [ADR-014](adr/014-vault-history-durability.md))
