@@ -173,13 +173,18 @@ exhausted and the capture degraded to an Inbox note — a *success*, not a failu
 ## 4. Chunking policy
 
 Split on headings, then paragraphs; target `CHUNK_SIZE` (1200 chars), overlap
-`CHUNK_OVERLAP` (200) on hard splits. **For chunking/embedding, both the frontmatter and the
-`sb:related` machine block are stripped** ([ADR-023](adr/023-semantic-relatedness-graph.md)) — a
-note's *embedded* identity is its human content only. **`content_hash` differs deliberately:** it
-covers **frontmatter + body minus the `sb:related` block** (§3) — the machine block is excluded
-(so the graph's own writes never re-trigger a reindex) but frontmatter is *kept* (so tag/plane
-edits still reindex). So only the `sb:related` block is stripped from both paths; frontmatter is
-stripped from the embed path but not the hash. The embedded text is `"search_document: {title}\n\n{chunk}"`
+`CHUNK_OVERLAP` (200) on hard splits. **For chunking/embedding, the frontmatter, the `sb:related`
+machine block, *and* the M1 co-capture `## Related` wikilink section are stripped**
+([ADR-023](adr/023-semantic-relatedness-graph.md)) — a note's *embedded* identity is its human
+content only, **never links to other notes** (embedding a sibling's title/path couples co-captured
+notes in cosine search — an M2-Accept finding, 2026-07-13). Only a *pure* `## Related` + `- [[…]]`
+bullet list is stripped, never a prose section; the co-capture link survives in the `related:`
+frontmatter. **`content_hash` differs deliberately:** it covers **frontmatter + body minus the
+`sb:related` block** (§3) — the machine block is excluded (so the graph's own writes never
+re-trigger a reindex) but frontmatter **and the co-capture section are *kept*** (so tag/plane and
+sibling edits still reindex). So only the `sb:related` block is stripped from both paths;
+frontmatter and the co-capture `## Related` list are stripped from the embed path but not the hash.
+The embedded text is `"search_document: {title}\n\n{chunk}"`
 and search queries are embedded as `"search_query: {q}"` — the **asymmetric nomic task prefixes are
 mandatory** ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)), or retrieval quality drops.
 `notes.embedding` = mean-pool of the note's chunk vectors (no extra embed call).

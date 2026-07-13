@@ -1,6 +1,6 @@
 # Infrastructure & Operations
 
-**Version:** 1.1 · **Status:** Approved 2026-07-13 (1.1 = M2 adds the `ollama` embeddings sidecar — [ADR-022](adr/022-embeddings-self-hosted-nomic.md))
+**Version:** 1.2 · **Status:** Approved 2026-07-13 (1.2 = M2 Accept adds the `ollama-init` one-shot that auto-pulls the embedding model — no manual `ollama pull`; 1.1 = M2 adds the `ollama` embeddings sidecar — [ADR-022](adr/022-embeddings-self-hosted-nomic.md))
 **Key ADRs:** [001](adr/001-vault-on-vps-with-git-backup.md) · [003](adr/003-single-service-on-vps.md) · [007](adr/007-auth-password-session-cloudflare.md) · [022](adr/022-embeddings-self-hosted-nomic.md)
 
 ## Hosting
@@ -43,9 +43,12 @@ deploy/docker-compose.yml
 ├── api        # FastAPI + scheduler + agents (single app container, ADR-003)
 │              # volumes: /srv/vault (vault git repo), /srv/data (audio files),
 │              #          claude CLI credentials volume
-└── ollama     # M2 — self-hosted embeddings (nomic-embed-text-v1.5), ADR-022
-               # OpenAI-compatible /v1/embeddings on the internal network;
-               # model volume; not exposed off-box (no published port)
+├── ollama     # M2 — self-hosted embeddings (nomic-embed-text-v1.5), ADR-022
+│              # OpenAI-compatible /v1/embeddings on the internal network;
+│              # model volume; not exposed off-box (no published port); healthchecked
+└── ollama-init # M2 — one-shot: pulls the embedding model into ollama's volume, then exits.
+               # Runs on every `up` (self-healing, idempotent no-op once present) so a fresh
+               # box / recreated volume needs no manual `ollama pull` (ADR-022)
 ```
 
 - The `api` image includes Python 3.12, the app, git, and the **Claude Code CLI**
@@ -54,10 +57,15 @@ deploy/docker-compose.yml
 - **`ollama` (M2, [ADR-022](adr/022-embeddings-self-hosted-nomic.md)):** an infra sidecar (not an
   app-logic split — consistent with [ADR-003](adr/003-single-service-on-vps.md), which is about the
   *application* being one service). The `api` container reaches it as an `OpenAICompatibleProvider`
-  at `http://ollama:11434/v1` (base-URL config, no API key). Provisioning pulls the model once
-  (`ollama pull nomic-embed-text`); resident ~0.1–0.3 GB on the 4 GB box. The app **tolerates
-  ollama-not-ready** — a capture's index step fails retryably and the next rescan converges; a
-  transient outage never corrupts the index (single-provider, one vector space).
+  at `http://ollama:11434/v1` (base-URL config, no API key). The model is pulled **automatically**
+  by the `ollama-init` one-shot (gated on the ollama healthcheck), which runs on every `up` and is
+  a fast idempotent no-op once the blobs are present — so a fresh box or a recreated `ollama_models`
+  volume self-provisions with **no manual `ollama pull`**. Resident ~0.1–0.3 GB on the 4 GB box.
+  The app **tolerates ollama-not-ready** — a capture's index step fails retryably and the next
+  rescan converges; a transient outage never corrupts the index (single-provider, one vector space).
+  *(History: the live M2 Accept caught the prod box running without the model — the sidecar predated
+  M2 provisioning — surfacing as a `partial`/all-embeds-failed reindex; `ollama-init` removes that
+  class of manual-step gap for good.)*
 - `ENABLE_SCHEDULER=true` on exactly one instance (there is only one).
 
 ## Vault backup & history durability (ADR-001 + [ADR-014](adr/014-vault-history-durability.md))
