@@ -7,14 +7,17 @@ implementation plus a `CLAUDE.md` that points here.
 **Status (2026-07-13).** Design approved 2026-07-12 (grilled decision-by-decision).
 **M0 / M0b ACCEPT COMPLETE** — the code monorepo `../second-brain/` is **deployed live at
 `https://braindan.cc`** (PWA over HTTPS, login, `/health` green, Cloudflare TLS Full-strict).
-**M1 (capture end-to-end) code-complete** — voice/text capture → organized atomic notes with
-full ADR-014 vault durability; its live-Accept backup tail folds into the M2 close. **M2
-(indexing & search) IN PROGRESS** — Tasks 1–8 done (nomic-via-Ollama embeddings, chunker,
-indexer, `/search` + note preview, the materialized `note_links` relatedness graph, the
-combined nightly `reindex` job + async single-flight `POST /admin/reindex`, organizer tag
-reuse + the two-step `POST /admin/tags/consolidate`, and the web **Search + Admin tabs** with two
-small supporting endpoints `GET /planes` + `GET /activity/runs/{id}`); next is Task 9 — the live
-M2 Accept (which also confirms the folded-in M1 backup tail).
+**M1 (capture end-to-end) ACCEPT COMPLETE** — voice/text capture → organized atomic notes with
+full ADR-014 vault durability; its backup tail closed at the M2 Accept (WORM bundle in R2 +
+integrity-drill green, `/health backups:true`). **M2 (indexing & search) ACCEPT COMPLETE** — all 9
+tasks done (nomic-via-Ollama embeddings, chunker, indexer, `/search` + note preview, the
+materialized `note_links` relatedness graph, the combined nightly `reindex` job + async
+single-flight `POST /admin/reindex`, organizer tag reuse + the two-step
+`POST /admin/tags/consolidate`, the web **Search + Admin tabs** with `GET /planes` +
+`GET /activity/runs/{id}`, and the **live Accept** — paraphrased search, DB-wipe→reindex recovery,
+git-push pickup all verified on prod; four prod issues surfaced + fixed: `ollama-init` model
+auto-pull, the co-capture `## Related` embedding leak, `db-backup` pg_dump, `data-sync` WORM).
+**Next: M3 (chat).**
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

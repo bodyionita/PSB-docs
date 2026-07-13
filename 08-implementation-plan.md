@@ -157,7 +157,7 @@ The captured-voice-note→GitHub-history half is already satisfied (capture `a1e
 - [x] 4 — web capture screen (06) · [log](08-logs/m1.md#web-capture-screen-06)
 - [x] 5 — M1 replan (STT chain + `agent_runs` logging + `CLAUDE_MAX_EFFORT` + web 3 must-fix + vault SSH wiring) — server `d9b21e8`, web `4d988ea`+`26a1c09`, deploy `a56038f` · [log](08-logs/m1.md#m1-replan-2026-07-13)
 - [x] 6 — polish batch (English-only vault, valid tags, git hygiene, reorganize) — `d469277` (shipped + deployed) · [log](08-logs/m1.md#polish-batch-2026-07-13)
-- [ ] 7 — **M1 live Accept** (scheduled-backup evidence: nightly WORM bundle + weekly drill) — **folded into the M2 close**
+- [x] 7 — **M1 live Accept** (scheduled-backup evidence: WORM bundle in R2 + integrity-drill verifies its fingerprint; `/health backups:true`) — **closed at the M2 Accept** (all four R2 jobs green after fixing `db-backup`/`data-sync`) · [log](08-logs/m2.md#task-9--live-m2-accept-in-progress-2026-07-13)
 
 ## M2 — Indexing & search
 
@@ -231,7 +231,7 @@ empty — the M1 index step is a no-op stub); chunking policy is in [02 §4](02-
 - [x] 6 — combined nightly `reindex` job (`reindex_all` + `RelatednessGraph.recompute`, `git pull` first, one commit+push under the vault lock, single-flight) + `POST /admin/reindex` async wrapper — `a059c18`+`8cde827` · [log](08-logs/m2.md#task-6)
 - [x] 7 — tag reuse in the organizer prompt + `POST /admin/tags/consolidate` (propose → apply) — `b404709` · [log](08-logs/m2.md#task-7)
 - [x] 8 — web Search tab + Admin tab (+ two small server endpoints `GET /planes` and `GET /activity/runs/{id}`, 03-api v2.3) · [log](08-logs/m2.md#task-8)
-- [ ] 9 — **live M2 Accept** (paraphrased query finds the right note; DB-wipe + reindex restores search; git-push edit picked up nightly) — **also confirms the M1 backup tail**
+- [x] 9 — **live M2 Accept** (paraphrased query finds the right note; DB-wipe + reindex restores search; git-push edit picked up) — **also closed the M1 backup tail**; surfaced + fixed 4 prod issues (model-pull → `ollama-init`; co-capture `## Related` embedding leak; `db-backup` pg_dump-missing; `data-sync` WORM lock) · [log](08-logs/m2.md#task-9--live-m2-accept-in-progress-2026-07-13)
 
 ## M3 — Chat
 
