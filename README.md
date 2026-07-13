@@ -120,7 +120,8 @@ directional `note_links`, block render, zero-churn re-run). See the *M2 progress
 | [05-connectors.md](05-connectors.md) | Connector contract, Slack connector spec, deferred connectors |
 | [06-web-app.md](06-web-app.md) | PWA screens, design language (premium, animated), auth UX |
 | [07-infrastructure.md](07-infrastructure.md) | VPS, Docker Compose, Caddy, Cloudflare, CI/CD, secrets, backups |
-| [08-implementation-plan.md](08-implementation-plan.md) | Phased delivery with acceptance criteria |
+| [08-implementation-plan.md](08-implementation-plan.md) | Phased delivery: per-milestone scope, acceptance, build decisions + a **task tracker** (done/open) |
+| [08-logs/](08-logs/) | Per-milestone **implementation logs** (what was built, reviews, verification) — the append-only detail behind the tracker |
 | [09-session-protocol.md](09-session-protocol.md) | How every session runs: grill → record → pause → respawn-friendly commits |
 | [adr/](adr/) | Architecture Decision Records — the *why* behind every choice |
 | [templates/CLAUDE.md](templates/CLAUDE.md) | Ready-to-copy implementation rules for the code monorepo |
