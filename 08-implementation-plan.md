@@ -126,9 +126,10 @@ nothing left to implementer discretion:
   VPS deploy pubkey into the Actions log; user actions = GitHub UI only (create repo, paste
   key, archive `PSB-vault` after Accept).
 
-**Tasks** — detail in 08-logs/m3.md (created at implementation).
-- [ ] 1 — migration 005 + config/vocab plumbing (`GRAPH_STORE_PATH/REPO`, `NODE_TYPES`,
-      `EDGE_RELS`, `ENTITY_MATCH_MIN_CONF`, burst/profile settings)
+**Tasks** — detail in [08-logs/m3.md](08-logs/m3.md).
+- [x] 1 — migration 005 + config/vocab plumbing (`GRAPH_STORE_PATH/REPO`, `NODE_TYPES`,
+      `EDGE_RELS`, `ENTITY_MATCH_MIN_CONF`, burst/profile settings) — done 2026-07-13,
+      review clean, verified vs real pgvector; commit `f2b9549` (log: task 1)
 - [ ] 2 — graph-store service + code rename (store writer: type folders, slug+short-id,
       new frontmatter contract; bootstrap; ADR-014 machinery untouched)
 - [ ] 3 — organizer v3 (typed nodes, occurred, entity resolution vs alias index, edges
