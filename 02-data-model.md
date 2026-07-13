@@ -1,6 +1,8 @@
 # Data Model
 
-**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = **M3 grilled to build-ready**
+**Version:** 3.2 · **Status:** Approved 2026-07-13 (3.2 = prior-art adoptions
+[ADR-032](adr/032-prior-art-adoptions.md): edge `until`, observation-style profiles.
+3.1 = **M3 grilled to build-ready**
 ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
 aliases/disambig + `occurred` + edge `{conf,since}` + `organizer_version` in the contract; 9 node
 types / 6 edge rels; `review_queue` pulled into M3, kind-generic; migration 005 DDL fixed.
@@ -55,10 +57,11 @@ plane: personal                 # primary plane (attribute, not folder)
 planes: [personal, friends]     # full membership; superset of `plane`
 tags: [dinner, catching-up]
 organizer_version: v3           # which organizer generation wrote this (retrofit targeting)
-edges:                          # canonical typed edges, target = node id (ADR-030/031)
+edges:                          # canonical typed edges, target = node id (ADR-030/031/032)
   - {rel: involves, to: 018f4a11-…, since: 2025-07-10}
   - {rel: part_of,  to: 018f6c33-…}          # conf omitted ⇒ 1.0; <threshold ⇒ review, no edge
----
+  - {rel: at, to: 018f7d44-…, until: 2025-08-02}   # `until` closes a superseded relation —
+---                                                # invalidate, never delete (ADR-032)
 (Markdown prose body — the memory itself)
 ```
 
@@ -127,9 +130,10 @@ New config: `GRAPH_STORE_PATH`, `GRAPH_STORE_REPO`, `NODE_TYPES` (9), `EDGE_RELS
 | node_created_at | timestamptz null | frontmatter `created`, else mtime |
 | indexed_at | timestamptz | |
 
-*Derived entity **profiles** ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)) — the "who/what
-is X now" summary regenerated nightly from the 1-hop neighborhood — live DB-side (embedded,
-rebuildable; storage detail an implementation choice within the derived tier).*
+*Derived entity **profiles** ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[032](adr/032-prior-art-adoptions.md)) —
+regenerated nightly from the 1-hop neighborhood as **categorized observation lines** (`[role]`,
+`[location]`, `[last-seen]`, …), not prose blobs — live DB-side (embedded, rebuildable; storage
+detail an implementation choice within the derived tier).*
 
 **`chunks`** — as before, `note_id` → **`node_id`** (fk → nodes, cascade); unique
 `(node_id, chunk_index)`; content + `vector(768)`.
@@ -141,7 +145,7 @@ rebuildable; storage detail an implementation choice within the derived tier).*
 | rel | text | `involves`, `about`, `at`, … for canonical; `similar` for derived |
 | origin | text | `canonical` (materialized from frontmatter at index time) \| `derived` (recomputed nightly from embeddings, top-K over cosine ≥ floor — the surviving half of [ADR-023](adr/023-semantic-relatedness-graph.md)) |
 | score | real null | one column, origin disambiguates: **confidence** for canonical (null ⇒ 1.0), **cosine** for derived ([ADR-031](adr/031-m3-organizer-and-contract-extensions.md)) |
-| since | date null | canonical currency date ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)) |
+| since / until | date null | canonical validity window ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[032](adr/032-prior-art-adoptions.md)) — `until` closes a superseded relation; invalidate, never delete |
 | | | pk `(src_id, dst_id, rel, origin)`. Both origins rebuildable: canonical from files, derived from vectors — the whole table is derived-tier |
 
 ### Operational state (not rebuildable — why the DB is managed/backed up)

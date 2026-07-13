@@ -1,6 +1,11 @@
 # Implementation Plan
 
-**Version:** 3.2 · **Status:** Approved 2026-07-13 (3.2 = **M3 GRILLED TO BUILD-READY**
+**Version:** 3.3 · **Status:** Approved 2026-07-13 (3.3 = **prior-art research pass adopted in full**
+([ADR-032](adr/032-prior-art-adoptions.md)): edge `until`, resolution short-circuit + entropy
+guard, observation profiles, day/night effort, RRF + English condensation + recency + expansion
+guards, MCP pagination + `build_context`, M6 augment/re-split/salience, M7 rendering guidance,
+continents architecture + PPR + serendipity + gap-prompts to backlog, explicit rejections
+recorded. 3.2 = **M3 GRILLED TO BUILD-READY**
 ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
 agenda → build decisions + 10-task list; M4/M6 addenda **ratified** (re-check at kickoff); repo
 named `PSB-graph`; zero-manual-VPS cutover. 3.1 = re-review agendas + consistency fixes.
@@ -99,18 +104,23 @@ nothing left to implementer discretion:
   tiered organizing = documented evolution path only.
 - **Entity substrate:** `aliases[]`/`disambig` on entity-like types; GIN alias index;
   retrieval-bounded structured candidate injection; `< ENTITY_MATCH_MIN_CONF` (0.8, live-tuned)
-  ⇒ edge pending + `entity-ambiguity` review item — never guessed.
+  ⇒ edge pending + `entity-ambiguity` review item — never guessed. **+ADR-032:** single exact
+  alias hit auto-links with **no LLM round-trip**; intra-capture dedup pass; short/low-entropy
+  aliases never fuzzy auto-link.
 - **Review queue lands in M3, kind-generic** (`entity-ambiguity`, `vocab-proposal` now;
   `stance-candidate` M6; `dedup-proposal` M6+): one lifecycle, items decidable in place;
   minimal admin Review list now, polished UX M6. Vocab proposals = a queue kind (no table).
 - **Entity lifecycle:** thin canonical hubs + **derived profiles** (nightly for touched
-  entities, DB-side, embedded, in `GET /nodes/{id}`); currency via edge `since`.
+  entities, DB-side, embedded, in `GET /nodes/{id}`; **format = categorized observation lines**,
+  ADR-032); currency via edge `since` **+ optional `until`** (close a superseded relation —
+  invalidate, never delete; ADR-032).
 - **Merge + backfill:** `POST /admin/entities/merge` propose→apply, immediate apply after a
   forced commit+push; permanent `merged_into` tombstones; nightly backfill scan.
 - **Contract:** `occurred`/`occurred_end` partial-ISO (ranges in DB, `occurred ?? created`,
   never fabricated); **9 node types** (+`place`/`event`/`project`/`topic`) & **6 edge rels**
-  (+`at`); edges `{rel,to,conf?,since?}` (DB `score` serves both origins);
+  (+`at`); edges `{rel,to,conf?,since?,until?}` (DB `score` serves both origins);
   `organizer_version` stamped; injection-hygiene rules (a)–(d) are organizer law.
+  **Day/night effort defaults** (ADR-032 via ADR-025): sync organize low, nightly jobs high.
 - **Bootstrap/cutover — zero manual VPS steps:** repo **`PSB-graph`**; `GRAPH_STORE_REPO`
   config; idempotent app-level bootstrap (init+skeleton+push -u); deploy workflow prints the
   VPS deploy pubkey into the Actions log; user actions = GitHub UI only (create repo, paste
@@ -146,13 +156,16 @@ hybrid grounding, cited-only `[n]` renumbering, implicit sessions, Settings → 
 **Retarget only:** retrieval returns nodes; source cards show type + plane; "not in your
 memories". Retrieval stays **passive top-k** (full agentic traversal = backlog).
 
-**M4 addendum — RATIFIED 2026-07-13 (M3 grilling); re-check at M4 kickoff before build:**
+**M4 addendum — RATIFIED 2026-07-13 (M3 grilling), refined by [ADR-032](adr/032-prior-art-adoptions.md);
+re-check at M4 kickoff before build:**
 (a) **graph-aware retrieval lite** — after top-k, inject each hit's 1-hop canonical-edge
-neighbors as `{rel, title, type}` lines (pure SQL, no extra LLM call) + entity-seeded expansion
-(query resolves to a person/idea → union in its `involves`/`about` neighborhood); without this
-the typed graph is unused on the primary read surface. (b) **hybrid FTS leg** — a Postgres
-`tsvector` union with vector top-k (nomic is English-only and weak on proper nouns — this is a
-graph full of names).
+neighbors as `{rel, title, type}` lines (pure SQL, no extra LLM call, **config-capped**) +
+entity-seeded expansion (**falls back to vector/FTS seeds, never a hard gate**; expansion
+function **PPR-swappable**). (b) **hybrid FTS leg** — Postgres `tsvector` ⊍ vector top-k **fused
+by RRF (rank-based, k=60)**, degenerate-signal suppression, FTS→0 on non-English raw queries.
+(c) **condensation renders the query in English** (one prompt line). (d) **mild recency prior**
+on `occurred ?? created`. (e) **temporal filters** (`as_of`/date-window) on `/search`.
+LLM-free at read time throughout — no reranker, no retrieval-loop LLM (ADR-032 rejections).
 
 **Accept:** questions over known graph content answered with correct `[n]` node citations on
 both Claude and Nebius; "not in your memories" verified; sessions persist; **plus the deferred
@@ -169,10 +182,12 @@ registry fallback unit tests).
 
 ## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))
 
-**Scope.** Token-authenticated MCP server on the VPS exposing the service layer: `search`,
-`get_node`, `traverse`, `list_planes`/`list_types`, `capture` (full organizer pipeline,
-`source: mcp`). No logic of its own; smallest milestone, biggest compounding effect (external
-LLMs start feeding the brain early).
+**Scope.** Token-authenticated MCP server on the VPS exposing the service layer: `search`
+(+temporal filters), `get_node`, `traverse` (center+depth+rel, **cursor-paginated**),
+`build_context` (get_node+traverse in one round-trip — [ADR-032](adr/032-prior-art-adoptions.md)),
+`list_planes`/`list_types`, `capture` (full organizer pipeline, `source: mcp`, burst-queued).
+No logic of its own; smallest milestone, biggest compounding effect (external LLMs start
+feeding the brain early).
 **Accept (draft):** from a Claude conversation on any device: a `capture` lands as organized
 nodes; `search`+`get_node`+`traverse` answer a question about known graph content; token
 revocation locks it out; MCP-driven runs visible in activity.
@@ -189,7 +204,10 @@ endorsed/rejected/unclear), `review_queue` table + endpoints, the web **Review**
 (feed-flagged, removable); a pure-retrieval session is skipped and logged; a stance-unclear
 candidate waits in Review and ingests only on agree.
 
-**M6 addendum — RATIFIED 2026-07-13 (M3 grilling); re-check at M6 kickoff before build:**
+**M6 addendum — RATIFIED 2026-07-13 (M3 grilling), extended by [ADR-032](adr/032-prior-art-adoptions.md)
+(dedup verbs gain **augment** — same event, new fact; nightly **re-split proposals** for bloated
+nodes; salience = **graph degree + user pins + edge conf**, no LLM scoring); re-check at M6
+kickoff before build:**
 (a) **segment sessions before the salience gate** (a real session = 90% retrieval + one buried
 decision across planes; per-session granularity skips the gem or distills the noise); bias
 sarcasm/hedged/affect-laden statements toward review rather than auto-endorse; idempotent
@@ -206,9 +224,12 @@ cycle** (capture fast by day; consolidate, link, dedup, drain, reflect by night)
 **Scope.** Desktop-first point-and-click graph exploration over `GET /nodes/{id}/neighbors`
 (same service as MCP `traverse`): centered node, one-hop edges, click-to-expand, type
 shapes/icons, plane colors, canonical-vs-derived edge styling, breadcrumbs; entry from search/
-node lists; phone = tappable-list degradation. **Growth path (post-M7, own planning):** curated
-"world/continents" overviews (custom-designed together) → aerial whole-graph only if performant
-and genuinely pleasant.
+node lists; phone = tappable-list degradation. **ADR-032 build guidance:** `react-force-graph`
+**2D canvas build only**; plex-style animated re-center; **rel-based zones** over pure physics;
+per-hop fanout cap with "show more" — never a whole-graph client layout. **Growth path
+(post-M7, own planning):** curated "world/continents" overviews = **nightly server-side layout
+(UMAP/community detection) served as static tiles, clusters LLM-named once/night** — never live
+client GPU layout → aerial whole-graph only if performant and genuinely pleasant.
 **Accept (draft):** starting from a search hit, reach a `person` node in one click and see their
 constellation; expand three hops without jank; edge styling distinguishes typed relations from
 similarity.
@@ -261,15 +282,24 @@ goals across professional/personal planes. Open questions parked for its plannin
 
 ## Backlog (do not build unprompted)
 
-**Chat/retrieval:** graph-aware chat context (one-hop canonical-edge expansion) → agentic
-traversal (chat model gets `search`/`get_node`/`traverse` tools) · LLM session titles · session
-rename/delete · true token streaming (streaming provider interface + SSE).
+**Chat/retrieval:** seeded **Personalized PageRank** expansion (SPRIG GraphRRF — replaces the
+flat 1-hop union behind the same function; needs hub down-weighting) → agentic traversal (chat
+model gets `search`/`get_node`/`traverse` tools; only if M5 MCP usage proves one-shot fails —
+[ADR-032](adr/032-prior-art-adoptions.md)) · cross-encoder rerank (rejected for the hot path;
+revisit only if RRF ordering demonstrably fails) · LLM session titles · session rename/delete ·
+true token streaming (streaming provider interface + SSE).
 **Graph:** node editing in web · undo a manual ingestion (soft-delete via `git rm`,
 `captures.node_paths`) · entity extraction beyond person/idea · hybrid keyword+vector search.
 **Sources:** LLM-chat exports connector (promoted by the pivot — stance-gated like the
 chat-distiller) · WhatsApp · Instagram spike ([ADR-009](adr/009-instagram-connector-deferred.md)) ·
 email · calendar.
-**Map:** curated "world/continents" overviews (custom design session) → aerial whole-graph mode.
+**Map:** curated "world/continents" overviews (custom design session; architecture fixed by
+[ADR-032](adr/032-prior-art-adoptions.md): nightly server-side UMAP/community layout → static
+tiles, LLM-named clusters) → aerial whole-graph mode · **InfraNodus-style structural-gap
+prompts** for the reflection agent ("much about X and Y, nothing linking them") ·
+**serendipity resurfacing** (M10-adjacent: "On This Day" on the `occurred` range + weighted
+random-walk digest with a "why this" path; tune the similarity floor first) · per-type
+**field templates** (Tana-style, via ADR-027 governance — pairs with M11's task/goal types).
 **Platform:** PWA offline text-capture queue + offline shell polish · voice offline queue ·
 Cloudflare Access second wall · demo/presentation layer (curated/redacted show-off view) ·
 multi-tenant (far horizon; keep jobs CLI-invokable) · backup fast-follows (monthly CI restore

@@ -17,6 +17,10 @@ deployed live at `https://braindan.cc` (capture → organize → index/search, f
 durability); that system stays live until M3 lands (fresh start: the old vault is archived, no
 data migration). The previously grilled chat plan ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
 is carried intact to **M4**, retargeted to nodes.
+**Prior-art research pass adopted in full (2026-07-13, [ADR-032](adr/032-prior-art-adoptions.md))** —
+field survey validated the design (several areas ahead of SOTA); adoptions: edge `until`,
+exact-alias short-circuit, observation-style profiles, day/night effort, RRF hybrid retrieval +
+guards, MCP pagination/`build_context`, plus M6/M7/backlog refinements and explicit rejections.
 **M3 GRILLED TO BUILD-READY (2026-07-13 — [ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):**
 sync-full organize + MCP burst queue; alias/disambig entity substrate with bounded resolution;
 kind-generic review queue in M3; thin hubs + derived profiles; merge/backfill; `occurred`;

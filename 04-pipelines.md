@@ -1,6 +1,9 @@
 # Pipelines & Scheduling
 
-**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = **M3 grilled**
+**Version:** 3.2 · **Status:** Approved 2026-07-13 (3.2 = prior-art adoptions
+[ADR-032](adr/032-prior-art-adoptions.md): resolution short-circuit + entropy guard + intra-capture
+dedup; RRF/English-condensation/recency/expansion-guards in chat retrieval; day/night effort
+defaults. 3.1 = **M3 grilled**
 ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
 sync-full organize stays + MCP burst queue; entity resolution flow fixed; profile-refresh +
 backfill join the nightly roster. 3.0 = **mind-graph pivot**
@@ -32,10 +35,13 @@ ORGANIZE — LLM, JSON out (synchronous-full, ADR-031; MCP surface burst-queued)
    │ { nodes: [ { title, type, occurred?, plane, planes[], tags[], body, edges[] } ] }
    │ • typing against the 9-type vocabulary (ADR-027/031); no fit → type=memory
    │   + a vocab-proposal review item
-   │ • ENTITY RESOLUTION (ADR-030): mentions → alias-index candidates (GIN over
-   │   nodes.aliases) → only matching candidates injected as structured fields;
-   │   confident → edge (conf/since); < ENTITY_MATCH_MIN_CONF → edge PENDING +
-   │   entity-ambiguity review item; new entities minted with aliases/disambig
+   │ • ENTITY RESOLUTION (ADR-030/032): mentions → alias-index candidates (GIN over
+   │   nodes.aliases) → single EXACT alias hit auto-links, NO LLM round-trip;
+   │   multi-candidate/fuzzy → LLM with structured candidates; < ENTITY_MATCH_MIN_CONF
+   │   → edge PENDING + entity-ambiguity review item; short/low-entropy aliases never
+   │   fuzzy auto-link (exact or review); intra-capture dedup pass (one new entity,
+   │   not two); new entities minted with aliases/disambig; may close a superseded
+   │   edge with `until` (invalidate, never delete)
    │ • occurred extracted only when the text implies a time (partial ISO), never fabricated
    │ • typed edges (involves/about/part_of/led_to/follows/at) targeting node ids
    │ • may SPLIT into multiple atomic nodes; tag-vocabulary reuse (ADR-024, bounded)
@@ -115,10 +121,15 @@ file → read → sha256 whole file ── unchanged? skip
 [traverse] get_node/neighbors — served to the web, the map (M7) and MCP (M5) by one GraphService
 
 [chat]                                             persist user msg BEFORE any model call
-   │ turn 1? embed raw msg; else CONDENSE last N turns → standalone query (conspect chain,
-   │ low effort; all-down ⇒ degrade to raw msg)
+   │ turn 1? embed raw msg; else CONDENSE last N turns → standalone query IN ENGLISH
+   │ (conspect chain, low effort; all-down ⇒ degrade to raw msg — ADR-032: the corpus is
+   │ English; a Romanian tsquery matches nothing, vectors stay cross-lingual)
    ▼
-   node-grouped top_k (CHAT_CONTEXT_TOP_K, optional planes) → numbered context [1..k]
+   M4 retrieval (ratified + ADR-032): vector top_k ⊍ tsvector FTS fused by RRF (rank-based,
+   k=60; degenerate-signal suppression; FTS weight→0 on non-English raw queries) + mild
+   recency prior on occurred ?? created + 1-hop edge-neighbor {rel,title,type} injection
+   (config-capped) + entity-seeded expansion (falls back to vector/FTS seeds, never a hard
+   gate; expansion function PPR-swappable) → numbered context [1..k]
    ▼
    chat model (Settings chat group; per-conversation picker overrides active model)
    ▼
@@ -143,6 +154,9 @@ context (one-hop canonical-edge expansion of retrieved nodes), then agentic trav
 
 - Heavy agent work runs **03:00–05:00 Europe/Bucharest**, staggered: connectors → reindex →
   distillers → reflection; store backup sweep 04:55 + debounced after every write batch.
+- **Day/night effort split ([ADR-032](adr/032-prior-art-adoptions.md), via ADR-025 routing):**
+  the sync capture-organize defaults to lower effort; nightly consolidation/profile/reflection
+  jobs default to higher effort — cheap by day, strong by night.
 - **Every job**: idempotent, manually triggerable (`POST /agents/{name}/run`), category-tagged,
   **live-observable while running** (status + logs), schedule + next-run visible (`GET /agents`).
   The scheduler decides *when*, never *what*. No cron-only ghosts (01 invariant 4).

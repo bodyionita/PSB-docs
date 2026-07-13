@@ -1,6 +1,8 @@
 # API Contract
 
-**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = **M3 grilled**
+**Version:** 3.2 · **Status:** Approved 2026-07-13 (3.2 = prior-art adoptions
+[ADR-032](adr/032-prior-art-adoptions.md): search RRF hybrid + temporal filters; MCP traverse
+pagination + `build_context`. 3.1 = **M3 grilled**
 ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
 review queue → M3 kind-generic, `POST /admin/entities/merge`, `GET /nodes/{id}` gains
 aliases/occurred/`profile`/tombstone-resolve. 3.0 = **mind-graph pivot**
@@ -57,7 +59,7 @@ Non-streaming; the web animates a client-side reveal. Retrieval = passive node-g
 
 | | |
 |---|---|
-| `POST /search` | `{ "query", "top_k"?: 10, "planes"?, "types"? }` → **node-grouped** scored results, no LLM. `search_query:` prefix, cosine over `chunks`, deduped to best chunk per node. `planes` filters membership; `types` filters node type. `[{ node_id, store_path, type, title, plane, planes[], tags[], snippet, score }]` |
+| `POST /search` | `{ "query", "top_k"?: 10, "planes"?, "types"?, "as_of"?: date, "since"?/"until"?: date }` → **node-grouped** scored results, no LLM. `search_query:` prefix, cosine over `chunks`; **M4 ([ADR-032](adr/032-prior-art-adoptions.md)): ⊍ tsvector FTS fused by RRF (k=60)** + mild recency prior; date params filter on the `occurred` range. `planes` filters membership; `types` filters node type. `[{ node_id, store_path, type, title, plane, planes[], tags[], snippet, score }]` |
 | `GET /nodes/{id}` | node detail: `{ node_id, store_path, type, title, plane, planes[], tags[], aliases[], disambig, occurred, body, profile, edges: [{ rel, dir, node_id, type, title, origin, score?, since? }] }` — body from the store file; `profile` = the **derived** entity profile ([ADR-030](adr/030-entity-substrate-and-lifecycle.md), null for content nodes); edges = canonical + derived, both directions. Tombstones 302-resolve to `merged_into`. `404` if unknown |
 | `GET /nodes/{id}/neighbors` | **(M7 map; same service as MCP `traverse`)** one-hop expansion for the explorer: grouped by rel/origin, paginated |
 | `GET /planes` | plane vocabulary for filter chips: `{ planes: [..], inbox: "inbox" }` |
@@ -108,8 +110,9 @@ Bearer-token-authenticated MCP server exposing the same services — no logic of
 
 | tool | maps to |
 |---|---|
-| `search(query, top_k?, planes?, types?)` | SearchService (as `POST /search`) |
+| `search(query, top_k?, planes?, types?, as_of?, since?/until?)` | SearchService (as `POST /search`, incl. RRF hybrid + temporal filters — [ADR-032](adr/032-prior-art-adoptions.md)) |
 | `get_node(id)` | as `GET /nodes/{id}` |
-| `traverse(id, rel?, depth?=1)` | GraphService (as `GET /nodes/{id}/neighbors`) |
+| `traverse(id, rel?, depth?=1, cursor?)` | GraphService (as `GET /nodes/{id}/neighbors`) — center+depth+rel filter, **cursor-paginated** (LLM context is finite) |
+| `build_context(id, depth?)` | convenience: get_node + traverse bundled in one round-trip ([ADR-032](adr/032-prior-art-adoptions.md), Basic-Memory pattern) |
 | `list_planes()` / `list_types()` | vocabulary listings |
-| `capture(text)` | the **full organizer pipeline**, identical to `POST /capture/text` (`source: mcp`) — external LLMs never write nodes/edges directly |
+| `capture(text)` | the **full organizer pipeline**, identical to `POST /capture/text` (`source: mcp`, burst-queued) — external LLMs never write nodes/edges directly |
