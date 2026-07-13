@@ -156,8 +156,13 @@ nothing left to implementer discretion:
 - [x] 5 — indexer/search retarget (id-keyed, whole-file hash, canonical-edge materialization,
       derived `similar` edges, `types` filter, `GET /nodes/{id}` with edges+tombstone) — done
       2026-07-13 (combined with 2+3); `profile` stubbed null (job = task 6)
-- [ ] 6 — entity services (merge propose/apply + tombstones, backfill scan job, profile-refresh
-      job)
+- [x] 6 — entity services (merge propose/apply + tombstones, backfill scan job, profile-refresh
+      job) — done 2026-07-14; `POST /admin/entities/merge` (retarget→alias-union→tombstone→reindex→
+      force-commit), nightly `entity-backfill` (qualifying-alias auto-link, watermark) + tiered
+      `profile-refresh` (stub/snapshot/full by degree → `node_profiles`, served by `GET /nodes/{id}`);
+      migration 006; 294 tests, review clean (3 minors fixed); commits `f5795fe`/`9e544c3`/`f6f0678`
+      (log: task 6). **Open before Accept:** real-DB SQL smoke + profile-embedding-in-search +
+      alias-accretion (log follow-ups)
 - [ ] 7 — vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, consolidation job)
 - [ ] 8 — web retarget (capture strip node_paths, search type icons, node preview with
       edges/profile, Review list, Settings → Vocabulary)
