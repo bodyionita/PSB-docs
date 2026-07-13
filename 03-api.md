@@ -1,7 +1,9 @@
 # API Contract
 
-**Version:** 2.2 · **Status:** Approved 2026-07-13 (2.2 = M2 indexing/search: `POST /search`
-now note-grouped, `POST /admin/reindex` async→`202`+run, new `GET /notes/{id}` preview,
+**Version:** 2.3 · **Status:** Approved 2026-07-13 (2.3 = M2 web Task 8 needs: new `GET /planes`
+for the Search-tab plane-filter chips, and `GET /activity/runs/{id}` **pulled forward from M4**
+so the Admin tab can show a reindex/tags-apply run's live status + counts. 2.2 = M2 indexing/search:
+`POST /search` now note-grouped, `POST /admin/reindex` async→`202`+run, new `GET /notes/{id}` preview,
 `POST /admin/tags/consolidate` — [ADR-022](adr/022-embeddings-self-hosted-nomic.md),
 [ADR-023](adr/023-semantic-relatedness-graph.md), [ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md);
 2.1 = M1 capture additions: `GET /captures` list, `POST /captures/{id}/follow-up`, follow-up
@@ -51,12 +53,18 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | `POST /search` | `{ "query", "top_k"?: int=10, "planes"?: [..] }` → **note-grouped** scored results, no LLM call. Query embedded with the `search_query:` prefix ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)); pgvector cosine over `chunks`, **deduped to one row per note** (best-scoring chunk = snippet). `planes` filters on **`notes.planes` membership** (array overlap, not folder — [ADR-005](adr/005-planes-and-atomic-notes.md)). Response: `[{ note_id, vault_path, title, plane, planes[], tags[], snippet, score }]`, ranked by best chunk. No hard score floor by default (`SEARCH_MIN_SCORE` setting, off = 0). |
 | `GET /notes/{id}` | read-only note preview for the search UI expand: `{ note_id, vault_path, title, plane, planes[], tags[], body, related: [{ note_id, vault_path, title, score }] }`. `body` is read from the **vault file** (fidelity, incl. any Obsidian edits); `related` = this note's semantic neighbours from `note_links` ([ADR-023](adr/023-semantic-relatedness-graph.md)). `404` if unknown. No in-app editing (v2). |
 
+## Meta
+
+| | |
+|---|---|
+| `GET /planes` | the configured plane vocabulary for the Search-tab plane-filter chips ([ADR-005](adr/005-planes-and-atomic-notes.md)): `{ planes: [..], inbox: "Inbox" }` — `planes` = the `PLANES=` config list (primary homes); `inbox` is the always-present system plane, not part of `PLANES`. Session-gated, no LLM. The web filters `POST /search` on `notes.planes` membership using these values. (Added M2 so the web needs no server-config duplication — ADR-006.) |
+
 ## Activity feed
 
 | | |
 |---|---|
 | `GET /activity?limit=50&before=<cursor>` | merged feed: agent runs + captures + errors, newest first. Run entries: `{ id, agent, status, started_at, finished_at, model_used, fallback_used, summary }` |
-| `GET /activity/runs/{id}` | full run incl. `details` jsonb (expandable view) |
+| `GET /activity/runs/{id}` | full run incl. `details` jsonb (expandable view): `{ id, agent, status, started_at, finished_at, model_used, fallback_used, summary, details, error }`; `404` if unknown. **Implemented in M2** (pulled forward from the M4 feed) so the Admin tab can poll a reindex / tags-apply run's live status + `details` counts. The merged `GET /activity` list stays M4. |
 
 ## Settings
 
