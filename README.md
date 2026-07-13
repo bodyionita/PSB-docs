@@ -90,9 +90,19 @@ embed → pgvector cosine over `chunks`, `DISTINCT ON` best-chunk-per-note snipp
 array-overlap filter, `top_k`/`min_score`; `GET /notes/{id}` = metadata + vault-file body +
 `note_links` neighbours (empty until the graph task). Session-gated router (503 on embed-down, 422
 bad uuid, 404 unknown). 186 pytest + ruff green; **verified end-to-end against real pgvector**
-(dedupe, cosine order, planes overlap, min_score floor, get_note). See the *M2 progress* block in
-[08](08-implementation-plan.md). Next: relatedness graph recompute + `sb:related` render
-(materialize `note_links` from top-K over `notes.embedding`).
+(dedupe, cosine order, planes overlap, min_score floor, get_note). **Task 5 (relatedness graph
+recompute + `sb:related` render — ADR-023) done, independently reviewed (1 must-fix — a bad note
+aborting the render — fixed + skip-and-continue test), committed locally (server `73ed641`, not
+pushed) 2026-07-13** — new `app/graph/` package: `RelatednessGraph.recompute()` materializes the
+canonical `note_links` graph from a per-note LATERAL top-K over `notes.embedding` cosine above
+`RELATED_MIN_SCORE` (floored after the top-K cut, deterministic tiebreak) and renders the
+Obsidian-visible, churn-gated `## Related notes` wikilink block into each note body (distinct from
+co-capture `related:`; feedback-loop-safe — the block is excluded from `content_hash`), committing
+changed files via the `VaultBackup` seam. `RELATED_TOP_K`=5/`RELATED_MIN_SCORE`=0.5 (tuned live at
+Accept). 202 pytest + ruff green; **verified end-to-end against real pgvector** (top-K + floor,
+directional `note_links`, block render, zero-churn re-run). See the *M2 progress* block in
+[08](08-implementation-plan.md). Next: the combined nightly `reindex` job (`reindex_all` +
+`RelatednessGraph.recompute`, single-flight, `POST /admin/reindex` async wrapper).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

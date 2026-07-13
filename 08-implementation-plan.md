@@ -901,12 +901,49 @@ Search + Admin tabs → live M2 Accept (which also confirms the M1 backup tail).
     cosine ordering, `planes` overlap filter, `min_score` floor, and `get_note` metadata/related.
   - **Note:** `note_links` is still empty (graph recompute is the next task), so `related` is `[]`
     until then — the endpoint reads whatever the graph has materialised.
-- **Remaining M2 tasks** (unchanged order): relatedness graph recompute + `sb:related` render
-  (materializes `note_links` from top-K over the indexer's `notes.embedding`, renders the
-  Obsidian-visible block, churn-gated) → nightly combined `reindex` job (calls `reindex_all` +
-  graph, single-flight; `POST /admin/reindex` async wrapper) → tag reuse +
-  `/admin/tags/consolidate` → web Search + Admin tabs → live M2 Accept (also confirms the M1 backup
-  tail).
+- **Task 5 — relatedness graph recompute + `sb:related` render — DONE** (server commit `73ed641`,
+  local, **not pushed**). The topical-relatedness graph ([ADR-023](adr/023-semantic-relatedness-graph.md),
+  02 §3, 04 §3) — a new `app/graph/` domain package with one entry point,
+  `RelatednessGraph.recompute()`:
+  - **`app/graph/store.py`** — `GraphStore` protocol + `PgGraphStore` (plain SQL, ADR-011).
+    `compute_neighbors` = a per-note **LATERAL top-K nearest** over `notes.embedding` cosine, the
+    `RELATED_MIN_SCORE` floor applied **after** the top-K cut (so a note keeps *at most* K,
+    possibly fewer), `m.id <> n.id` (no self-links), NULL embeddings excluded. `replace_note_links`
+    rewrites the whole **canonical** `note_links` table in one transaction. Distance written
+    `m.embedding <=> n.embedding` (indexed operand left, HNSW-friendly) + an `m.id` **deterministic
+    tiebreaker** on both the top-K cut and the render order, so exact-score ties can't reorder a
+    block and spuriously churn the vault.
+  - **`app/graph/renderer.py`** — pure, **idempotent** render/apply of the machine-owned
+    `sb:related` `## Related notes` block: path-target + title-alias `[[wikilinks]]` (title falls
+    back to the basename), placed at the end of the body, LF-normalized, strips a **stale** block
+    when a note loses all neighbours. Strictly distinct from the co-capture `related:` frontmatter
+    / human `## Related` section (untouched).
+  - **`app/graph/service.py`** — `recompute()`: **always** replaces `note_links` (canonical,
+    reflects current embeddings even at zero vault churn) → renders every indexed note's block
+    **churn-gated** (rewrite only when the file content actually changed → a stable graph = **zero**
+    writes, ADR-023 §5) → **atomic** temp+`os.replace` writes → requests a vault commit via the
+    `VaultBackup` seam **only when ≥1 file changed** (the single git owner folds it into one
+    commit+push under the vault lock; the nightly job/`/admin/reindex` wrapper is Task 6). The
+    feedback-loop fix holds: the indexer's `content_hash` excludes the block, so these writes never
+    re-trigger a reindex. `RELATED_TOP_K`=5 / `RELATED_MIN_SCORE`=0.5 settings (rule 9, tuned live
+    at Accept). Wired onto `app.state` + a `get_relatedness_graph` accessor for Task 6.
+  - **Independent review (protocol-sanctioned, fresh context): 1 must-fix, fixed.** A
+    present-but-unreadable/unwritable note (bad encoding, permissions, disk-full) would raise out of
+    the whole render, aborting it mid-run and leaving `note_links` replaced but blocks partially
+    rendered (breaks rule 7). **Fixed:** the per-note loop now catches any exception, logs it, counts
+    the note `failed`, and continues (skip-and-continue, mirroring the indexer) — with a new test
+    (undecodable file → run completes, others still render). Also applied its two hardening MINORs
+    (deterministic ordering; index-friendly operand order); MINOR-3 (one-time first-run
+    normalization is not a churn bug) documented in the renderer.
+  - **202 pytest + ruff green** (16 new across `test_graph_renderer` + `test_graph_service`).
+    **Verified end-to-end against a real pgvector DB** (dev compose, head 004): LATERAL top-K +
+    floor (near-duplicate notes link ~1.0, an orthogonal note is correctly excluded by the 0.5
+    floor), directional `note_links` materialized, blocks rendered only into linked notes, and a
+    **zero-churn second run** (churn gate holds).
+- **Remaining M2 tasks** (unchanged order): nightly combined `reindex` job (calls `reindex_all` +
+  `RelatednessGraph.recompute`, single-flight; `POST /admin/reindex` async wrapper, `git pull`
+  first, one commit+push under the vault lock) → tag reuse + `/admin/tags/consolidate` → web Search
+  + Admin tabs → live M2 Accept (also confirms the M1 backup tail).
 
 ## M3 — Chat
 
