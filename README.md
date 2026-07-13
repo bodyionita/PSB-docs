@@ -17,12 +17,12 @@ deployed live at `https://braindan.cc` (capture → organize → index/search, f
 durability); that system stays live until M3 lands (fresh start: the old vault is archived, no
 data migration). The previously grilled chat plan ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
 is carried intact to **M4**, retargeted to nodes.
-**Next: grill M3 (graph core) to build-ready detail in a planning session** — over the **M3
-grilling agenda** recorded in [08 §M3](08-implementation-plan.md) (2026-07-13 deep re-review:
-entity-resolution substrate + merge primitive, thin-hub/derived-profile lifecycle, `occurred`
-event time, vocabulary seeds, edge metadata, tiered organizing, injection hygiene) plus
-migration 005 DDL, proposal storage, bootstrap + archive procedure. M4/M6 carry smaller
-re-review addenda in their sections.
+**M3 GRILLED TO BUILD-READY (2026-07-13 — [ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):**
+sync-full organize + MCP burst queue; alias/disambig entity substrate with bounded resolution;
+kind-generic review queue in M3; thin hubs + derived profiles; merge/backfill; `occurred`;
+9 types / 6 edge rels; edge `{conf,since}` + `organizer_version`; injection hygiene; repo
+**`PSB-graph`** with a zero-manual-VPS cutover. M4/M6 addenda ratified (re-check at kickoff).
+**Next: implement M3** (start at task 1 — migration 005 + config — in [08 §M3](08-implementation-plan.md)).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
@@ -81,10 +81,11 @@ If you are an AI (or human) picking this up with no prior context:
    starting at the first milestone whose acceptance criteria don't pass yet. Do not skip ahead.
 4. Anything ambiguous or contradictory: fix the docs first (new ADR if architectural),
    then implement. Never silently diverge from these documents.
-5. Things intentionally NOT decided yet (ask the user when reached): the new GitHub repo
-   name for the graph store (created at M3; old `PSB-vault` gets archived then), Slack app
-   creation (M9), MCP token distribution (M5). Already provisioned: domain (`braindan.cc`),
-   Cloudflare, Supabase, code repo.
+5. Things intentionally NOT decided yet (ask the user when reached): Slack app creation (M9),
+   MCP token distribution (M5). Decided at the M3 grilling: graph-store repo = **`PSB-graph`**
+   (user creates it in the GitHub UI at M3; `PSB-vault` archived after the Accept — zero
+   manual VPS steps, ADR-031). Already provisioned: domain (`braindan.cc`), Cloudflare,
+   Supabase, code repo.
 
 ## Rules of this repo
 

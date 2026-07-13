@@ -1,6 +1,9 @@
 # API Contract
 
-**Version:** 3.0 · **Status:** Approved 2026-07-13 (3.0 = **mind-graph pivot**
+**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = **M3 grilled**
+([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
+review queue → M3 kind-generic, `POST /admin/entities/merge`, `GET /nodes/{id}` gains
+aliases/occurred/`profile`/tombstone-resolve. 3.0 = **mind-graph pivot**
 [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)–[029](adr/029-conversational-ingestion-stance-gate-review-queue.md):
 full rename (notes→**nodes**, vault→**graph store**) landing with M3; graph/traverse endpoints; the
 MCP peer surface (M5); review queue (M6); ops/observability endpoints (M8). Endpoints marked with
@@ -55,17 +58,19 @@ Non-streaming; the web animates a client-side reveal. Retrieval = passive node-g
 | | |
 |---|---|
 | `POST /search` | `{ "query", "top_k"?: 10, "planes"?, "types"? }` → **node-grouped** scored results, no LLM. `search_query:` prefix, cosine over `chunks`, deduped to best chunk per node. `planes` filters membership; `types` filters node type. `[{ node_id, store_path, type, title, plane, planes[], tags[], snippet, score }]` |
-| `GET /nodes/{id}` | node detail: `{ node_id, store_path, type, title, plane, planes[], tags[], body, edges: [{ rel, dir, node_id, type, title, origin, score? }] }` — body from the store file; edges = canonical + derived, both directions. `404` if unknown |
+| `GET /nodes/{id}` | node detail: `{ node_id, store_path, type, title, plane, planes[], tags[], aliases[], disambig, occurred, body, profile, edges: [{ rel, dir, node_id, type, title, origin, score?, since? }] }` — body from the store file; `profile` = the **derived** entity profile ([ADR-030](adr/030-entity-substrate-and-lifecycle.md), null for content nodes); edges = canonical + derived, both directions. Tombstones 302-resolve to `merged_into`. `404` if unknown |
 | `GET /nodes/{id}/neighbors` | **(M7 map; same service as MCP `traverse`)** one-hop expansion for the explorer: grouped by rel/origin, paginated |
 | `GET /planes` | plane vocabulary for filter chips: `{ planes: [..], inbox: "inbox" }` |
 | `GET /types` | **(M3)** node + edge type vocabularies (config + approved additions) + pending proposals ([ADR-027](adr/027-typed-vocabulary-governance.md)) |
 
-## Review queue (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
+## Review queue (**M3** minimal + M6 full UX — [ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
+
+Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6), `dedup-proposal` (M6+).
 
 | | |
 |---|---|
-| `GET /review?status=pending` | stance-unclear candidates: `[{ id, source, source_ref, proposed, excerpt, created_at }]`, grouped by conversation |
-| `POST /review/{id}` | `{ "verdict": "agree"\|"disagree"\|"maybe" }` — agree → organizer ingests; disagree → discarded (logged); maybe → stays queued |
+| `GET /review?status=pending&kind=` | decidable-in-place items: `[{ id, kind, payload, excerpt, source, source_ref, created_at }]` — `payload` carries candidates (`{id,name,disambig,aliases}`) or proposed content per kind |
+| `POST /review/{id}` | resolution per kind — entity-ambiguity: `{ "choice": node_id \| "new" \| "maybe" }` (choice materializes the pending edge, file + DB); vocab-proposal: `{ "verdict": "approve"\|"reject" }` (approve queues retro-consolidation); stance (M6): `{ "verdict": "agree"\|"disagree"\|"maybe" }` |
 
 ## Activity & ops
 
@@ -92,6 +97,7 @@ Non-streaming; the web animates a client-side reveal. Retrieval = passive node-g
 |---|---|
 | `POST /admin/reindex` | async full pass: rescan store → materialize canonical edges → recompute derived edges → `202 { run_id }`; single-flight `409`. (No render/commit step — similarity never touches files, ADR-026) |
 | `POST /admin/tags/consolidate` | two-step tag cleanup (propose → apply), [ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md) |
+| `POST /admin/entities/merge` | **(M3, [ADR-030](adr/030-entity-substrate-and-lifecycle.md))** two-step: propose (`{loser, survivor, apply:false}` → inbound-edge inventory) → apply (`apply:true`) — immediate, after a forced commit+push; unions aliases, writes the tombstone, reindexes |
 | `POST /admin/backup` | force store git commit+push → `{ committed, pushed }` |
 | `POST /admin/captures/{id}/reorganize` | re-organize a capture's raw text, replace its nodes; `202` |
 | `GET /health` | no auth: `{ status, db, store, git_remote, backups }`, `503` when degraded ([ADR-014](adr/014-vault-history-durability.md) §6) |

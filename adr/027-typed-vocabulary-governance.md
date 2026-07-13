@@ -2,6 +2,9 @@
 
 **Status:** Accepted · 2026-07-13 · Builds on [ADR-026](026-graph-native-storage-obsidian-removed.md);
 generalizes the consolidation pattern of [ADR-024](024-tag-vocabulary-reuse-and-consolidation.md).
+**Extended by [ADR-030](030-entity-substrate-and-lifecycle.md)/[031](031-m3-organizer-and-contract-extensions.md) (M3 grilling):**
+proposal storage = a `review_queue` kind (`vocab-proposal`); starter vocabulary seeded to 9 node
+types / 6 edge rels.
 
 ## Context
 

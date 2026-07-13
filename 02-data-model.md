@@ -1,6 +1,10 @@
 # Data Model
 
-**Version:** 3.0 · **Status:** Approved 2026-07-13 (3.0 = **mind-graph pivot**
+**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = **M3 grilled to build-ready**
+([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
+aliases/disambig + `occurred` + edge `{conf,since}` + `organizer_version` in the contract; 9 node
+types / 6 edge rels; `review_queue` pulled into M3, kind-generic; migration 005 DDL fixed.
+3.0 = **mind-graph pivot**
 [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)/[027](adr/027-typed-vocabulary-governance.md):
 typed-node **graph store** replaces the note vault (fresh start — old vault archived); `nodes`/`edges`
 replace `notes`/`note_links`; wikilinks, `sb:related` blocks and folder-=-plane are deleted. The
@@ -12,14 +16,13 @@ M1 capture columns — see git history.)
 ## 1. Graph store layout
 
 ```
-<GRAPH_STORE_PATH>/                # on the VPS; git repo pushed to private GitHub
+<GRAPH_STORE_PATH>/                # on the VPS; git repo = PSB-graph (private GitHub)
 ├── memory/                        # node types = top-level folders (config-driven)
 │   └── 2026-07-13--dinner-with-alex--018f3c2e.md
 ├── person/
 │   └── alex-marsh--018f4a11.md
-├── idea/
-├── conversation/
-├── insight/
+├── idea/ · conversation/ · insight/
+├── place/ · event/ · project/ · topic/    # seeded at M3 (ADR-031)
 └── inbox/                         # system folder: organizer-fallback nodes, until re-organized
 ```
 
@@ -42,26 +45,43 @@ Pipeline-written nodes always carry:
 ```yaml
 ---
 id: 018f3c2e-…                  # THE identity (capture id / ingest item id)
-type: memory                    # memory | person | idea | conversation | insight | …
+type: memory                    # one of NODE_TYPES (9 seeded — ADR-031)
 created: 2026-07-13T21:40:00+02:00
+occurred: 2025-07               # OPTIONAL event time, partial ISO (2025 | 2025-07 | 2025-07-10)
+occurred_end: 2025-08           # OPTIONAL range end; time axes use occurred ?? created
 source: voice                   # voice | text | slack | chat | mcp | agent | …
 source_ref: "slack:C0123/p1720771234.5678"   # opaque locator (optional)
 plane: personal                 # primary plane (attribute, not folder)
 planes: [personal, friends]     # full membership; superset of `plane`
 tags: [dinner, catching-up]
-edges:                          # canonical typed edges, target = node id
-  - {rel: involves, to: 018f4a11-…}
-  - {rel: part_of,  to: 018f6c33-…}
+organizer_version: v3           # which organizer generation wrote this (retrofit targeting)
+edges:                          # canonical typed edges, target = node id (ADR-030/031)
+  - {rel: involves, to: 018f4a11-…, since: 2025-07-10}
+  - {rel: part_of,  to: 018f6c33-…}          # conf omitted ⇒ 1.0; <threshold ⇒ review, no edge
 ---
 (Markdown prose body — the memory itself)
 ```
 
+Entity-like nodes (`person`, `place`, `topic`, `idea`, `event`, `project`) additionally carry
+([ADR-030](adr/030-entity-substrate-and-lifecycle.md)):
+
+```yaml
+aliases: [alex, alexandru, "my brother"]   # organizer-maintained surface forms
+disambig: "younger brother, b.1994"        # one line, resolves same-name collisions
+```
+
+Their files are **thin hubs** — the readable "who/what is X now" profile is **derived**
+(regenerated nightly from the 1-hop neighborhood, DB-side, embedded for search, served by
+`GET /nodes/{id}`), never LLM-accreted into the file. Tombstones after a merge keep only
+`merged_into: <survivor-id>`.
+
 Rules:
-- **Edge vocabulary** (starter: `involves`, `about`, `part_of`, `led_to`, `follows`) is governed
-  like node types — LLM proposes, user approves, consolidation retrofits
+- **Edge vocabulary** (seeded: `involves`, `about`, `part_of`, `led_to`, `follows`, `at` —
+  [ADR-031](adr/031-m3-organizer-and-contract-extensions.md)) is governed like node types — LLM
+  proposes, user approves, consolidation retrofits
   ([ADR-027](adr/027-typed-vocabulary-governance.md)). Edges are directional, written on the
-  source node. **Similarity is never written into files** — derived `similar` edges live only
-  in the DB.
+  source node; `part_of` targets event/project/conversation; `at` targets place. **Similarity
+  is never written into files** — derived `similar` edges live only in the DB.
 - One source may produce **several atomic nodes** (split per plane/topic); siblings share
   `source_ref` and are connected by typed edges (no wikilinks, no `related:` field).
 - **English-only store** (organizer translates; raw input preserved verbatim in
@@ -79,8 +99,11 @@ Embedding dimension **768** (self-hosted `nomic-embed-text-v1.5` via Ollama,
 settings — provider change = deliberate migration + reindex.
 
 **Migrations:** Alembic, explicit SQL, no ORM ([ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md)).
-**M3 (pivot) ships migration 005**: drops the note-model derived tables, creates `nodes`/`edges`,
-renames `captures.note_paths → node_paths` (fresh start — no data migrated, old vault archived).
+**M3 (pivot) ships migration 005** ([ADR-031](adr/031-m3-organizer-and-contract-extensions.md)):
+drops the note-model derived tables; creates `nodes`/`edges`/`review_queue`; renames
+`captures.note_paths → node_paths` (fresh start — no data migrated, old vault archived).
+New config: `GRAPH_STORE_PATH`, `GRAPH_STORE_REPO`, `NODE_TYPES` (9), `EDGE_RELS` (6),
+`ENTITY_MATCH_MIN_CONF` (0.8, live-tuned), MCP burst-queue + profile-refresh settings.
 
 ### Derived graph index (rebuildable from the graph store)
 
@@ -93,11 +116,20 @@ renames `captures.note_paths → node_paths` (fresh start — no data migrated, 
 | title | text | |
 | plane / planes | text / text[] | attribute membership (fallback: `{plane}`) |
 | tags | text[] | |
+| aliases | text[] | entity surface forms, **GIN index** — this *is* the alias index ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)) |
+| disambig | text null | one-line same-name disambiguator |
+| occurred_start / occurred_end | date null | partial-ISO `occurred` expanded to a range ([ADR-031](adr/031-m3-organizer-and-contract-extensions.md)); time axes use `occurred ?? created` |
+| organizer_version | text null | which organizer generation wrote the node (retrofit targeting) |
+| merged_into | uuid null | tombstone marker after `merge` — node hidden from search/map, id keeps resolving |
 | source / source_ref | text null | |
 | content_hash | text | sha256 of the **whole file** (no exclusions — the `sb:related` machinery is gone); unchanged ⇒ skip reindex |
 | embedding | vector(768) null | mean-pool of chunk embeddings; powers similar-edge k-NN. HNSW, cosine |
 | node_created_at | timestamptz null | frontmatter `created`, else mtime |
 | indexed_at | timestamptz | |
+
+*Derived entity **profiles** ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)) — the "who/what
+is X now" summary regenerated nightly from the 1-hop neighborhood — live DB-side (embedded,
+rebuildable; storage detail an implementation choice within the derived tier).*
 
 **`chunks`** — as before, `note_id` → **`node_id`** (fk → nodes, cascade); unique
 `(node_id, chunk_index)`; content + `vector(768)`.
@@ -106,9 +138,10 @@ renames `captures.note_paths → node_paths` (fresh start — no data migrated, 
 | column | type | notes |
 |---|---|---|
 | src_id / dst_id | uuid fk → nodes, cascade | directional |
-| rel | text | `involves`, `about`, … for canonical; `similar` for derived |
+| rel | text | `involves`, `about`, `at`, … for canonical; `similar` for derived |
 | origin | text | `canonical` (materialized from frontmatter at index time) \| `derived` (recomputed nightly from embeddings, top-K over cosine ≥ floor — the surviving half of [ADR-023](adr/023-semantic-relatedness-graph.md)) |
-| score | real null | derived edges only |
+| score | real null | one column, origin disambiguates: **confidence** for canonical (null ⇒ 1.0), **cosine** for derived ([ADR-031](adr/031-m3-organizer-and-contract-extensions.md)) |
+| since | date null | canonical currency date ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)) |
 | | | pk `(src_id, dst_id, rel, origin)`. Both origins rebuildable: canonical from files, derived from vectors — the whole table is derived-tier |
 
 ### Operational state (not rebuildable — why the DB is managed/backed up)
@@ -124,13 +157,13 @@ chat-distiller registers here like any connector ([ADR-029](adr/029-conversation
 `consolidate`, `reflection`, …). Plus (M8 ops console) a **schedule registry** surface: each
 registered job's cadence + next-run time is queryable (implementation detail at M8 grilling).
 
-**`review_queue`** (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)) —
-stance-unclear distillation candidates: proposed memory + conversation excerpt + source/
-source_ref + status (`pending` | `agreed` | `discarded`), no expiry. Exact DDL at the M6 grilling.
+**`review_queue`** (**M3**, [ADR-030](adr/030-entity-substrate-and-lifecycle.md) — pulled forward
+from M6 and made **kind-generic**): every human-decision item the system files, one lifecycle.
+| id uuid pk · kind (`entity-ambiguity` M3 \| `vocab-proposal` M3 \| `stance-candidate` M6 \| `dedup-proposal` M6+) · payload jsonb (candidates / proposed content) · excerpt · source · source_ref · status (`pending`\|`resolved`\|`discarded`\|`maybe`, no expiry) · resolution jsonb null · created_at · resolved_at |
 
-**Vocabulary proposals** ([ADR-027](adr/027-typed-vocabulary-governance.md)) — pending node/edge
-type proposals (name, definition, examples, status). Table vs `app_settings` decided at the M3
-grilling; approved vocabulary lives in config + `app_settings`.
+Items are decidable in place (mention in capture excerpt, candidates with name/disambig/aliases +
+node-preview link). **Vocabulary proposals ([ADR-027](adr/027-typed-vocabulary-governance.md)) are
+a queue kind** — no separate table; approved vocabulary lives in config + `app_settings`.
 
 **`summaries`** — retired at the pivot; daily/weekly output becomes `insight` nodes produced by
 the reflection agent (M10). (Table kept until M10 replaces it; no new writers.)

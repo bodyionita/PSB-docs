@@ -1,10 +1,10 @@
 # Implementation Plan
 
-**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = deep re-review pass: **grilling agendas**
-added to M3/M4/M6 — proposals from the 2026-07-13 re-review (entity substrate, thin-hub+derived-
-profile, `occurred`, vocabulary seeds, edge metadata, tiered organizing, graph-aware retrieval,
-FTS leg, session segmentation, dedup, drainers) — **recorded as agenda, not yet decided**; plus
-consistency fixes. 3.0 = **THE MIND-GRAPH PIVOT** — vision/direction
+**Version:** 3.2 · **Status:** Approved 2026-07-13 (3.2 = **M3 GRILLED TO BUILD-READY**
+([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
+agenda → build decisions + 10-task list; M4/M6 addenda **ratified** (re-check at kickoff); repo
+named `PSB-graph`; zero-manual-VPS cutover. 3.1 = re-review agendas + consistency fixes.
+3.0 = **THE MIND-GRAPH PIVOT** — vision/direction
 change grilled decision-by-decision ([ADR-026](adr/026-graph-native-storage-obsidian-removed.md) ·
 [027](adr/027-typed-vocabulary-governance.md) · [028](adr/028-one-service-layer-mcp-peer-surface.md) ·
 [029](adr/029-conversational-ingestion-stance-gate-review-queue.md)): Obsidian removed, typed-node
@@ -91,42 +91,51 @@ repo's history; a person mentioned twice across captures resolves to **one** `pe
 proposal appears in Settings, approval runs consolidation; DB wipe + reindex restores search +
 canonical **and** derived edges identically.
 
-**Before implementation: an M3 build-ready grilling session** (entity-resolution mechanics,
-migration 005 DDL, proposal storage, bootstrap details, archive procedure).
+**M3 build decisions (GRILLED 2026-07-13 — [ADR-030](adr/030-entity-substrate-and-lifecycle.md) ·
+[ADR-031](adr/031-m3-organizer-and-contract-extensions.md); contract detail in
+[02](02-data-model.md) v3.1 / [03](03-api.md) v3.1 / [04](04-pipelines.md) v3.1).** Build-ready;
+nothing left to implementer discretion:
+- **Pipeline shape:** synchronous-full organize stays (option A); MCP `capture` burst-queued;
+  tiered organizing = documented evolution path only.
+- **Entity substrate:** `aliases[]`/`disambig` on entity-like types; GIN alias index;
+  retrieval-bounded structured candidate injection; `< ENTITY_MATCH_MIN_CONF` (0.8, live-tuned)
+  ⇒ edge pending + `entity-ambiguity` review item — never guessed.
+- **Review queue lands in M3, kind-generic** (`entity-ambiguity`, `vocab-proposal` now;
+  `stance-candidate` M6; `dedup-proposal` M6+): one lifecycle, items decidable in place;
+  minimal admin Review list now, polished UX M6. Vocab proposals = a queue kind (no table).
+- **Entity lifecycle:** thin canonical hubs + **derived profiles** (nightly for touched
+  entities, DB-side, embedded, in `GET /nodes/{id}`); currency via edge `since`.
+- **Merge + backfill:** `POST /admin/entities/merge` propose→apply, immediate apply after a
+  forced commit+push; permanent `merged_into` tombstones; nightly backfill scan.
+- **Contract:** `occurred`/`occurred_end` partial-ISO (ranges in DB, `occurred ?? created`,
+  never fabricated); **9 node types** (+`place`/`event`/`project`/`topic`) & **6 edge rels**
+  (+`at`); edges `{rel,to,conf?,since?}` (DB `score` serves both origins);
+  `organizer_version` stamped; injection-hygiene rules (a)–(d) are organizer law.
+- **Bootstrap/cutover — zero manual VPS steps:** repo **`PSB-graph`**; `GRAPH_STORE_REPO`
+  config; idempotent app-level bootstrap (init+skeleton+push -u); deploy workflow prints the
+  VPS deploy pubkey into the Actions log; user actions = GitHub UI only (create repo, paste
+  key, archive `PSB-vault` after Accept).
 
-**M3 grilling agenda (from the 2026-07-13 deep re-review — PROPOSALS, each needs a user
-decision; they are contract-level and cheap now, LLM re-walks over the whole graph later):**
-1. **Entity resolution substrate** — `aliases[]` + one-line `disambig` frontmatter on
-   person/idea nodes; a DB alias index for *retrieval-bounded* candidate generation (organizer
-   sees only matching candidates as structured data, never the registry, never node bodies);
-   ambiguous/low-confidence matches → the review queue, never guessed.
-2. **Entity merge + backfill primitive** — duplicates are inevitable: define
-   `merge(loser→survivor)` (DB reverse-index → batch-rewrite inbound edges in the agent window
-   under an ADR-014 checkpoint → tombstone `merged_into:` → reindex) + retroactive edge
-   backfill when a new entity matches older unlinked/inbox nodes.
-3. **Entity lifecycle: thin hub + derived profile** — hub files stay thin/canonical (identity,
-   aliases, edges); the readable "who is Alex now" **profile is derived** (regenerated from the
-   1-hop neighborhood, DB-side, embeddable, shown by `get_node`/map) — never LLM
-   read-modify-write on capture. Fact currency via edge metadata (`since`) or a `supersedes`
-   edge, decided here.
-4. **Event time** — organizer-extracted `occurred` (+ granularity: day/month/year/range)
-   alongside `created`; reflection windows and map timelines run on `occurred ?? created`.
-5. **Vocabulary seeds** — add `place` (+ `happened_at`-style edge) and a container type
-   (`event`/`project`) at M3; decide `topic` vs `idea` and whether `about` needs splitting
-   before it becomes the misc-bucket of edges.
-6. **Edge metadata + organizer versioning** — edges become `{rel, to, conf?, since?}`;
-   nodes/captures stamped with `organizer_version` so later quality-retrofits are targetable.
-7. **Organizer economics (pipeline shape)** — tiered organizing: cheap synchronous pass at
-   capture (never-lose write, type guess, alias-index candidate match, inbox fallback, nudge)
-   + a **nightly batch organize** in the agent window (full ER/edges/splitting with the whole
-   day in view — better ER + enables dedup, and caps Claude-Max window spend). Decide sync-all
-   vs tiered.
-8. **Injection hygiene** — all organizer prompt injections retrieval-bounded (never O(corpus));
-   ingested text (Slack/MCP) treated as untrusted data behind hard delimiters; node bodies
-   never fed to the resolver.
-
-- [ ] M3 grilled to build-ready detail (planning session over the agenda above)
-- [ ] Tasks defined at that grilling; 08-logs/m3.md created at implementation
+**Tasks** — detail in 08-logs/m3.md (created at implementation).
+- [ ] 1 — migration 005 + config/vocab plumbing (`GRAPH_STORE_PATH/REPO`, `NODE_TYPES`,
+      `EDGE_RELS`, `ENTITY_MATCH_MIN_CONF`, burst/profile settings)
+- [ ] 2 — graph-store service + code rename (store writer: type folders, slug+short-id,
+      new frontmatter contract; bootstrap; ADR-014 machinery untouched)
+- [ ] 3 — organizer v3 (typed nodes, occurred, entity resolution vs alias index, edges
+      conf/since, hygiene, vocab proposals, organizer_version, English-only carried)
+- [ ] 4 — review queue (table + service + minimal admin Review list; resolution materializes
+      pending edges; vocab-approve queues consolidation)
+- [ ] 5 — indexer/search retarget (id-keyed, whole-file hash, canonical-edge materialization,
+      derived `similar` edges, `types` filter, `GET /nodes/{id}` with edges+profile+tombstone)
+- [ ] 6 — entity services (merge propose/apply + tombstones, backfill scan job, profile-refresh
+      job)
+- [ ] 7 — vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, consolidation job)
+- [ ] 8 — web retarget (capture strip node_paths, search type icons, node preview with
+      edges/profile, Review list, Settings → Vocabulary)
+- [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step,
+      defaults.env)
+- [ ] 10 — **live M3 Accept** (per accept draft above + threshold tuning + cutover: verify
+      capture→node→PSB-graph push, then user archives PSB-vault)
 
 ## M4 — Chat (the grilled old-M3 plan, carried + retargeted to nodes)
 
@@ -137,7 +146,7 @@ hybrid grounding, cited-only `[n]` renumbering, implicit sessions, Settings → 
 **Retarget only:** retrieval returns nodes; source cards show type + plane; "not in your
 memories". Retrieval stays **passive top-k** (full agentic traversal = backlog).
 
-**M4 grilling addendum (2026-07-13 deep re-review — PROPOSALS, user decision pending):**
+**M4 addendum — RATIFIED 2026-07-13 (M3 grilling); re-check at M4 kickoff before build:**
 (a) **graph-aware retrieval lite** — after top-k, inject each hit's 1-hop canonical-edge
 neighbors as `{rel, title, type}` lines (pure SQL, no extra LLM call) + entity-seeded expansion
 (query resolves to a person/idea → union in its `involves`/`about` neighborhood); without this
@@ -180,7 +189,7 @@ endorsed/rejected/unclear), `review_queue` table + endpoints, the web **Review**
 (feed-flagged, removable); a pure-retrieval session is skipped and logged; a stance-unclear
 candidate waits in Review and ingests only on agree.
 
-**M6 grilling addendum (2026-07-13 deep re-review — PROPOSALS, user decision pending):**
+**M6 addendum — RATIFIED 2026-07-13 (M3 grilling); re-check at M6 kickoff before build:**
 (a) **segment sessions before the salience gate** (a real session = 90% retrieval + one buried
 decision across planes; per-session granularity skips the gem or distills the noise); bias
 sarcasm/hedged/affect-laden statements toward review rather than auto-endorse; idempotent

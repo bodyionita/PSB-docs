@@ -1,6 +1,9 @@
 # Pipelines & Scheduling
 
-**Version:** 3.0 · **Status:** Approved 2026-07-13 (3.0 = **mind-graph pivot**
+**Version:** 3.1 · **Status:** Approved 2026-07-13 (3.1 = **M3 grilled**
+([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[031](adr/031-m3-organizer-and-contract-extensions.md)):
+sync-full organize stays + MCP burst queue; entity resolution flow fixed; profile-refresh +
+backfill join the nightly roster. 3.0 = **mind-graph pivot**
 [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)–[029](adr/029-conversational-ingestion-stance-gate-review-queue.md):
 organizer emits typed nodes + entity resolution + typed edges; indexing loses the render/strip
 machinery and gains canonical-edge materialization; chat retargeted to nodes; **chat-distiller**
@@ -25,15 +28,19 @@ POST /capture/{voice,text}  |  MCP capture(text)
    ▼
 [voice] TRANSCRIBE (STT chain groq→openai)          status=transcribing
    ▼
-ORGANIZE — LLM, JSON out                            status=organizing
-   │ { nodes: [ { title, type, plane, planes[], tags[], body, edges[] } ] }
-   │ • typing against the governed vocabulary (ADR-027); no fit → type=memory
-   │   + a vocabulary proposal filed
-   │ • ENTITY RESOLUTION: mentions of people/ideas resolve to existing
-   │   person/idea nodes (or create them) — mechanics grilled at M3
-   │ • typed edges (involves/about/part_of/led_to/follows) targeting node ids
-   │ • may SPLIT into multiple atomic nodes; tag-vocabulary reuse (ADR-024)
-   │ • "don't know" → inbox/ node, never guessed
+ORGANIZE — LLM, JSON out (synchronous-full, ADR-031; MCP surface burst-queued)   status=organizing
+   │ { nodes: [ { title, type, occurred?, plane, planes[], tags[], body, edges[] } ] }
+   │ • typing against the 9-type vocabulary (ADR-027/031); no fit → type=memory
+   │   + a vocab-proposal review item
+   │ • ENTITY RESOLUTION (ADR-030): mentions → alias-index candidates (GIN over
+   │   nodes.aliases) → only matching candidates injected as structured fields;
+   │   confident → edge (conf/since); < ENTITY_MATCH_MIN_CONF → edge PENDING +
+   │   entity-ambiguity review item; new entities minted with aliases/disambig
+   │ • occurred extracted only when the text implies a time (partial ISO), never fabricated
+   │ • typed edges (involves/about/part_of/led_to/follows/at) targeting node ids
+   │ • may SPLIT into multiple atomic nodes; tag-vocabulary reuse (ADR-024, bounded)
+   │ • injection hygiene (ADR-031): delimited untrusted text, no node bodies in prompt
+   │ • "don't know" → inbox/ node, never guessed; organizer_version stamped
    ▼
 WRITE NODES to the graph store (frontmatter contract, 02 §2)   status=written
    ▼
@@ -96,6 +103,10 @@ file → read → sha256 whole file ── unchanged? skip
   commit step, no churn-gating** (deleted by [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)).
 - The nightly `reindex` job: `git pull` store → full pass → recompute derived edges. Single-flight
   with `/admin/reindex`.
+- **Nightly entity jobs (M3, [ADR-030](adr/030-entity-substrate-and-lifecycle.md)):**
+  **profile-refresh** — regenerate derived profiles for entities whose 1-hop neighborhood changed
+  (DB-side, embedded); **backfill scan** — new/renamed entities re-checked against recent
+  unlinked/`inbox/` nodes (≥ threshold auto-edge + feed flag, below → review item).
 
 ## 5. Chat / search pipeline (M4 — the grilled chat plan carried, retargeted to nodes)
 

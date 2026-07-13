@@ -77,8 +77,14 @@ deploy/docker-compose.yml
 
 **Live copy — GitHub (rewritable primary):**
 - `/srv/graph-store` is a git repo with a private GitHub remote (deploy key, write access) —
-  a **fresh repo** created at M3 ([ADR-026](adr/026-graph-native-storage-obsidian-removed.md);
-  the old `PSB-vault` repo is archived read-only, its R2 WORM bundles retained).
+  the **fresh `PSB-graph` repo**, created at M3 ([ADR-031](adr/031-m3-organizer-and-contract-extensions.md);
+  the old `PSB-vault` repo is archived read-only after the M3 Accept, its R2 WORM bundles retained,
+  new bundles land as `graph-store-*` in the same WORM bucket).
+- **Zero-touch cutover (ADR-031):** the app bootstraps the store itself (idempotent: init +
+  skeleton + `push -u` to `GRAPH_STORE_REPO` from `defaults.env`); the deploy workflow **prints
+  the VPS's existing deploy public key into the Actions log** so the user's entire manual surface
+  is GitHub UI — create `PSB-graph`, paste the key (write access), archive `PSB-vault` later.
+  No SSH, no VPS steps.
 - Auto commit+push: after every pipeline write batch (debounced ~60s) + a 04:55 sweep +
   `POST /admin/backup`. Commit messages: `capture: 2 nodes` / `chat-distill: 1 node` etc.
 - The server only fast-forward pushes — **never force/rebase/reset**; on non-fast-forward it
@@ -138,10 +144,11 @@ repo with any editor — any external client must be **merge-only, never force-p
   `BRAINDAN_DOMAIN`, `PLANES`, `NEBIUS_CHAT_MODEL`, `CLAUDE_MAX_MODEL`, `CLAUDE_MAX_EFFORT`
   (default `medium`, M1 replan), `STT_CHAIN` (default `groq,openai`), `GROQ_BASE_URL`,
   `GROQ_STT_MODEL` (default `whisper-large-v3`) — all [ADR-020](adr/020-stt-fallback-chain-groq-primary.md)/replan —
-  `SCHEDULER_TZ`, `GRAPH_STORE_PATH` (ex-`VAULT_PATH`, renamed at M3 —
-  [ADR-026](adr/026-graph-native-storage-obsidian-removed.md)), `SESSION_COOKIE_SECURE`,
-  `ENVIRONMENT`, `R2_BUCKET`; **M5 adds the MCP bearer-token secret**
-  ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) to the Actions secrets set.
+  `SCHEDULER_TZ`, `GRAPH_STORE_PATH` + `GRAPH_STORE_REPO` (ex-`VAULT_PATH`, renamed/added at M3 —
+  [ADR-031](adr/031-m3-organizer-and-contract-extensions.md)), `NODE_TYPES`, `EDGE_RELS`,
+  `ENTITY_MATCH_MIN_CONF`, `SESSION_COOKIE_SECURE`, `ENVIRONMENT`, `R2_BUCKET`; **M5 adds the
+  MCP bearer-token secret** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) to the
+  Actions secrets set.
 - **Deploy renders** `.env = defaults.env + secrets`, `scp`s it to the VPS mode 600, then
   `compose up`. It **also renders the origin TLS files** `deploy/origin.crt` / `origin.key`
   from `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM` and `scp`s them mode 600 for Caddy to mount

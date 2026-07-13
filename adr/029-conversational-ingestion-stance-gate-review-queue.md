@@ -3,6 +3,9 @@
 **Status:** Accepted · 2026-07-13 · Builds on [ADR-026](026-graph-native-storage-obsidian-removed.md),
 [ADR-027](027-typed-vocabulary-governance.md), [ADR-028](028-one-service-layer-mcp-peer-surface.md);
 extends the connector pattern of [ADR-008](008-connectors-run-on-vps.md) / [05-connectors.md](../05-connectors.md).
+**Extended by [ADR-030](030-entity-substrate-and-lifecycle.md) (M3 grilling):** the `review_queue`
+table lands **in M3** (kind-generic; first tenants = entity ambiguity + vocab proposals); this
+ADR's M6 scope becomes the stance kinds + the polished Review UX.
 
 ## Context
 
