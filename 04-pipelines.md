@@ -113,6 +113,13 @@ file → read → sha256 whole file ── unchanged? skip
   **profile-refresh** — regenerate derived profiles for entities whose 1-hop neighborhood changed
   (DB-side, embedded); **backfill scan** — new/renamed entities re-checked against recent
   unlinked/`inbox/` nodes (≥ threshold auto-edge + feed flag, below → review item).
+- **Vocabulary consolidation (M3, on-demand — [ADR-027](adr/027-typed-vocabulary-governance.md) §3 /
+  [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)):** approving a type proposal (via `PUT
+  /settings/vocabulary` or the Review queue) writes the addition to `app_settings` (effective vocab =
+  seeds ∪ approved, forward-live) and opens the `vocab-consolidation` job. It re-walks the graph and,
+  ADR-024 propose→apply: for a new **edge rel** proposes + (on confirm) applies edge re-typings
+  (frontmatter rewrites); for a new **node type** surfaces candidate re-typings **propose-only** in
+  M3 (the folder-move/re-slug apply machinery is a deferred follow-up, ADR-035).
 
 ## 5. Chat / search pipeline (M4 — the grilled chat plan carried, retargeted to nodes)
 

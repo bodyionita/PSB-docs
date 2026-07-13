@@ -95,7 +95,8 @@ Tasks (all done, detail in [08-logs/m2.md](08-logs/m2.md)): 1 migration 004+prov
 - **API rename + additions**: `GET /nodes/{id}` (with edges), `GET /types`,
   `PUT /settings/vocabulary`; full nodes/graph vocabulary in code and OpenAPI.
 - **Vocabulary governance**: Settings panel (types + proposals + approve), the
-  **consolidation job** (approve → retro-walk propose → apply).
+  **consolidation job** (approve → retro-walk propose → apply) — M3 scope per
+  [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md): edges apply, nodes propose-only.
 - Web: capture/search/admin retargeted (type icons, node previews with edges).
 
 **Accept (draft — refined at the M3 grilling):** a voice capture in Romanian becomes typed,
@@ -163,7 +164,15 @@ nothing left to implementer discretion:
       migration 006; 294 tests, review clean (3 minors fixed); commits `f5795fe`/`9e544c3`/`f6f0678`
       (log: task 6). **Open before Accept:** real-DB SQL smoke + profile-embedding-in-search +
       alias-accretion (log follow-ups)
-- [ ] 7 — vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, consolidation job)
+- [ ] 7 — vocabulary surface (`GET /types`, `PUT /settings/vocabulary`, consolidation job).
+      **Scope fixed by [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md):** approval writes
+      the addition to `app_settings` (effective vocab = seeds ∪ approved, read via a provider at the
+      organizer / `GET /types` / entity-substrate call sites), then the `vocab-consolidation` job
+      re-walks — **edges propose→apply** (confirm-gated frontmatter rewrites, ADR-024 envelope),
+      **nodes propose-only** (candidate re-typings surfaced; the folder-move/re-slug/`node_paths`
+      apply machinery is a deferred follow-up + own ADR). `PUT /settings/vocabulary` and the task-4
+      `POST /review/{id}` vocab-proposal path share one `VocabularyService` (replacing task 4's
+      queued-marker stub with a real run)
 - [ ] 8 — web retarget (capture strip node_paths, search type icons, node preview with
       edges/profile, Review list, Settings → Vocabulary)
 - [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step,
