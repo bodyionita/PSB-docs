@@ -4,105 +4,18 @@ This repository is the **single source of truth for product and architecture dec
 It lives outside the code on purpose: the code repo (`../second-brain/`) contains only
 implementation plus a `CLAUDE.md` that points here.
 
-**Status:** design approved 2026-07-12 (grilled decision-by-decision). **M0 grilled and
-recorded 2026-07-12** (see [ADR-011](adr/011-alembic-migrations-plain-sql-no-orm.md),
-[ADR-012](adr/012-m0-implementation-stack.md)). **M0 / M0b ACCEPT COMPLETE 2026-07-12** —
-the code monorepo `../second-brain/` is **deployed live at `https://braindan.cc`**: PWA over
-HTTPS, login works, `/health` green (db/vault/git_remote), Cloudflare TLS **Full (strict)**,
-`claude login` done on the box. The one accept clause with no M0 surface — the *live*
-Claude-limit→Nebius chain-and-record — is formally **deferred to M3** (satisfied for M0 by
-unit tests); see [08-implementation-plan.md](08-implementation-plan.md) Accept amendment.
-**M1 grilled + recorded to build-ready detail 2026-07-12** (see
-[ADR-019](adr/019-conversational-capture-minimal-in-m1.md) and the M1 build-decisions block in
-[08-implementation-plan.md](08-implementation-plan.md)) — minimal conversational capture pulled
-into M1, full ADR-014 durability set, online-only web capture. **M1 implementation IN PROGRESS:
-Task 1 (migration 002 + capture domain core / `CapturePipeline`), Task 2 (capture routers +
-lifespan wiring), Task 3 / durability **Slice A** (git-backed `VaultBackupService` — one-lock
-ff-only push + heal-on-reject merge, debounced commits, empty-repo bootstrap, gc/reflog pins,
-`POST /admin/backup`), and durability **Slice B1** (the four R2/WORM jobs — `git bundle`→R2 +
-fingerprint, integrity drill, `pg_dump`→R2, `/srv/data`→R2 — `agent_runs` writer, boto3 object
-store, CLI) done, reviewed, and verified 2026-07-12** (see the *M1 progress* block in
-[08](08-implementation-plan.md)). **Durability Slice B2 (in-process APScheduler + `/health` `backups`
-4th leg) done, reviewed (no must-fix), and verified 2026-07-12 — the durability task is complete
-(Slices A+B1+B2); 116 tests + ruff green.** **Web capture screen (06) done, 2026-07-12** — the last
-M1 surface: record orb + Web-Audio `AnalyserNode` visualizer, quick text capture, recent-captures
-strip (`GET /captures?limit=20`, TanStack Query polling ~2s while in-flight), failed→retry, inline
-follow-up nudge; online-only (offline text queue stays M5). `tsc`+`eslint`+`vite build` green; code
-committed locally (not pushed — user's call). **M1 replan recorded 2026-07-12** — the first live
-drive on `braindan.cc` + an independent review reopened M1 with recorded, not-yet-built scope
-(see the *M1 replan* block in [08](08-implementation-plan.md) and
-[ADR-020](adr/020-stt-fallback-chain-groq-primary.md)/[ADR-021](adr/021-capture-interactions-agent-runs-logging.md)):
-**(1)** STT fallback chain (Groq `whisper-large-v3` primary → OpenAI fallback) after voice hit an
-OpenAI 429; **(2)** capture interactions logged to `agent_runs` + a `capture_interactions` view,
-explored via the Supabase dashboard/MCP; **(3)** global `CLAUDE_MAX_EFFORT=medium` on every
-claude-max call. **M1 replan IMPLEMENTED 2026-07-12** — all replan code is built, independently reviewed, and
-static-verified; committed locally (**not pushed — user's call**). Commits: server `d9b21e8` (STT
-chain, capture `agent_runs` logging + migration 003 view, `CLAUDE_MAX_EFFORT`), web `4d988ea` +
-`26a1c09` (nudge/Pass-2 render live, reduced-motion), deploy `a56038f` (vault-push SSH wiring:
-openssh-client + entrypoint installs the mounted deploy key + pins GitHub's host key). The
-independent review found **1 must-fix** (answered-nudge Pass-2 not rendering live) — **fixed in
-`26a1c09`** — and reconciled Inbox-fallback semantics (a *success*, now flagged via
-`inbox_fallback`). Server 124 pytest + ruff green; web `tsc`+`eslint`+`vite build` green; **not yet
-run live**. `GROQ_API_KEY` added to GitHub Actions secrets. **What remains (all operational): push
-code; confirm the `PSB-vault` GitHub repo + write-enabled deploy key on the box; then run the M1
-*live Accept*** on `braindan.cc` (voice→plane-note <30s in vault **and GitHub history**, nudge
-appears, organizer-down→Inbox note, a nightly WORM bundle + drill). Then M1 closes and M2
-(indexing/search) begins. **M1 polish batch SHIPPED 2026-07-13** — English-only vault + valid tags +
-vault git hygiene + `POST /admin/captures/{id}/reorganize` (`d469277`, deployed); the one Romanian
-capture reorganized to English + pushed to `PSB-vault`. **Post-ship vault review (2026-07-13):** all
-notes English/valid; one organizer-v2 name corruption `Braindone`→`Braindan` fixed by hand (vault
-`70396dd`). Clarified two by-design points (shared `id` = capture id; `related` = same-source
-siblings) and flagged **semantic relatedness linking** as a future-scope question for M2 — see the
-*M1 polish batch* block in [08](08-implementation-plan.md). **M1 close POSTPONED to end of M2
-(2026-07-13):** the Accept's nightly-WORM-bundle + weekly-integrity-drill tail needs real
-overnight/weekly cycles, so the app is left running overnight and **M2 starts now**; the M1 Accept
-confirmation (backup evidence + any overnight findings) folds into the M2 close. **M2 grilled to
-build-ready detail 2026-07-13** (see [ADR-022](adr/022-embeddings-self-hosted-nomic.md) self-hosted
-nomic embeddings, [ADR-023](adr/023-semantic-relatedness-graph.md) materialized relatedness graph,
-[ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md) tag reuse, and the M2 build-decisions
-block in [08](08-implementation-plan.md)): local nomic-via-Ollama embeddings (768-dim, single
-provider, Nebius cold-swap), a full materialized `note_links` graph rendered as Obsidian-visible
-wikilink blocks, note-grouped `/search` + read-only preview, async single-flight `/admin/reindex`,
-a combined nightly pull+rescan+graph job, forward tag reuse + a manual consolidate tool, and a web
-Search + Admin surface. **Overnight snapshot recorded** (box up; nudge/Inbox-fallback live-verified;
-scheduled-backup evidence pending the next cycle — not chased). **M2 implementation IN PROGRESS:
-Task 1 (migration 004 + Ollama/nomic provider wiring) done, independently reviewed (no must-fix),
-committed locally (server `c66b562`, not pushed) 2026-07-13** — `vector(768)` resize +
-`notes.embedding` + `note_links` (verified up/down/up on real pgvector), self-hosted
-nomic-via-Ollama as the sole embedding provider (keyless localhost), OpenAI now STT-only, `ollama`
-compose sidecar; 134 pytest + ruff green. **Task 2 (pure text chunker — `app/indexing/chunking.py`,
-02 §4) done, independently reviewed, committed locally (server `fdd0f60`, not pushed) 2026-07-13** —
-heading→paragraph→hard-split-with-overlap, frontmatter + `sb:related` stripping, 19 chunker tests
-(153 total + ruff green). **Task 3 (indexer service — the real index step replacing the M1 stub)
-done, independently reviewed (1 must-fix — batch resilience — fixed), committed locally (server
-`684604e`, not pushed) 2026-07-13** — per-note `read → strip sb:related → sha256 → skip-if-unchanged
-→ parse frontmatter → chunk_note → batch-embed (`search_document:` prefix) → per-note tx (upsert
-note + replace chunks) + `notes.embedding` mean-pool`; `index_paths` (capture path) + `reindex_all`
-(rescan + deletion reconcile); embed-fail → skip-and-continue → `partial`; graph left untouched
-(nightly-only). No YAML dep (own frontmatter parser); a pgvector `vector` codec on the asyncpg pool
-lets embeddings pass as plain float lists. Wired into the capture pipeline (best-effort — vault is
-truth, so an index failure never fails a written capture; outcome logged to `agent_runs`). 173
-pytest + ruff green; **verified end-to-end against a real pgvector DB** (codec round-trip, per-note
-tx, mean-pool, hash-skip, cosine query, deletion reconcile). **Task 4 (`POST /search` note-grouped
-+ `GET /notes/{id}` preview) done, independently reviewed (no must-fix; one consistency fix),
-committed locally (server `6e0fa21`, not pushed) 2026-07-13** — `search_query:`-prefixed query
-embed → pgvector cosine over `chunks`, `DISTINCT ON` best-chunk-per-note snippet, `planes`
-array-overlap filter, `top_k`/`min_score`; `GET /notes/{id}` = metadata + vault-file body +
-`note_links` neighbours (empty until the graph task). Session-gated router (503 on embed-down, 422
-bad uuid, 404 unknown). 186 pytest + ruff green; **verified end-to-end against real pgvector**
-(dedupe, cosine order, planes overlap, min_score floor, get_note). **Task 5 (relatedness graph
-recompute + `sb:related` render — ADR-023) done, independently reviewed (1 must-fix — a bad note
-aborting the render — fixed + skip-and-continue test), committed locally (server `73ed641`, not
-pushed) 2026-07-13** — new `app/graph/` package: `RelatednessGraph.recompute()` materializes the
-canonical `note_links` graph from a per-note LATERAL top-K over `notes.embedding` cosine above
-`RELATED_MIN_SCORE` (floored after the top-K cut, deterministic tiebreak) and renders the
-Obsidian-visible, churn-gated `## Related notes` wikilink block into each note body (distinct from
-co-capture `related:`; feedback-loop-safe — the block is excluded from `content_hash`), committing
-changed files via the `VaultBackup` seam. `RELATED_TOP_K`=5/`RELATED_MIN_SCORE`=0.5 (tuned live at
-Accept). 202 pytest + ruff green; **verified end-to-end against real pgvector** (top-K + floor,
-directional `note_links`, block render, zero-churn re-run). See the *M2 progress* block in
-[08](08-implementation-plan.md). Next: the combined nightly `reindex` job (`reindex_all` +
-`RelatednessGraph.recompute`, single-flight, `POST /admin/reindex` async wrapper).
+**Status (2026-07-13).** Design approved 2026-07-12 (grilled decision-by-decision).
+**M0 / M0b ACCEPT COMPLETE** — the code monorepo `../second-brain/` is **deployed live at
+`https://braindan.cc`** (PWA over HTTPS, login, `/health` green, Cloudflare TLS Full-strict).
+**M1 (capture end-to-end) code-complete** — voice/text capture → organized atomic notes with
+full ADR-014 vault durability; its live-Accept backup tail folds into the M2 close. **M2
+(indexing & search) IN PROGRESS** — Tasks 1–5 done (nomic-via-Ollama embeddings, chunker,
+indexer, `/search` + note preview, and the materialized `note_links` relatedness graph);
+next is the combined nightly `reindex` job + `POST /admin/reindex`.
+
+> The per-milestone status, task checklist (done/open), and the full implementation logs live
+> in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
+> is the authoritative source for where the build is. This paragraph is a snapshot.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

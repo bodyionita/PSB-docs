@@ -1,7 +1,9 @@
 # Architecture
 
-**Version:** 2.0 · **Status:** Approved 2026-07-12
-**Key ADRs:** [001 vault-on-VPS+git](adr/001-vault-on-vps-with-git-backup.md) · [003 single-service](adr/003-single-service-on-vps.md) · [004 provider-registry](adr/004-provider-registry-claude-primary-nebius-fallback.md) · [006 monorepo-decoupled](adr/006-monorepo-with-strict-server-web-decoupling.md) · [008 connectors-on-vps](adr/008-connectors-run-on-vps.md) · [013 web-on-VPS-single-origin](adr/013-web-stays-on-vps-single-origin.md)
+**Version:** 2.1 · **Status:** Approved 2026-07-13 (2.1 = M2 refresh — self-hosted nomic embeddings
+via an `ollama` sidecar [ADR-022], OpenAI/Groq now STT-only, and the derived `note_links` relatedness
+graph [ADR-023]; 2.0 = cloud-service pivot)
+**Key ADRs:** [001 vault-on-VPS+git](adr/001-vault-on-vps-with-git-backup.md) · [003 single-service](adr/003-single-service-on-vps.md) · [004 provider-registry](adr/004-provider-registry-claude-primary-nebius-fallback.md) · [006 monorepo-decoupled](adr/006-monorepo-with-strict-server-web-decoupling.md) · [008 connectors-on-vps](adr/008-connectors-run-on-vps.md) · [013 web-on-VPS-single-origin](adr/013-web-stays-on-vps-single-origin.md) · [022 self-hosted-embeddings](adr/022-embeddings-self-hosted-nomic.md) · [023 relatedness-graph](adr/023-semantic-relatedness-graph.md)
 
 ## High-level view
 
@@ -14,8 +16,9 @@
 │  activity feed           │ (behind  │  ├─ API layer          (routers)         │
 │  settings (agent models) │ Cloud-   │  ├─ Pipelines/services (business logic)  │
 └──────────────────────────┘  flare)  │  ├─ Provider registry  (Claude Max SDK ──┼──▶ Anthropic (Max sub)
-                                      │  │   primary → Nebius fallback; OpenAI   ├──▶ Nebius AI (fallback LLM)
-   Obsidian (optional,                │  │   embeddings/STT)                     ├──▶ OpenAI (Whisper, embeddings)
+                                      │  │   primary → Nebius fallback;          ├──▶ Nebius AI (fallback LLM)
+   Obsidian (optional,                │  │   STT chain Groq→OpenAI)              ├──▶ Groq / OpenAI (Whisper STT)
+                                      │  ├─ ollama sidecar (nomic embeddings)    │  (self-hosted, no external call)
    occasional exploration)            │  ├─ Scheduler (03:00–05:00 agent window) │
         ▲                             │  └─ Ingestion agents (Slack, …)  ────────┼──▶ Slack API
         │ obsidian-git                │      │                                   │
@@ -52,6 +55,10 @@ Single FastAPI process hosting four layers ([ADR-003](adr/003-single-service-on-
 - **Provider registry** — named LLM/STT/embedding providers + per-task routing with
   fallback chains ([ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md)).
   Primary mind: Claude via Agent SDK on the Max subscription; automatic fallback: Nebius.
+  **STT** walks a Groq→OpenAI Whisper chain ([ADR-020](adr/020-stt-fallback-chain-groq-primary.md));
+  **embeddings** are **self-hosted** — `nomic-embed-text` on a local `ollama` sidecar (768-dim,
+  single provider, no external call), the Nebius cold-swap kept in reserve
+  ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)).
 - **Scheduler + agents** — APScheduler firing ingestion connectors and analysis jobs in
   the **03:00–05:00 Europe/Bucharest window** ([ADR-010](adr/010-agent-window-3-5am.md)),
   staggered; every run recorded in `agent_runs` and surfaced in the activity feed.
@@ -63,7 +70,9 @@ and the bridge to optional Obsidian exploration via obsidian-git.
 
 ### 4. Supabase Postgres + pgvector
 Two roles, one database ([ADR-002](adr/002-supabase-pgvector-for-index.md)):
-- **Derived index** (rebuildable from vault): `notes`, `chunks` (+embeddings).
+- **Derived index** (rebuildable from vault): `notes`, `chunks` (+embeddings), and `note_links`
+  — the materialized semantic relatedness graph rendered back into notes as an Obsidian-visible
+  `## Related notes` block ([ADR-023](adr/023-semantic-relatedness-graph.md)).
 - **Operational state** (not derivable): `captures`, `connector_cursors`, `agent_runs`,
   `chat_*`, `summaries`, `auth_sessions`, `app_settings`.
 

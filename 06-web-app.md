@@ -1,6 +1,7 @@
 # Web App (PWA)
 
-**Version:** 1.0 · **Status:** Approved 2026-07-12
+**Version:** 1.1 · **Status:** Approved 2026-07-13 (1.1 = M2 adds the Search + Admin screens —
+[ADR-022](adr/022-embeddings-self-hosted-nomic.md)/[023](adr/023-semantic-relatedness-graph.md)/[024](adr/024-tag-vocabulary-reuse-and-consolidation.md))
 **Stack:** React + Vite + TypeScript, installable PWA, served statically by Caddy on the
 VPS at **single origin** (`/` = web, `/api` = API — [ADR-013](adr/013-web-stays-on-vps-single-origin.md)),
 consumes only [03-api.md](03-api.md). Strictly decoupled from the server
@@ -64,6 +65,23 @@ login header; kept as a single config constant so it's changeable at zero cost.
 - **Agents section** (separate from chat, by decision): conspect model + fallback model
   (`PUT /settings/agents`), connector list with last-run status and "run now".
 - Session management (logout), theme, reduced motion override.
+
+### 5. Search (M2)
+Standalone semantic-search screen over the whole vault (`POST /search`, no LLM call):
+- Query box + **plane-filter chips** (scopes on `notes.planes` membership).
+- Results as **note cards** — title, plane badge, snippet (the best-matching chunk), tags,
+  score — ranked by relevance.
+- **Expand a card → read-only note preview** (`GET /notes/{id}`): the note body read live from
+  the vault, plus its **semantic neighbours** from the `note_links` relatedness graph
+  ([ADR-023](adr/023-semantic-relatedness-graph.md)). No in-app editing (Obsidian/git covers that).
+
+### 6. Admin (M2)
+A lightweight operations panel (movable later) with a few buttons, each showing live run status:
+- **Reindex** (`POST /admin/reindex`) — async vault rescan + relatedness recompute; shows the
+  run's live counts (`indexed/skipped/deleted/failed`); single-flight (guarded against overlap).
+- **Backup now** (`POST /admin/backup`) — force an immediate vault commit + push.
+- **Consolidate tags** (`POST /admin/tags/consolidate`) — two-step tag cleanup: **Propose** →
+  review the merge plan → **Apply** ([ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md)).
 
 ## Auth UX
 Password screen (single field, biometric-friendly via password manager autofill) →
