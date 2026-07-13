@@ -799,7 +799,7 @@ step replacing the M1 stub) → `/search` + `GET /notes/{id}` → relatedness gr
 `sb:related` render) → nightly combined `reindex` job → tag reuse + `/admin/tags/consolidate` → web
 Search + Admin tabs → live M2 Accept (which also confirms the M1 backup tail).
 
-**M2 progress (implementation) — Task 1 done, reviewed, committed 2026-07-13.**
+**M2 progress (implementation) — Tasks 1–2 done, reviewed, committed 2026-07-13.**
 - **Task 1 — migration 004 + Ollama/nomic provider wiring — DONE** (server commit `c66b562`,
   local, **not pushed**). Migration 004 (`004_embeddings_768_and_note_links.py`): resizes the
   still-empty `chunks.embedding` + adds `notes.embedding` at **`vector(768)`**, creates the
@@ -821,10 +821,27 @@ Search + Admin tabs → live M2 Accept (which also confirms the M1 backup tail).
     **Logged follow-up (non-blocking):** `note_links` has no index on `related_note_id`, so a
     note-delete cascade seq-scans — negligible at M2 scale (small, rebuildable, nightly-recomputed);
     add only if reverse-neighbor queries or graph size warrant it later.
-- **Remaining M2 tasks** (unchanged order): pure chunker → indexer service (real index step) →
-  `/search` + `GET /notes/{id}` → relatedness graph recompute + `sb:related` render → nightly
-  combined `reindex` job → tag reuse + `/admin/tags/consolidate` → web Search + Admin tabs → live
-  M2 Accept (also confirms the M1 backup tail).
+- **Task 2 — pure text chunker — DONE** (server commit `fdd0f60`, local, **not pushed**). New
+  `app/indexing/` domain package. `app/indexing/chunking.py` (pure, no I/O, unit-tested no-mocks):
+  `split_frontmatter`, `strip_related_block` (canonical `sb:related` delimiter constants live
+  here), `chunk_text` (split on headings → paragraphs → hard-split with overlap **only** on hard
+  splits, per [02 §4](02-data-model.md)), and `chunk_note` (strip frontmatter + `sb:related`, then
+  chunk). `CHUNK_SIZE`/`CHUNK_OVERLAP` are caller-passed params (rule 9); the
+  `search_document:`/`search_query:` prefixes stay **deferred** to embed time (the chunker also
+  feeds hashing). 19 chunker tests; **153 pytest + ruff green.**
+  - **Independent review: no must-fix.** Applied its four MINOR findings: **(1)** fence-aware
+    heading split (a `#` inside a fenced code block is not a heading boundary), **(2)** positive-size
+    / non-negative-overlap guards (a `size≤0` misconfig previously hung), **(3)** CRLF normalization
+    inside the exported primitives (the Task-3 hash builder will call them on raw vault text, which
+    can be CRLF), **(4)** reconciled a **doc contradiction**: [02 §4](02-data-model.md) now states
+    that only the `sb:related` block is stripped from *both* the hash and embed paths, while
+    frontmatter is stripped from the embed path but **kept in `content_hash`** (so tag/plane edits
+    still reindex) — matching §3 + [ADR-023](adr/023-semantic-relatedness-graph.md).
+- **Remaining M2 tasks** (unchanged order): indexer service (real index step, replacing the M1
+  stub — uses `chunk_note` + `strip_related_block` for `content_hash`) → `/search` +
+  `GET /notes/{id}` → relatedness graph recompute + `sb:related` render → nightly combined
+  `reindex` job → tag reuse + `/admin/tags/consolidate` → web Search + Admin tabs → live M2 Accept
+  (also confirms the M1 backup tail).
 
 ## M3 — Chat
 

@@ -70,8 +70,11 @@ Task 1 (migration 004 + Ollama/nomic provider wiring) done, independently review
 committed locally (server `c66b562`, not pushed) 2026-07-13** — `vector(768)` resize +
 `notes.embedding` + `note_links` (verified up/down/up on real pgvector), self-hosted
 nomic-via-Ollama as the sole embedding provider (keyless localhost), OpenAI now STT-only, `ollama`
-compose sidecar; 134 pytest + ruff green. See the *M2 progress* block in
-[08](08-implementation-plan.md). Next: Task 2 — the pure chunker.
+compose sidecar; 134 pytest + ruff green. **Task 2 (pure text chunker — `app/indexing/chunking.py`,
+02 §4) done, independently reviewed, committed locally (server `fdd0f60`, not pushed) 2026-07-13** —
+heading→paragraph→hard-split-with-overlap, frontmatter + `sb:related` stripping, 19 chunker tests
+(153 total + ruff green). See the *M2 progress* block in [08](08-implementation-plan.md). Next:
+Task 3 — the indexer service (real index step replacing the M1 stub).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
