@@ -17,7 +17,12 @@ single-flight `POST /admin/reindex`, organizer tag reuse + the two-step
 `GET /activity/runs/{id}`, and the **live Accept** — paraphrased search, DB-wipe→reindex recovery,
 git-push pickup all verified on prod; four prod issues surfaced + fixed: `ollama-init` model
 auto-pull, the co-capture `## Related` embedding leak, `db-backup` pg_dump, `data-sync` WORM).
-**Next: M3 (chat).**
+**M3 (chat) GRILLED to build-ready detail (2026-07-13, planning)** — chat pipeline (non-streaming +
+client-side reveal, hybrid grounding, LLM query-condensation, cited-only `[n]`, prompt-driven "not in
+notes", sessions) **+** UI-editable per-group model routing / per-task effort engine
+([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)); no migration (all tables exist).
+**Next: implement M3** (start at task 1 — the model routing engine — in
+[08 §M3](08-implementation-plan.md)).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

@@ -1,6 +1,8 @@
 # Pipelines & Scheduling
 
-**Version:** 2.3 · **Status:** Approved 2026-07-13 (2.3 = M2 indexing/search: nomic embeddings +
+**Version:** 2.4 · **Status:** Approved 2026-07-13 (2.4 = **M3 chat pipeline** §4 fleshed out
+(condensation → note-grouped top-k → hybrid grounded answer → cited-only `[n]`), model routing +
+per-group/per-task effort now UI-editable [ADR-025]; 2.3 = M2 indexing/search: nomic embeddings +
 prefixes [ADR-022], nightly combined `reindex` job + relatedness graph [ADR-023], organizer tag
 reuse [ADR-024]; 2.2 = M1 replan: STT fallback chain [ADR-020], capture interactions → `agent_runs`
 [ADR-021], `claude_max_effort`; 2.1 = M1 capture follow-up nudge, ADR-019)
@@ -10,12 +12,15 @@ transition is persisted (`captures.status`, `agent_runs`) — nothing silent
 (vision P8). All LLM calls resolve through the provider registry with the
 Claude-primary → Nebius-fallback chain ([ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md)).
 
-**Claude Max effort ([ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md); M1 replan).**
-Every `claude-max` call sets a reasoning-effort level on the CLI (`claude --print --model
-claude-opus-4-8 --effort <level>`). A single global setting `CLAUDE_MAX_EFFORT` (default
-**`medium`**, `deploy/defaults.env`) applies to every claude-max invocation in v1 — the knob
-**ships in v1** (effort is never silently unset), the default is explicit. Per-task effort
-(organize vs chat vs distill) is a **noted post-v1 extension**, not built now.
+**Model routing + effort ([ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md) +
+[ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md), M3).** Every `claude-max` call
+sets a reasoning-effort level on the CLI (`claude --print --model claude-opus-4-8 --effort <level>`).
+As of M3, routing (active + fallback model) and effort are **UI-editable per group** — `chat`
+(`chat_chain`) and `conspect` (`distill_chain`) — persisted in `app_settings` and resolved by
+`ModelRoutingService` (env config = defaults). **Effort is per-group, per-provider** (Chat-Claude and
+Conspect-Claude independent; Nebius has no effort concept; default = global `CLAUDE_MAX_EFFORT`,
+`medium`) and is passed as a **per-call argument** into the registry → `claude_max.complete(effort=…)`.
+The knob is never silently unset. (Superseding the M1-replan note that per-task effort was post-v1.)
 
 **STT resolves through a fallback chain ([ADR-020](adr/020-stt-fallback-chain-groq-primary.md)).**
 Voice transcription walks `STT_CHAIN = ["groq", "openai"]` (Groq Whisper `large-v3` primary,
@@ -117,16 +122,34 @@ file → read → strip frontmatter + sb:related block → sha256 ── unchang
 ## 4. Chat / search pipeline (interactive)
 
 ```
-query → embed → pgvector cosine top_k (optional planes filter)
-      → [search] scored results
-      → [chat] context blocks [n] + last N session turns
-              → selected chat model (per-conversation picker; registry applies
-                fallback if the pick is unavailable → flagged in response)
-              → answer with [n] citations → persist messages
+[search] query → embed (search_query:) → pgvector cosine top_k (optional planes) → scored results
+
+[chat] (M3, ADR-025)                                          persist user msg BEFORE any model call
+   │ turn 1? → embed raw message
+   │ else    → CONDENSE last N turns + message → standalone query   (conspect chain, low effort;
+   │                                                                 all-down ⇒ degrade to raw msg)
+   ▼
+   embed condensed query → SearchService note-grouped top_k (CHAT_CONTEXT_TOP_K, optional planes)
+   ▼
+   numbered context blocks [1..k] + last CHAT_HISTORY_MAX_MESSAGES turns + system prompt
+   ▼
+   chat model (Settings `chat` group default; per-conversation picker overrides the active model —
+     registry applies the group's fallback + effort; resolution flagged model_used/fallback_used)
+   ▼
+   answer with [n] → parse markers, keep ONLY cited notes, renumber [1..m]
+   ▼
+   persist assistant msg (chat_messages.model = model_used, sources = cited notes)   ← records fallback
 ```
 
-Prompt rules: answer only from context for questions about the user's notes; cite `[n]`;
-say explicitly when the context lacks the answer; reply in the user's language.
+Prompt rules (hybrid, grounding-biased): for questions that could be about the user's memory, answer
+**only** from the numbered context and cite `[n]`, and say plainly "that's not in your notes" when the
+context is silent; answer clearly-general questions normally (no forced citation). Reply in the user's
+language. No score floor — the model judges relevance from the context itself.
+
+Non-streaming in M3: the full answer returns in one `POST /chat` body (the web animates a client-side
+reveal); `claude --print` is blocking and the registry returns a whole string. True token streaming is
+post-v1. Chat records its fallback on `chat_messages.model` (+ the response banner) and does **not**
+write `agent_runs` (that table is autonomous agent/job work → the M4 feed).
 
 ## 5. Analysis pipeline (background intelligence)
 

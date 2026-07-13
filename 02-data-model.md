@@ -1,6 +1,8 @@
 # Data Model
 
-**Version:** 2.3 · **Status:** Approved 2026-07-13 (2.3 = M2 migration 004: embeddings resized
+**Version:** 2.4 · **Status:** Approved 2026-07-13 (2.4 = **M3, no migration**: `app_settings`
+`model_routing` key documented + `chat_messages.model`/`sources` semantics [ADR-025]; all M3 tables
+already exist at revision 001. 2.3 = M2 migration 004: embeddings resized
 1536→**768** for self-hosted nomic [ADR-022], new `notes.embedding` + `note_links` table for the
 relatedness graph [ADR-023]; 2.2 = M1 replan: migration 003 = `capture_interactions` view,
 `agent="capture"` runs [ADR-021]; 2.1 = M1 migration 002: capture follow-up columns; new
@@ -160,15 +162,24 @@ exhausted and the capture degraded to an Inbox note — a *success*, not a failu
 **`summaries`** — daily/weekly analysis registry
 | period (`daily`\|`weekly`) + period_start date, unique · content · note_path · created_at |
 
-**`chat_sessions`** / **`chat_messages`**
-| sessions: id uuid pk · title · created_at · last_model text |
+**`chat_sessions`** / **`chat_messages`** (M3 chat, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
+| sessions: id uuid pk · title (first-message truncation in M3; LLM titles = fast-follow) · created_at · last_model text |
 | messages: id uuid pk · session_id fk · role (`user`\|`assistant`) · content · model text null · sources jsonb null · created_at |
+
+`chat_messages.model` on an assistant row = the **resolved** chat model (`model_used` after fallback) —
+this is where the deferred M0 clause's "records it" lands; chat does **not** write `agent_runs`.
+`sources` = the **cited** notes only (renumbered `[1..m]`, matching the `[n]` in `content`). Existing
+tables (revision 001) — **M3 adds no migration**.
 
 **`auth_sessions`** — login sessions (httpOnly cookie → hashed token)
 | id uuid pk · token_hash text unique · user_agent · created_at · last_seen_at · expires_at · revoked boolean |
 
-**`app_settings`** — UI-editable runtime settings (agent model chain, etc.)
-| key text pk · value jsonb · updated_at |
+**`app_settings`** — UI-editable runtime settings (key text pk · value jsonb · updated_at)
+Namespaced keys. **M3 ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):**
+`model_routing` = `{ chat: { active, fallback, effort: {<provider>: level} }, conspect: {…} }` —
+per-group active/fallback model + per-provider effort; env config (`chat_chain`/`distill_chain`/
+`CLAUDE_MAX_EFFORT`) is the default when a field is unset. Read (cached) by `ModelRoutingService` in
+the request path — a bad/unknown model id degrades to the config default chain, never a hard failure.
 
 ## 4. Chunking policy
 

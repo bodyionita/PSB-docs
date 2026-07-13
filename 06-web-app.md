@@ -1,6 +1,9 @@
 # Web App (PWA)
 
-**Version:** 1.1 · **Status:** Approved 2026-07-13 (1.1 = M2 adds the Search + Admin screens —
+**Version:** 1.2 · **Status:** Approved 2026-07-13 (1.2 = **M3 chat screen finalized** (reveal render,
+per-conversation picker, cited-only source cards, plane chips, "not in notes") + **Settings → Models**
+routing panel — [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md); 1.1 = M2 adds the
+Search + Admin screens —
 [ADR-022](adr/022-embeddings-self-hosted-nomic.md)/[023](adr/023-semantic-relatedness-graph.md)/[024](adr/024-tag-vocabulary-reuse-and-consolidation.md))
 **Stack:** React + Vite + TypeScript, installable PWA, served statically by Caddy on the
 VPS at **single origin** (`/` = web, `/api` = API — [ADR-013](adr/013-web-stays-on-vps-single-origin.md)),
@@ -48,13 +51,19 @@ login header; kept as a single config constant so it's changeable at zero cost.
 - Recent captures strip with live pipeline status (received → transcribing → … → indexed),
   animated state transitions; failed items expose retry.
 
-### 2. Chat
-- Conversation list + thread view; streaming answer rendering.
-- **Model picker per conversation** (`GET /chat/models`) — compact selector in the
-  composer; when the response's `fallback_used` is true, show a discreet banner
+### 2. Chat (M3, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
+- Conversation list (newest first, `GET /chat/sessions`) + thread view. **List / open / new**
+  only in M3 — rename + delete are deferred (no endpoints yet).
+- Answer rendering is a **client-side reveal animation** over the full non-streaming response
+  (true token streaming is post-v1) — respects `prefers-reduced-motion`.
+- **Model picker per conversation** (`GET /chat/models`, real ids + labels) — compact selector in
+  the composer; overrides only the *active* model for this thread (fallback + effort inherited from
+  the Settings **Chat** group). When the response's `fallback_used` is true, show a discreet banner
   "answered by <model>".
-- Source citations `[n]` rendered as expandable cards (note title, plane badge, snippet).
-- Plane filter chips (optional query scoping).
+- Source citations `[n]` rendered as **expandable cards** — only the **cited** notes
+  (`sources[]`), title + plane badge + snippet; tap to expand.
+- **Plane-filter chips** in the composer (optional retrieval scoping → `POST /chat` `planes`).
+- **"Not in your notes"** answers render plainly, no source cards.
 
 ### 3. Activity
 - The "what did my brain do" feed (`GET /activity`): agent runs, captures, errors —
@@ -62,8 +71,14 @@ login header; kept as a single config constant so it's changeable at zero cost.
   (`GET /activity/runs/{id}`). Fallback events visibly badged.
 
 ### 4. Settings
-- **Agents section** (separate from chat, by decision): conspect model + fallback model
-  (`PUT /settings/agents`), connector list with last-run status and "run now".
+- **Models section (M3, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):** two
+  routing groups — **Chat** and **Conspect** — each an active-model dropdown + fallback dropdown +
+  an **effort selector shown only for models that support it** (Claude yes, Nebius no). Choices +
+  effort levels come from `GET /settings` (registry-sourced, never hardcoded); saved via
+  `PUT /settings/models`. This is where the M0/M3 model-and-effort control lives; the chat composer
+  picker is a per-conversation override of the Chat group's active model.
+- **Agents (M4):** connector list with last-run status and "run now". (The conspect model that was
+  drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)
 - Session management (logout), theme, reduced motion override.
 
 ### 5. Search (M2)

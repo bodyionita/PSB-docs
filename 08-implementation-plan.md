@@ -1,8 +1,11 @@
 # Implementation Plan
 
-**Version:** 2.3 · **Status:** Approved 2026-07-13 (2.3 = plan split into a **task tracker** + a
-per-milestone [08-logs/](08-logs/); per-task implementation narratives moved out. 2.2 = M2 grilled to
-build-ready detail —
+**Version:** 2.4 · **Status:** Approved 2026-07-13 (2.4 = **M3 grilled to build-ready detail** —
+chat pipeline (non-streaming + reveal, hybrid grounding, LLM query-condensation, cited-only `[n]`,
+prompt-driven "not in notes", sessions) + the UI-editable per-group model routing / per-task effort
+engine, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md); no migration. 2.3 = plan
+split into a **task tracker** + a per-milestone [08-logs/](08-logs/); per-task implementation
+narratives moved out. 2.2 = M2 grilled to build-ready detail —
 [ADR-022](adr/022-embeddings-self-hosted-nomic.md)/[023](adr/023-semantic-relatedness-graph.md)/[024](adr/024-tag-vocabulary-reuse-and-consolidation.md);
 M1 close folded into M2; 2.1 = M1 grilled to build-ready detail; v2 backlog additions)
 **Rule:** ship in phases; every phase ends usable. A phase starts only when the previous
@@ -233,13 +236,91 @@ empty — the M1 index step is a no-op stub); chunking policy is in [02 §4](02-
 - [x] 8 — web Search tab + Admin tab (+ two small server endpoints `GET /planes` and `GET /activity/runs/{id}`, 03-api v2.3) · [log](08-logs/m2.md#task-8)
 - [x] 9 — **live M2 Accept** (paraphrased query finds the right note; DB-wipe + reindex restores search; git-push edit picked up) — **also closed the M1 backup tail**; surfaced + fixed 4 prod issues (model-pull → `ollama-init`; co-capture `## Related` embedding leak; `db-backup` pg_dump-missing; `data-sync` WORM lock) · [log](08-logs/m2.md#task-9--live-m2-accept-in-progress-2026-07-13)
 
-## M3 — Chat
+## M3 — Chat + UI-editable model routing
 
 Chat endpoints + retrieval + citations + sessions + per-conversation model picker +
-fallback banner. Web: chat screen with streaming render, source cards, model picker.
+fallback banner. Web: chat screen with reveal-animated render, source cards, model picker.
+**Also lands** the UI-editable per-group model routing + per-task effort engine
+([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)) and the Settings → Models panel.
 
 **Accept:** questions over known vault content answered with correct [n] citations on both
-Claude and Nebius; "not in your notes" behavior verified; sessions persist.
+Claude and Nebius; "not in your notes" behavior verified; sessions persist. **Plus the deferred M0
+clause** (the live Claude-limit → Nebius chain-and-record) — satisfied by a Settings-driven
+Nebius-primary drive on prod (the chain answers via Nebius, recorded in `chat_messages.model`) **+**
+the existing 21 registry fallback unit tests for the mechanism; an optional one-shot "force Claude
+down" exercises the literal live fallback.
+
+**M3 build decisions (grilled 2026-07-13 — [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)).**
+Build-ready detail below; nothing left to implementer discretion. Facts confirmed against the code:
+the registry already does the `["claude-max","nebius"]` chat/distill fallback chain and returns
+`model_used`/`fallback_used`; `SearchService.search(query, top_k, planes)` is the retrieval
+primitive; `chat_sessions`/`chat_messages`/`app_settings` all exist (revision 001) so **M3 needs no
+migration**; `claude --print` is **blocking** (no native token stream); effort is a per-call `--effort`
+on the claude-max CLI, today a constructor constant.
+
+- **Passive top-k retrieval (agentic stays v2).** `query → embed → SearchService note-grouped top_k
+  (optional planes) → numbered context blocks → chat model → answer with [n] → persist`. Chat
+  context uses a chat-specific `CHAT_CONTEXT_TOP_K` (default 8).
+- **Transport = non-streaming.** `POST /chat` returns the full JSON body (answer + sources +
+  model_used + fallback_used); the web animates a **client-side reveal**. Registry/providers
+  untouched. True token streaming is a **post-v1** upgrade (would need a streaming provider interface
+  + SSE + mid-stream persistence — out of scope).
+- **Grounding = hybrid, biased to grounding.** Note-questions answered **only** from retrieved
+  context + `[n]` citations, with an explicit "that's not in your notes" when the context is silent;
+  clearly-general questions answered normally (no forced citation). System prompt biases toward the
+  notes whenever the question could be about the user's memory. Reply in the user's language.
+- **Multi-turn retrieval query = LLM condensation.** Before retrieval, the last N turns + the new
+  message are condensed into one standalone search query via the **conspect** chain at **low effort**.
+  **Skipped on turn 1** (nothing to resolve → embed the raw message); **degrades to embedding the raw
+  message** if condensation's providers are all down (never a hard dependency).
+- **Citations = cited-only, renumbered.** Parse `[n]` markers from the answer; `sources[]` = **only
+  the notes actually cited**, renumbered `[1..m]` to match the rendered answer; uncited/invalid
+  markers dropped; general/"not in notes" answers carry empty `sources[]`. Pure, unit-tested
+  parse-and-renumber. Source = a note (best chunk snippet), matching note-grouped search.
+- **"Not in your notes" = prompt-driven, no score floor.** Always retrieve, let the grounding-biased
+  prompt decide (consistent with search's `SEARCH_MIN_SCORE=0`); no brittle cosine cutoff.
+- **Sessions.** Implicit creation (`POST /chat` with no `session_id` creates + returns one). **User
+  message persisted before the LLM call**, assistant message after (never-lose). History window =
+  `CHAT_HISTORY_MAX_MESSAGES` (default **20**), oldest-trimmed for the answer prompt; full history
+  stays in `chat_messages`. Title = **first-message truncation** (LLM-generated titles = fast-follow).
+  Web = list / open / new only; **rename + delete deferred** (M5/polish, no endpoints in M3).
+- **Fallback recording (deferred M0 clause).** `model_used` → `chat_messages.model`;
+  `model_used`+`fallback_used` returned for the composer banner. **Chat stays out of `agent_runs`**
+  (that table = autonomous agent/job work → the M4 feed; per-turn chat logging would flood it).
+  Condensation's own model is internal plumbing, not separately recorded.
+- **Model routing engine ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)).** Two
+  UI-configurable groups — **Chat** (`chat_chain`) and **Conspect** (`distill_chain`) — each
+  `{active, fallback, per-provider effort}`. **Per-group, per-provider effort** (Chat-Claude and
+  Conspect-Claude independent; Nebius has no effort knob; default = global `CLAUDE_MAX_EFFORT`). A
+  **`ModelRoutingService`** reads `app_settings` (env config as defaults, cache busted on save);
+  **effort promoted to a per-call arg** through `registry.chat/distill` → `claude_max.complete(effort=…)`.
+  A bad saved model id degrades to the config default chain (rule 7), never a hard failure.
+- **Model picker vs Settings default.** Settings `chat` group = the default active/fallback/effort;
+  the composer picker overrides just the **active** model per conversation (existing `model` param;
+  the registry's `_resolve_chain` keeps the group's fallback + effort underneath).
+- **API/contract additions** ([03-api](03-api.md)): `POST /chat` finalized (+ optional `planes`);
+  `GET /chat/models` real registry ids + `CHAT_MODEL_LABELS`; `GET /chat/sessions` + `GET
+  /chat/sessions/{id}`; enriched `GET /settings`; new `PUT /settings/models` (per group);
+  `PUT /settings/agents` **superseded**. No schema change ([02](02-data-model.md) — routing lives in
+  `app_settings` jsonb). New config: `CHAT_HISTORY_MAX_MESSAGES` (20), `CHAT_CONTEXT_TOP_K` (8),
+  `CHAT_MODEL_LABELS` (id→label), chat condensation effort (low).
+- **Web (online-only).** Chat screen per [06](06-web-app.md): conversation list + thread, composer
+  with **model picker + plane-filter chips**, client-side **reveal animation**, expandable `[n]`
+  **source cards** (title/plane badge/snippet), discreet **fallback banner** when `fallback_used`,
+  "not in your notes" empty state. New **Settings → Models** panel: per-group active/fallback
+  dropdowns + effort selector for effort-supporting models, saved via `PUT /settings/models`.
+
+**Tasks** — full detail in 08-logs/m3.md (created at implementation).
+- [ ] 1 — model routing engine: `ModelRoutingService` over `app_settings` (config defaults, cache-bust
+      on save) + effort promoted to a per-call arg (`registry.chat/distill` → `claude_max.complete(effort=)`)
+- [ ] 2 — chat service: retrieval (condensation → note-grouped top-k) + prompt (hybrid/grounded) +
+      `[n]` cited-only parse-and-renumber + session/message persistence
+- [ ] 3 — chat routers: `POST /chat`, `GET /chat/models`, `GET /chat/sessions[/{id}]` (+ `planes`)
+- [ ] 4 — settings routers: enriched `GET /settings` + `PUT /settings/models` (supersede `PUT /settings/agents`)
+- [ ] 5 — web chat screen (06): list/thread, composer (picker + plane chips), reveal, source cards, banner
+- [ ] 6 — web Settings → Models panel (per-group active/fallback/effort)
+- [ ] 7 — **live M3 Accept** (both-model cited answers; "not in notes"; sessions persist; deferred M0
+      clause: Settings-driven Nebius-primary drive recorded + fallback unit tests)
 
 ## M4 — Slack agent + activity feed
 

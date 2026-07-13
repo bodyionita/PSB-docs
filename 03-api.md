@@ -1,6 +1,10 @@
 # API Contract
 
-**Version:** 2.3 · **Status:** Approved 2026-07-13 (2.3 = M2 web Task 8 needs: new `GET /planes`
+**Version:** 2.4 · **Status:** Approved 2026-07-13 (2.4 = **M3 chat + model routing** —
+[ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md): `POST /chat` finalized
+(non-streaming, cited-only `[n]` sources, `planes`), `GET /chat/models` real registry ids + labels,
+`GET /chat/sessions[/{id}]`, enriched `GET /settings`, new `PUT /settings/models` per group
+(`PUT /settings/agents` superseded). 2.3 = M2 web Task 8 needs: new `GET /planes`
 for the Search-tab plane-filter chips, and `GET /activity/runs/{id}` **pulled forward from M4**
 so the Admin tab can show a reindex/tags-apply run's live status + counts. 2.2 = M2 indexing/search:
 `POST /search` now note-grouped, `POST /admin/reindex` async→`202`+run, new `GET /notes/{id}` preview,
@@ -38,13 +42,20 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | `POST /captures/{id}/retry` | re-run from first incomplete step; `409` unless `failed` |
 | `POST /captures/{id}/follow-up` | `{ "answer": "..." }` → **Pass 2** re-organize (original + answer), replacing the capture's notes ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)); `202`. `409` if no `follow_up_question` pending |
 
-## Chat
+## Chat (M3, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
+
+Non-streaming (M3): `POST /chat` returns the full answer in one JSON body; the web animates a
+client-side reveal (true token streaming is post-v1). Retrieval is passive note-grouped top-k over
+the vault index; the answer is grounded + `[n]`-cited for note-questions (hybrid — general questions
+answered normally). Fallback resolution is recorded on the assistant message (`chat_messages.model`);
+chat does **not** write `agent_runs`.
 
 | | |
 |---|---|
-| `GET /chat/models` | available chat models from provider registry: `[{ "id": "claude", "label": "Claude (Max)", "default": true }, { "id": "nebius/…", … }]` |
-| `GET /chat/sessions` · `GET /chat/sessions/{id}` | history for the UI |
-| `POST /chat` | `{ "message", "session_id"?: uuid, "model"?: id, "top_k"?: int }` → `{ "session_id", "answer", "model_used", "fallback_used", "sources": [{ note_path, title, snippet, score, planes }] }` — `model_used` may differ from requested when fallback fired (UI shows banner) |
+| `GET /chat/models` | chat models from the registry, **real ids** + display labels (`CHAT_MODEL_LABELS`): `[{ "id": "claude-max", "label": "Claude (Max)", "default": true }, { "id": "nebius", "label": "Nebius · Llama 3.1 70B" }]`. `default` = the Chat group's active model. The composer picker overrides only the active model per conversation (fallback + effort inherited from the Chat group — ADR-025) |
+| `GET /chat/sessions` | conversation list for the sidebar, newest first: `[{ id, title, created_at, last_model }]` |
+| `GET /chat/sessions/{id}` | one thread's messages: `{ id, title, messages: [{ role, content, model, sources, created_at }] }`; `404` if unknown |
+| `POST /chat` | `{ "message", "session_id"?: uuid, "model"?: id, "planes"?: [..], "top_k"?: int }` → `{ "session_id", "answer", "model_used", "fallback_used", "sources": [{ note_id, vault_path, title, snippet, score, planes }] }`. Implicit session creation when `session_id` omitted. `sources` = **only the notes actually cited**, renumbered `[1..m]` to match the `[n]` in `answer` (empty for general / "not in your notes" answers). `model_used` may differ from requested/default when fallback fired (UI shows the banner). `planes` scopes retrieval on `notes.planes` membership; `top_k` defaults to `CHAT_CONTEXT_TOP_K` |
 
 ## Search & notes
 
@@ -66,12 +77,17 @@ OpenAPI at `/api/openapi.json`; the web client may generate its types from it.
 | `GET /activity?limit=50&before=<cursor>` | merged feed: agent runs + captures + errors, newest first. Run entries: `{ id, agent, status, started_at, finished_at, model_used, fallback_used, summary }` |
 | `GET /activity/runs/{id}` | full run incl. `details` jsonb (expandable view): `{ id, agent, status, started_at, finished_at, model_used, fallback_used, summary, details, error }`; `404` if unknown. **Implemented in M2** (pulled forward from the M4 feed) so the Admin tab can poll a reindex / tags-apply run's live status + `details` counts. The merged `GET /activity` list stays M4. |
 
-## Settings
+## Settings ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
+
+Model routing is UI-editable per **group** (`chat` = `chat_chain`, `conspect` = `distill_chain`) and
+persisted in `app_settings`; env config (`chat_chain` / `distill_chain` / `CLAUDE_MAX_EFFORT`) is the
+default when unset. Saves bust the `ModelRoutingService` cache (apply on next request, no restart).
 
 | | |
 |---|---|
-| `GET /settings` | current app settings incl. agent model chain and available models |
-| `PUT /settings/agents` | `{ "conspect_model": id, "fallback_model": id }` — applies to future runs; separate from per-chat picker by design |
+| `GET /settings` | saved routing for both groups **plus** the choices the UI needs (all registry-sourced — no hardcoded model/effort lists in the web): `{ "models": { "chat": { "active": id, "fallback": id, "effort": { "<provider>": "medium" } }, "conspect": { … } }, "available": { "chat": [id…], "conspect": [id…] }, "providers": { "<id>": { "label", "supports_effort": bool, "effort_levels": ["low",…] } } }` |
+| `PUT /settings/models` | `{ "group": "chat"\|"conspect", "active": id, "fallback"?: id, "effort"?: { "<provider>": level } }` — saves one group's routing; unknown model id → `422`. Busts the routing cache |
+| `PUT /settings/agents` | **superseded by `PUT /settings/models`** ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)); the `conspect` group replaces it |
 
 ## Summaries
 
