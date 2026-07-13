@@ -837,11 +837,50 @@ Search + Admin tabs → live M2 Accept (which also confirms the M1 backup tail).
     that only the `sb:related` block is stripped from *both* the hash and embed paths, while
     frontmatter is stripped from the embed path but **kept in `content_hash`** (so tag/plane edits
     still reindex) — matching §3 + [ADR-023](adr/023-semantic-relatedness-graph.md).
-- **Remaining M2 tasks** (unchanged order): indexer service (real index step, replacing the M1
-  stub — uses `chunk_note` + `strip_related_block` for `content_hash`) → `/search` +
-  `GET /notes/{id}` → relatedness graph recompute + `sb:related` render → nightly combined
-  `reindex` job → tag reuse + `/admin/tags/consolidate` → web Search + Admin tabs → live M2 Accept
-  (also confirms the M1 backup tail).
+- **Task 3 — indexer service (real index step, replacing the M1 stub) — DONE** (server commit
+  `684604e`, local, **not pushed**). The `notes`/`chunks` index is now populated from the vault
+  (04 §3, [ADR-022](adr/022-embeddings-self-hosted-nomic.md)/[ADR-023](adr/023-semantic-relatedness-graph.md)):
+  - **`app/indexing/indexer.py`** — the `Indexer`. Per note: read → strip `sb:related` → **sha256
+    `content_hash`** (skip if unchanged) → `parse_note_metadata` → `chunk_note` → **batch-embed a
+    note's chunks in one `registry.embed` call** with the mandatory `search_document: {title}\n\n{chunk}`
+    prefix (bounded backoff on `ProviderUnavailable`) → **per-note transaction** (upsert note +
+    replace chunks) + `notes.embedding` = **mean-pool** of the chunk vectors. On embed failure:
+    **skip-and-continue → `partial`**, existing rows left intact (a later reindex retries). Two
+    entry points: `index_paths(paths)` (the capture/ingestion write path) and `reindex_all()`
+    (full rescan + **deletion reconciliation**, cascade). The **relatedness graph is left
+    untouched** — nightly-only per ADR-023. `content_hash` `strip()`s surrounding whitespace so the
+    trailing `sb:related` block (the graph's own writes) never re-triggers a reindex.
+  - **`app/indexing/frontmatter.py`** — pure frontmatter parser + `NoteMetadata` extraction
+    (plane←folder / planes←`[plane]` / tags / source / source_ref / created←mtime fallbacks; title
+    = H1 else filename stem). **No YAML dependency** — the parser matches the controlled render
+    shape and reads user notes leniently.
+  - **`app/indexing/store.py`** — `IndexStore` protocol + `PgIndexStore` (the per-note transaction
+    in plain SQL, upsert on `vault_path`, `list_indexed_paths`/`delete_notes` for reconciliation).
+  - **`db.py`** — registers a **text codec for the pgvector `vector` type** on every pooled
+    connection, so embeddings pass as plain `list[float]` (no `::vector` casts / string juggling in
+    query code); encode on INSERT, decode on SELECT.
+  - **Capture pipeline wired** — the M1 no-op stub (both `_process` and the reorganize path) now
+    calls `index_paths`. **Best-effort**: the vault is truth (rule 1) and the notes are already on
+    disk, so an index/embed failure **never flips a written capture to `failed`** — it's logged and
+    the outcome recorded to the capture's `agent_runs` `details.index` (ADR-021). New settings
+    `EMBED_MAX_ATTEMPTS` / `EMBED_RETRY_BACKOFF_SECONDS` (rule 9).
+  - **Independent review (`/code-review` high, protocol-sanctioned mechanism): 1 must-fix, fixed.**
+    `index_paths` promised "never raised — the rest of the batch still indexes," but `_index_one`
+    only caught `ProviderUnavailable`; an unexpected per-note store/DB error would abort the whole
+    batch (breaks rule 7 / "never crashes the job"). **Fixed:** the per-note loop now catches any
+    exception, logs it, counts the note `failed`, and continues. Added coverage (batch survives an
+    unexpected store error; pipeline indexes exactly the written notes + logs the outcome).
+  - **173 pytest + ruff green** (18→20 new across `test_frontmatter` + `test_indexer` +
+    `test_capture_pipeline`). **Verified end-to-end against a real pgvector DB** (dev compose, at
+    head 004): `vector` codec round-trips (768-dim `list` in/out), per-note transaction lands
+    note+chunks, mean-pool stored, hash-skip on unchanged reindex, cosine query runs over the HNSW
+    index, and `reindex_all` reconciles a deleted file's row away.
+- **Remaining M2 tasks** (unchanged order): `/search` + `GET /notes/{id}` (search side embeds with
+  the `search_query:` prefix — still deferred) → relatedness graph recompute + `sb:related` render
+  (materializes `note_links`, uses the indexer's `notes.embedding`) → nightly combined `reindex`
+  job (calls `reindex_all` + graph, single-flight; `POST /admin/reindex` async wrapper) → tag reuse
+  + `/admin/tags/consolidate` → web Search + Admin tabs → live M2 Accept (also confirms the M1
+  backup tail).
 
 ## M3 — Chat
 

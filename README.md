@@ -73,8 +73,19 @@ nomic-via-Ollama as the sole embedding provider (keyless localhost), OpenAI now 
 compose sidecar; 134 pytest + ruff green. **Task 2 (pure text chunker — `app/indexing/chunking.py`,
 02 §4) done, independently reviewed, committed locally (server `fdd0f60`, not pushed) 2026-07-13** —
 heading→paragraph→hard-split-with-overlap, frontmatter + `sb:related` stripping, 19 chunker tests
-(153 total + ruff green). See the *M2 progress* block in [08](08-implementation-plan.md). Next:
-Task 3 — the indexer service (real index step replacing the M1 stub).
+(153 total + ruff green). **Task 3 (indexer service — the real index step replacing the M1 stub)
+done, independently reviewed (1 must-fix — batch resilience — fixed), committed locally (server
+`684604e`, not pushed) 2026-07-13** — per-note `read → strip sb:related → sha256 → skip-if-unchanged
+→ parse frontmatter → chunk_note → batch-embed (`search_document:` prefix) → per-note tx (upsert
+note + replace chunks) + `notes.embedding` mean-pool`; `index_paths` (capture path) + `reindex_all`
+(rescan + deletion reconcile); embed-fail → skip-and-continue → `partial`; graph left untouched
+(nightly-only). No YAML dep (own frontmatter parser); a pgvector `vector` codec on the asyncpg pool
+lets embeddings pass as plain float lists. Wired into the capture pipeline (best-effort — vault is
+truth, so an index failure never fails a written capture; outcome logged to `agent_runs`). 173
+pytest + ruff green; **verified end-to-end against a real pgvector DB** (codec round-trip, per-note
+tx, mean-pool, hash-skip, cosine query, deletion reconcile). See the *M2 progress* block in
+[08](08-implementation-plan.md). Next: `/search` + `GET /notes/{id}` (search-side `search_query:`
+prefix + note-grouped results).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
