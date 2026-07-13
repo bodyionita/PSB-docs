@@ -229,7 +229,7 @@ empty — the M1 index step is a no-op stub); chunking policy is in [02 §4](02-
 - [x] 4 — `POST /search` + `GET /notes/{id}` (note-grouped preview) — `6e0fa21` · [log](08-logs/m2.md#task-4)
 - [x] 5 — relatedness graph recompute + `sb:related` render (ADR-023) — `73ed641` · [log](08-logs/m2.md#task-5)
 - [x] 6 — combined nightly `reindex` job (`reindex_all` + `RelatednessGraph.recompute`, `git pull` first, one commit+push under the vault lock, single-flight) + `POST /admin/reindex` async wrapper — `a059c18`+`8cde827` · [log](08-logs/m2.md#task-6)
-- [ ] 7 — tag reuse in the organizer prompt + `POST /admin/tags/consolidate` (propose → apply)
+- [x] 7 — tag reuse in the organizer prompt + `POST /admin/tags/consolidate` (propose → apply) — `b404709` · [log](08-logs/m2.md#task-7)
 - [ ] 8 — web Search tab + Admin tab
 - [ ] 9 — **live M2 Accept** (paraphrased query finds the right note; DB-wipe + reindex restores search; git-push edit picked up nightly) — **also confirms the M1 backup tail**
 

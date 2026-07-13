@@ -9,10 +9,10 @@ implementation plus a `CLAUDE.md` that points here.
 `https://braindan.cc`** (PWA over HTTPS, login, `/health` green, Cloudflare TLS Full-strict).
 **M1 (capture end-to-end) code-complete** — voice/text capture → organized atomic notes with
 full ADR-014 vault durability; its live-Accept backup tail folds into the M2 close. **M2
-(indexing & search) IN PROGRESS** — Tasks 1–6 done (nomic-via-Ollama embeddings, chunker,
-indexer, `/search` + note preview, the materialized `note_links` relatedness graph, and the
-combined nightly `reindex` job + async single-flight `POST /admin/reindex`); next is organizer
-tag reuse + `POST /admin/tags/consolidate`.
+(indexing & search) IN PROGRESS** — Tasks 1–7 done (nomic-via-Ollama embeddings, chunker,
+indexer, `/search` + note preview, the materialized `note_links` relatedness graph, the
+combined nightly `reindex` job + async single-flight `POST /admin/reindex`, and organizer tag
+reuse + the two-step `POST /admin/tags/consolidate`); next is the web Search + Admin tabs.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
