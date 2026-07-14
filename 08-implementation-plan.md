@@ -191,8 +191,10 @@ nothing left to implementer discretion:
         **Open before Accept:** real-DB smoke of the `PgEdgeConsolidationStore` SQL.
 - [ ] 8 — web retarget (capture strip node_paths, search type icons, node preview with
       edges/profile, Review list, Settings → Vocabulary)
-- [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step,
-      defaults.env)
+- [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step, defaults.env).
+      **GitHub-side prep already done (2026-07-14): `PSB-graph` created + VPS deploy key pasted with
+      write access** — so task 9's first `push -u` should work first try; the pubkey-print step is now
+      a convenience, not a blocker.
 - [ ] 10 — **live M3 Accept** (per accept draft above + threshold tuning + cutover: verify
       capture→node→PSB-graph push, then user archives PSB-vault)
 

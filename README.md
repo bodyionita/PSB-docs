@@ -121,9 +121,9 @@ If you are an AI (or human) picking this up with no prior context:
    then implement. Never silently diverge from these documents.
 5. Things intentionally NOT decided yet (ask the user when reached): Slack app creation (M9),
    MCP token distribution (M5). Decided at the M3 grilling: graph-store repo = **`PSB-graph`**
-   (user creates it in the GitHub UI at M3; `PSB-vault` archived after the Accept — zero
-   manual VPS steps, ADR-031). Already provisioned: domain (`braindan.cc`), Cloudflare,
-   Supabase, code repo.
+   (`PSB-vault` archived after the Accept — zero manual VPS steps, ADR-031). Already provisioned:
+   domain (`braindan.cc`), Cloudflare, Supabase, code repo, and **`PSB-graph` created + VPS deploy
+   key added with write access (2026-07-14)** — the task-9 cutover's GitHub-side prep is complete.
 
 ## Rules of this repo
 
