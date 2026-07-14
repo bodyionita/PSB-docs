@@ -48,9 +48,18 @@ delegated to one `VocabularyService` (shared with `POST /review/{id}`), and a fe
 **[ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)** (edges apply / nodes propose-only). 318
 tests green (+24), ruff clean, **independent review APPROVE — no must-fix** (2 minors fixed) —
 [08-logs/m3.md](08-logs/m3.md) task 7a; commits `dd3c5be`/`410b5d2`.
-**Next: task 7b** — edge retro-consolidation apply (`NodeWriter.retype_edge`, LLM re-walk propose +
-`POST /admin/vocab/consolidate`); then 8 web, 9 deploy, 10 live Accept. Wire before Accept (log
-follow-ups): real-DB SQL smoke of the task-6 + task-7a SQL, profile-embedding-in-search, cross-capture
+**Task 7b done (2026-07-14):** edge retro-consolidation apply — `POST /admin/vocab/consolidate`, an
+on-demand two-step (ADR-024 shape) that **re-types existing edges** onto a newly-approved rel:
+`NodeWriter.retype_edge` (rel-only frontmatter rewrite, `conf`/`since`/`until` preserved, field-boundary
+match, dedup-safe), a bounded recency-ordered edge inventory (`PgEdgeConsolidationStore`), and a
+`vocab-consolidation` background apply (rewrite → reindex → force-commit, skip-and-continue). Scope
+pinned by **[ADR-036](adr/036-edge-retro-consolidation-walk-retypings-only-m3.md)** (re-typings only;
+new-edge invention + node re-typing deferred; reconciles the ADR-035 §2 / 04-pipelines wording split).
+344 tests (+26), ruff clean, **independent review APPROVE after fixes** (1 must-fix prefix-colliding-rel
++ 3 minors, all resolved + regression-tested); commit `542459d`.
+**Next: task 8** — web retarget (capture strip node_paths, search type icons, node preview with
+edges/profile, Review list, Settings → Vocabulary); then 9 deploy, 10 live Accept. Wire before Accept
+(log follow-ups): real-DB SQL smoke of the task-6/7a/7b SQL, profile-embedding-in-search, cross-capture
 **alias accretion** (Alex/Alexandru → one node). Code committed, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live

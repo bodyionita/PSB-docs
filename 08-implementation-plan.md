@@ -178,14 +178,17 @@ nothing left to implementer discretion:
         2026-07-14; **318 tests (+24), ruff clean; independent review APPROVE — no must-fix** (2
         minors fixed: mint forward-live test + FOR-UPDATE race note); commits `dd3c5be`/`410b5d2`
         (log: task 7a). **Open before Accept:** real-DB smoke of the `PgVocabularyStore` SQL.
-  - [ ] 7b — **edge retro-consolidation apply**: `NodeWriter.retype_edge`, the LLM re-walk propose
+  - [x] 7b — **edge retro-consolidation apply**: `NodeWriter.retype_edge`, the LLM re-walk propose
         + `POST /admin/vocab/consolidate` confirm-apply (edges only); node re-typing stays
         propose-only (its folder-move/re-slug/`node_paths` apply machinery is a deferred follow-up +
         own ADR, ADR-035). **Mechanics pinned by [ADR-036](adr/036-edge-retro-consolidation-walk-retypings-only-m3.md)
         (2026-07-14, task-7b kickoff):** the walk proposes **re-typings of existing edges only**
         (bounded edge inventory, config cap; inventing new edges from node bodies deferred), via an
         **on-demand two-step** endpoint mirroring ADR-024 tags (the 7a approve-time marker run
-        unchanged) — resolves the ADR-035 §2 / 04-pipelines wording split.
+        unchanged) — resolves the ADR-035 §2 / 04-pipelines wording split. Done 2026-07-14;
+        **344 tests (+26), ruff clean; independent review APPROVE after fixes** (1 must-fix —
+        prefix-colliding rel match — + 3 minors, all resolved); commit `542459d` (log: task 7b).
+        **Open before Accept:** real-DB smoke of the `PgEdgeConsolidationStore` SQL.
 - [ ] 8 — web retarget (capture strip node_paths, search type icons, node preview with
       edges/profile, Review list, Settings → Vocabulary)
 - [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step,
