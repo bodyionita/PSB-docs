@@ -148,6 +148,18 @@ real-PG16 smoke checks** (hybrid SQL isn't fake-testable); **independent review 
 must-fix** (3 minors fixed: half-life div-by-zero guard, UTC-pinned recency date, deterministic rank tiebreak;
 1 logged for task 3 — tune the chat `min_score` floor to the RRF scale) — [08-logs/m4.md](08-logs/m4.md) task 2.
 **Code committed locally, not pushed.** Next: M4 task 3 (chat service).
+**M4 task 3 DONE (2026-07-14):** chat service (service layer only; routers = task 4) — new `app/chat/`
+package: `ChatService.send` **persists the user turn before any model call** (never-lose) → turn-1 raw /
+**turn-≥2 English condensation on `conspect`** (degrade-to-raw when down) → **hybrid RRF retrieval** via the
+existing `SearchService` → **fenced** grounded prompt (data-not-instructions) → **cited-only `[n]` renumber**
+(`citations.py`, out-of-range dropped never-errors) → persist assistant turn (`model` incl. fallback +
+`sources` jsonb, `PgChatStore`) → **best-effort non-blocking `quick`-tier titling** after the first exchange
+(drained on shutdown). **MINOR-1 resolved:** the chat "not in your memories" floor (`chat_retrieval_min_score`
+= 0.01) is floored on the **fused RRF×recency** scale, **not** cosine — `SearchService.search` gained a
+keyword-only `min_score` override (default keeps `/search` unchanged). ruff clean, **423 tests green** (+23)
++ **7 real-PG chat-store smoke checks**; **independent review APPROVE — no must-fix** (1 minor fixed —
+`_clean_title` tests; 2 logged) — [08-logs/m4.md](08-logs/m4.md) task 3; commits `6406bd9`/`0559799`.
+**Code committed locally, not pushed.** Next: M4 task 4 (chat routers).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
