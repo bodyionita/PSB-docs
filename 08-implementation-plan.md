@@ -356,7 +356,7 @@ registry fallback unit tests).
 - [x] 4 chat routers (`POST /chat`, `GET /chat/models`, `GET /chat/sessions[/{id}]`) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 4)
 - [x] 5 settings routers (enriched `GET /settings` + `PUT /settings/models`, all 3 groups) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 5)
 - [x] 6 web chat screen (list/thread, picker + plane chips, reveal, source cards, fallback banner, "not from your memories" chip) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 6)
-- [ ] 7 web Settings → Models panel (3 group controls)
+- [x] 7 web Settings → Models panel (3 group controls: active/fallback dropdowns + effort selector where supported) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 7)
 - [ ] 8 live M4 Accept (incl. deferred M0 clause — (A) required, (B) optional)
 
 ## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))

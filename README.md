@@ -196,6 +196,21 @@ every surface (grounded/ungrounded, citation→preview expand, model switch, see
 on the thinking dots/entrances; 1 deferred — the sessions-list item carries no first-message text, a server-
 contract follow-up) — [08-logs/m4.md](08-logs/m4.md) task 6; commits `fea9f9d`/`85be897`. **Code committed
 locally, not pushed.** Next: M4 task 7 (web Settings → Models panel).
+**M4 task 7 DONE (2026-07-14):** web Settings → Models panel — the PWA's Settings **Models** section, a thin
+TanStack-Query client over the task-5 API (03-api §Settings; no server code, ADR-006), replacing the `ComingSoon`
+placeholder: one card per **routing group** (`chat`/`conspect`/`quick`) with an **active** + **fallback** dropdown
+(fallback carries a **None** = `""`) and a **segmented effort selector rendered only for the selected
+effort-supporting models** in `{active, fallback}` — **all choices + effort levels registry-sourced** from
+`GET /settings`, **nothing hardcoded** (ADR-006 / ADR-025 §6). Save `PUT`s **one group** with a **normalized**
+`effort_by_provider` (a valid level for exactly the effort-capable selected models, stale keys dropped → never a
+server 422), is **dirty-gated**, and is **forward-live** (invalidates `['settings']` **and** `['chat','models']`
+so the composer default follows); a `signature`-ref re-seed applies server changes without clobbering in-progress
+edits. tsc/eslint/vite green; a **real-browser walkthrough vs a throwaway mock API** drove every surface (3 groups
+seed-correct, a second effort control on a dual-Claude group, a Chat@high save persisted + reflected forward-live,
+a Nebius active dropping its effort control + saving an empty payload with a None fallback — console clean);
+**independent review APPROVE — no must-fix** (1 minor fixed: reduced-motion on the "Saved" slide; 1 deferred —
+cosmetic "Saved" re-show on manual revert) — [08-logs/m4.md](08-logs/m4.md) task 7. **Code committed locally, not
+pushed.** Next: M4 task 8 (live M4 Accept).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
