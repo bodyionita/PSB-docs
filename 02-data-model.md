@@ -65,13 +65,23 @@ edges:                          # canonical typed edges, target = node id (ADR-0
 (Markdown prose body — the memory itself)
 ```
 
-Entity-like nodes (`person`, `place`, `topic`, `idea`, `event`, `project`) additionally carry
-([ADR-030](adr/030-entity-substrate-and-lifecycle.md)):
+Entity-hub nodes (`person`, `place`, `topic`, `event`, `project` — the `ENTITY_LIKE_TYPES` set)
+additionally carry ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)):
 
 ```yaml
-aliases: [alex, alexandru, "my brother"]   # organizer-maintained surface forms
+aliases: [alex, alexandru, "my brother"]   # resolver-maintained surface forms (accreted on link)
 disambig: "younger brother, b.1994"        # one line, resolves same-name collisions
 ```
+
+> **`idea` is a content type, not an entity** ([ADR-039](adr/039-entity-types-are-mention-only.md),
+> M3 task 11): the resolver mints hubs only for `person`/`place`/`topic`/`event`/`project`, and the
+> organizer may never emit any of those as a content node (a person/place/… is expressed **only** as
+> a mention on a content node; a structural guard coerces a mis-typed one to `memory`). Content nodes
+> are `memory`/`conversation`/`insight`/`idea`.
+> **Alias accretion** ([ADR-040](adr/040-token-overlap-retrieval-and-alias-accretion.md)): when a
+> mention links to a hub under a surface form not already in its `aliases` (confirmed by the resolver
+> LLM or a human review pick), that form is appended — so the exact short-circuit covers it next
+> time. Short/low-entropy forms are never accreted.
 
 Their files are **thin hubs** — the readable "who/what is X now" profile is **derived**
 (regenerated nightly from the 1-hop neighborhood, DB-side, embedded for search, served by
@@ -92,6 +102,12 @@ Rules:
 - **Tag slug rules kept on their own merits** (ex-"Obsidian tags"): English, lower-case, single
   word or hyphenated, no spaces, chars `a–z 0–9 _ - /`, must contain a letter; enforced by
   `_slugify_tag`.
+- **Zero diacritics in the store** ([ADR-041](adr/041-diacritic-folding-derived-content.md), M3 task
+  11): every derived field — filename slug, title, aliases, disambig, tags, **and body prose** — is
+  NFKD-folded to ASCII at the single `NodeWriter` write chokepoint (`"Mădălina"` → `madalina`,
+  never `m-d-lina`). Matching (`normalize_alias`, the alias index, tag slugs) folds too, so ASCII
+  and raw-diacritic forms compare equal. The **raw capture is never folded** — it is the never-lose
+  source of truth and what `reprocess-all-from-raw` replays.
 - Hand-created nodes may omit any field; every field is optional at read time. Title = H1 if
   present, else filename stem. Missing `type` = `memory`.
 
@@ -212,6 +228,7 @@ independent copy and may restore-to-last-nightly. Every capture ends as a node (
 | Loss | Recovery | Tier |
 |---|---|---|
 | Derived tables (`nodes`,`chunks`,`edges`) | `POST /admin/reindex` from the store | rebuildable |
+| A format/organizer-quality change left old nodes stale | `POST /admin/reprocess` ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reset derived state (node files + `nodes`/`chunks`/`edges`/`node_profiles`/`review_queue`, `captures.node_paths`), replay every capture's raw chronologically through the fixed pipeline; **raw + approved vocabulary preserved**, standing merges reported | derived (from raw) |
 | Operational state (`agent_runs`, `chat_*`, `captures`, `review_queue`, cursors, settings) | Supabase backup, or nightly `pg_dump` in R2 → restore-to-last-nightly | operational |
 | Whole database | as above; worst case reindex restores search/traverse/chat, losing at most the day's operational log + pending review items (re-derivable from persisted sessions) | operational |
 | Graph store on VPS | `git clone` from GitHub **or** the latest R2 WORM bundle | **never-lose** |

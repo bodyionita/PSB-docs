@@ -34,14 +34,19 @@ POST /capture/{voice,text}  |  MCP capture(text)
 ORGANIZE — LLM, JSON out (synchronous-full, ADR-031; MCP surface burst-queued)   status=organizing
    │ { nodes: [ { title, type, occurred?, plane, planes[], tags[], body, edges[] } ] }
    │ • typing against the 9-type vocabulary (ADR-027/031); no fit → type=memory
-   │   + a vocab-proposal review item
-   │ • ENTITY RESOLUTION (ADR-030/032): mentions → alias-index candidates (GIN over
-   │   nodes.aliases) → single EXACT alias hit auto-links, NO LLM round-trip;
-   │   multi-candidate/fuzzy → LLM with structured candidates; < ENTITY_MATCH_MIN_CONF
-   │   → edge PENDING + entity-ambiguity review item; short/low-entropy aliases never
-   │   fuzzy auto-link (exact or review); intra-capture dedup pass (one new entity,
-   │   not two); new entities minted with aliases/disambig; may close a superseded
-   │   edge with `until` (invalidate, never delete)
+   │   + a vocab-proposal review item. ENTITY TYPES ARE MENTION-ONLY (ADR-039): a
+   │   person/place/topic/event/project node is coerced to `memory` (body/mentions kept)
+   │   — prompt rule + deterministic guard; content types = memory/idea/insight/conversation
+   │ • ENTITY RESOLUTION (ADR-030/032/040): mentions → alias-index candidates — the EXACT
+   │   leg (normalized title/alias) PLUS a TOKEN-OVERLAP leg (a hub sharing a significant
+   │   token, so "Horia Fenwick" surfaces the "Horia" hub; low-entropy guard: short/stop
+   │   tokens never fan out). A single EXACT hit auto-links, NO LLM; a fuzzy candidate →
+   │   LLM with structured candidates; < ENTITY_MATCH_MIN_CONF → edge PENDING +
+   │   entity-ambiguity review item (never a fuzzy auto-link). On a confirmed link under a
+   │   new surface form → ALIAS ACCRETION (append to the hub's aliases, folded, feed-
+   │   visible). Intra-capture dedup; new entities minted with aliases/disambig; may close
+   │   a superseded edge with `until` (invalidate, never delete)
+   │ • all derived text diacritic-FOLDED to ASCII at the writer (ADR-041); raw kept
    │ • occurred extracted only when the text implies a time (partial ISO), never fabricated
    │ • typed edges (involves/about/part_of/led_to/follows/at) targeting node ids
    │ • may SPLIT into multiple atomic nodes; tag-vocabulary reuse (ADR-024, bounded)
@@ -59,7 +64,20 @@ Failure ⇒ `status=failed` + retry from first incomplete step. Organizer failur
 node in `inbox/`, title = first 8 words — a capture is never lost to a model error. The follow-up
 nudge ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)) and interaction logging
 ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over unchanged; Pass-2
-re-organize replaces the capture's nodes (soft-delete via `git rm`).
+re-organize replaces the capture's **content** nodes (soft-delete via `git rm`) but **never its
+entity hubs** — the removal is type-aware ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md):
+hubs are shared substrate; the fresh pass re-links to the live hub, orphans tolerated for a later GC).
+
+**Reprocess-all-from-raw** (`POST /admin/reprocess`, [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md),
+the vision-P10 data-survival op). Confirm-gated + single-flight; runs in the background with an
+`agent_runs` row. **Reset** the derived state — every node file, the DB index
+(`nodes`/`chunks`/`edges`/`node_profiles`), the alias index, the `review_queue`, and
+`captures.node_paths` — while **preserving** raw `captures`, the store git history, and approved
+vocabulary (`app_settings`); standing merges are **reported, not dropped**. Then **replay every
+capture's raw input chronologically** (combined text where a follow-up was answered) through the
+current pipeline — each replay is a normal organize→resolve→write→index, so it inherits every fix
+and alias accretion rebuilds deterministically — recompute derived edges, and force one commit+push.
+Idempotent; raw is never touched, so a bad reprocess is recovered by fixing code and re-running.
 
 ## 2. Ingestion pipeline (connectors, scheduled)
 

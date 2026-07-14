@@ -232,8 +232,14 @@ nothing left to implementer discretion:
       person over-extraction, entity split, diacritic mangling) → **replanned to task 11**; the Accept
       resumes after task 11 lands. `inbox/` clarified = model-failure fallback only (gibberish → an
       `unclear` memory, working as designed).
-- [ ] 11 — **organizer-quality + data-survival pass** (replanned 2026-07-14, grilled; ADR-038…042).
+- [~] 11 — **organizer-quality + data-survival pass** (replanned 2026-07-14, grilled; ADR-038…042).
       **All must-fix; M3 is accepted only after this + the remaining task-10 criteria pass.**
+      **Built 2026-07-14** (all five + `idea` reclassified content-only per the kickoff grill:
+      `entity_like_types` realizes the ADRs' `entity_types` = person/place/topic/event/project).
+      374 tests (+30), ruff clean; real-DB smoke green (29 checks incl. token-overlap SQL) + a
+      rolled-back reset-SQL smoke (11 checks, dev data intact). Detail: [08-logs/m3.md](08-logs/m3.md)
+      task 11. **Open:** independent review → full end-to-end reprocess dry-run + deploy + reprocess
+      prod (heals the 4 captures) → remaining task-10 Accept criteria → archive `PSB-vault`.
       - **Dangling edges** ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)): reorganize
         `remove_nodes` becomes type-aware — removes only content nodes (`memory`/`conversation`/
         `insight`/`idea`), never entity hubs (shared substrate); orphan hubs tolerated (later GC).
