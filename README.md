@@ -181,6 +181,21 @@ level, or bad group → **422** before any `app_settings` write). Added a `Model
 **independent review APPROVE — no must-fix** (2 minors: flagged test edges added; a deliberate ADR-025-accepted
 display-verbatim choice logged) — [08-logs/m4.md](08-logs/m4.md) task 5; commit `bb6857a`. **Code committed
 locally, not pushed.** Next: M4 task 6 (web chat screen).
+**M4 task 6 DONE (2026-07-14):** web chat screen — the PWA's Chat tab, a thin TanStack-Query client over the
+task-4/5 API (03-api §Chat; no server code, ADR-006): implicit-session chat loop with **list/open/new** (a
+`seededFor`-guarded one-time thread seed so a send's optimistic turns — incl. a just-created session — survive
+the detail refetch), a composer with a **per-conversation model picker** (`GET /chat/models`, resets to the
+Chat-group default per thread) + **plane chips** + auto-grow textarea + **Enter-to-send**, a **reduced-motion-
+gated client-side reveal** (word+`[n]`-badge stagger, fresh turns only) whose citation clicks expand +
+scroll to **cited-only source cards**, a **"not from your memories"** chip on empty `sources`, and an
+**"answered by `<model>`"** banner on `fallback_used`. Titles land via a **bounded session-list poll**. Search's
+node preview was extracted into a shared **`ui/NodePreview`** + **`ui/nodeDetail`** primitive so the chat source
+cards reuse it (rule 10). tsc/eslint/vite green; a **real-browser walkthrough vs a throwaway mock API** drove
+every surface (grounded/ungrounded, citation→preview expand, model switch, seeding, titling — console clean);
+**independent review APPROVE-WITH-MINORS — no must-fix** (2 fixed: citation-adjacent space drop, reduced-motion
+on the thinking dots/entrances; 1 deferred — the sessions-list item carries no first-message text, a server-
+contract follow-up) — [08-logs/m4.md](08-logs/m4.md) task 6; commits `fea9f9d`/`85be897`. **Code committed
+locally, not pushed.** Next: M4 task 7 (web Settings → Models panel).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
