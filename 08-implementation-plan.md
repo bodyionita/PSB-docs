@@ -357,7 +357,9 @@ registry fallback unit tests).
 - [x] 5 settings routers (enriched `GET /settings` + `PUT /settings/models`, all 3 groups) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 5)
 - [x] 6 web chat screen (list/thread, picker + plane chips, reveal, source cards, fallback banner, "not from your memories" chip) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 6)
 - [x] 7 web Settings → Models panel (3 group controls: active/fallback dropdowns + effort selector where supported) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 7)
-- [ ] 8 live M4 Accept (incl. deferred M0 clause — (A) required, (B) optional)
+- [x] 8 live M4 Accept — local dry-run + prod live drive; **all criteria green** (dual-model `[n]` citations Claude+Nebius, "not in your memories", persistence, **clause (A)** Nebius-primary recorded `chat_messages.model=nebius`, **clause (B)** true fallback shown live, 21 registry tests green). **Surfaced + fixed a real defect:** the committed `NEBIUS_CHAT_MODEL` was a HF-style id Nebius never served (retired 3.1) → every live Nebius call fell back to claude-max; corrected to `meta-llama/Llama-3.3-70B-Instruct` (commit `419ece4`) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 8)
+
+**→ M4 (chat) ACCEPT COMPLETE (2026-07-14)** — grounded cited chat over the graph is live at `braindan.cc` on both Claude and Nebius; model routing + Settings panel + fallback transparency all verified live. Next: **M5 (MCP server)** — planning session (`/grilling` first) per [09](09-session-protocol.md).
 
 ## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))
 

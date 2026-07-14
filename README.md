@@ -211,6 +211,23 @@ a Nebius active dropping its effort control + saving an empty payload with a Non
 **independent review APPROVE — no must-fix** (1 minor fixed: reduced-motion on the "Saved" slide; 1 deferred —
 cosmetic "Saved" re-show on manual revert) — [08-logs/m4.md](08-logs/m4.md) task 7. **Code committed locally, not
 pushed.** Next: M4 task 8 (live M4 Accept).
+**M4 task 8 DONE → M4 (chat) ACCEPT COMPLETE (2026-07-14).** Pushed the 9 M4 commits to prod (CI green, migration
+008 applied, `/api/v1/health` all-true) and ran the live Accept at `braindan.cc`: grounded `[n]`-cited chat on
+**both Claude** (`claude-opus-4-8`, 4 source cards) **and Nebius**, "not in your memories" on ungrounded questions,
+sessions persist with LLM titles, **clause (A)** Settings-driven **Nebius-primary drive recorded** on
+`chat_messages.model=nebius` (verified via authenticated API — the mobile PWA's bottom-nav tap was flaky), **clause
+(B)** true fallback shown live, 21 registry tests green. A **local in-process dry-run** (real app + local pgvector,
+auth gate overridden) preceded the push and verified the Claude leg, persistence, not-in-memories, fallback
+mechanism, and 503-on-exhaustion — no code defects. The prod Accept **surfaced + fixed a real config defect**: the
+committed `NEBIUS_CHAT_MODEL` was `meta-llama/Meta-Llama-3.1-70B-Instruct` — a HuggingFace-style id **Nebius never
+served** (it uses `Llama-3.1-...`, since retired for **Llama 3.3**), so **every** live Nebius call silently fell
+back to claude-max (never caught pre-M4: M0/M3 made no live Nebius call, the 21 tests use fakes). Corrected to
+**`meta-llama/Llama-3.3-70B-Instruct`** in all four committed spots (commit `419ece4`), redeployed, and re-verified
+Nebius answers grounded + recorded. Prod Chat routing restored to the seed default (Claude/opus primary, Nebius
+fallback). Grounded cited chat over the graph is **live at `braindan.cc`** — [08-logs/m4.md](08-logs/m4.md) task 8.
+**Follow-ups (out of M4):** UI "Claude Max"→"Claude"+effort-label relabel (needs a planning pass); optional
+provider-observability surface (a provider silently fell back with no visible reason — rule 7 / vision P8).
+**Code pushed through `419ece4`.** Next: **M5 (MCP server)** — planning session (`/grilling` first).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
