@@ -215,7 +215,15 @@ nothing left to implementer discretion:
       write access** — so the first `push -u` should work first try; the pubkey-print step is a
       convenience, not a blocker.
 - [ ] 10 — **live M3 Accept** (per accept draft above + threshold tuning + cutover: verify
-      capture→node→PSB-graph push, then user archives PSB-vault)
+      capture→node→PSB-graph push, then user archives PSB-vault). **Pre-Accept build (replanned in
+      the task-10 session):** close the carried backend smokes and the `profile-embedding-in-search`
+      gap. Real-DB SQL smoke of task-6/7a/7b stores + migration 006/007 = green (23 checks, local
+      pgvector). **`profile-embedding-in-search` = a real unbuilt ADR-030 §4 requirement** (search was
+      chunks-only; the stored profile vector was never queried) — mechanism pinned by
+      **[ADR-037](adr/037-profile-embedding-in-search-m3.md)**: a second per-profile vector leg
+      (`node_profiles.embedding`) unioned best-per-node with the chunk leg, all tiers, no weighting,
+      `SearchResultItem` unchanged, reindex-decoupled; **migration 007** adds the profile HNSW index.
+      Decision (task-10 session): **go straight to prod** for the live Accept (no local dry-run).
 
 ## M4 — Chat (the grilled old-M3 plan, carried + retargeted to nodes)
 

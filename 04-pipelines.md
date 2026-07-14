@@ -111,7 +111,9 @@ file → read → sha256 whole file ── unchanged? skip
   with `/admin/reindex`.
 - **Nightly entity jobs (M3, [ADR-030](adr/030-entity-substrate-and-lifecycle.md)):**
   **profile-refresh** — regenerate derived profiles for entities whose 1-hop neighborhood changed
-  (DB-side, embedded); **backfill scan** — new/renamed entities re-checked against recent
+  (DB-side, embedded — the profile embedding is a **search retrieval source**, so a full DB wipe
+  leaves profile-search degraded until this reruns; [ADR-037](adr/037-profile-embedding-in-search-m3.md));
+  **backfill scan** — new/renamed entities re-checked against recent
   unlinked/`inbox/` nodes (≥ threshold auto-edge + feed flag, below → review item).
 - **Vocabulary consolidation (M3, on-demand — [ADR-027](adr/027-typed-vocabulary-governance.md) §3 /
   [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)):** approving a type proposal (via `PUT
@@ -127,7 +129,8 @@ file → read → sha256 whole file ── unchanged? skip
 ## 5. Chat / search pipeline (M4 — the grilled chat plan carried, retargeted to nodes)
 
 ```
-[search]  query → embed (search_query:) → cosine top_k (planes/types filters) → node-grouped results
+[search]  query → embed (search_query:) → cosine top_k over chunks ⊍ node_profiles.embedding
+          (best-per-node union, ADR-037; planes/types filters) → node-grouped results
 [traverse] get_node/neighbors — served to the web, the map (M7) and MCP (M5) by one GraphService
 
 [chat]                                             persist user msg BEFORE any model call

@@ -107,6 +107,10 @@ drops the note-model derived tables; creates `nodes`/`edges`/`review_queue`; ren
 `captures.note_paths → node_paths` (fresh start — no data migrated, old vault archived).
 New config: `GRAPH_STORE_PATH`, `GRAPH_STORE_REPO`, `NODE_TYPES` (9), `EDGE_RELS` (6),
 `ENTITY_MATCH_MIN_CONF` (0.8, live-tuned), MCP burst-queue + profile-refresh settings.
+**Migration 006** (task 6): `node_profiles` (derived entity profiles — tier, text, observations,
+`neighborhood_hash`, `embedding`, fk → nodes cascade). **Migration 007** (task 10,
+[ADR-037](adr/037-profile-embedding-in-search-m3.md)): HNSW `vector_cosine_ops` index on
+`node_profiles.embedding` so the profile leg of search is ANN-indexed like `chunks`.
 
 ### Derived graph index (rebuildable from the graph store)
 
@@ -132,8 +136,13 @@ New config: `GRAPH_STORE_PATH`, `GRAPH_STORE_REPO`, `NODE_TYPES` (9), `EDGE_RELS
 
 *Derived entity **profiles** ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[032](adr/032-prior-art-adoptions.md)) —
 regenerated nightly from the 1-hop neighborhood as **categorized observation lines** (`[role]`,
-`[location]`, `[last-seen]`, …), not prose blobs — live DB-side (embedded, rebuildable; storage
-detail an implementation choice within the derived tier).*
+`[location]`, `[last-seen]`, …), not prose blobs — live DB-side in `node_profiles` (embedded,
+rebuildable). The profile `embedding` is a **search retrieval source**
+([ADR-037](adr/037-profile-embedding-in-search-m3.md)): search unions a per-profile vector leg with
+the chunk leg (same `search_document:` space), so searching an entity's name surfaces its own hub
+node with the summary as snippet — the ADR-030 §4 intent. Profiles are DB-only derived state, not in
+the store: a plain reindex preserves them, a full DB wipe leaves profile-search degraded until
+`profile-refresh` reruns (rule 1 restores from the store; profiles aren't in it).*
 
 **`chunks`** — as before, `note_id` → **`node_id`** (fk → nodes, cascade); unique
 `(node_id, chunk_index)`; content + `vector(768)`.

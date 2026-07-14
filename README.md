@@ -73,10 +73,18 @@ bind in compose, matching `docker-entrypoint.sh`/`Dockerfile` (`safe.directory` 
 **public** key into the Actions log (best-effort; private key never leaves the box). App bootstrap still
 owns remote-wire + `push -u` (ADR-031 §6); no VPS git steps. YAML + `sh -n` clean; **independent review
 APPROVE — no must-fix** — [08-logs/m3.md](08-logs/m3.md) task 9; commit `e97671b`.
-**Next: task 10** — live M3 Accept (capture→node→PSB-graph push, threshold tuning, then user archives
-`PSB-vault`). Wire before/at Accept (log follow-ups): real-DB SQL smoke of the task-6/7a/7b SQL,
-profile-embedding-in-search, cross-capture **alias accretion** (Alex/Alexandru → one node). Code
-committed through `e97671b`, **not pushed**.
+**Task 10 in progress (2026-07-14): live M3 Accept.** Green baseline (344 tests) + carried backend
+smokes closed against **real local pgvector**: migration 006 applied; a real-DB SQL smoke
+(`server/scripts/smoke_db.py`) drives the actual task-6/7a/7b `Pg*` stores — **23/23 green**. The
+smoke surfaced a real gap → replanned: **`profile-embedding-in-search` was an unbuilt
+[ADR-030](adr/030-entity-substrate-and-lifecycle.md) §4 requirement** (search was chunks-only; the
+stored profile vector never queried). Mechanism pinned by **[ADR-037](adr/037-profile-embedding-in-search-m3.md)**
+— a second per-profile vector leg unioned best-per-node with the chunk leg (all tiers, no weighting,
+`SearchResultItem` unchanged, reindex-decoupled); **migration 007** adds the profile HNSW index; being
+built now. Alias *accretion* stays a documented follow-up (the exact short-circuit serves "mentioned
+twice → one node"). **Live-Accept decision: go straight to prod** (no local dry-run) —
+capture→node→PSB-graph push, threshold-tune `ENTITY_MATCH_MIN_CONF`, then user archives `PSB-vault`.
+Code committed through `e97671b`, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
