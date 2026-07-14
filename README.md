@@ -45,13 +45,13 @@ an `EffectiveVocabulary` provider (config seeds ∪ approved additions) threaded
 approved type is **forward-live**, `GET /types`, `PUT /settings/vocabulary`, the vocab-proposal branch
 delegated to one `VocabularyService` (shared with `POST /review/{id}`), and a feed-visible
 `vocab-consolidation` run on approve (replaces task 4's SKIPPED marker). Scope split by
-**[ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)** (edges apply / nodes propose-only). 317
-tests green (+23), ruff clean, self-reviewed — [08-logs/m3.md](08-logs/m3.md) task 7a; commit `dd3c5be`.
+**[ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)** (edges apply / nodes propose-only). 318
+tests green (+24), ruff clean, **independent review APPROVE — no must-fix** (2 minors fixed) —
+[08-logs/m3.md](08-logs/m3.md) task 7a; commits `dd3c5be`/`410b5d2`.
 **Next: task 7b** — edge retro-consolidation apply (`NodeWriter.retype_edge`, LLM re-walk propose +
-`POST /admin/vocab/consolidate`); then the **independent-agent review** at the task-7 boundary, then 8
-web, 9 deploy, 10 live Accept. Wire before Accept (log follow-ups): real-DB SQL smoke of the task-6 +
-task-7a SQL, profile-embedding-in-search, cross-capture **alias accretion** (Alex/Alexandru → one
-node). Code committed, **not pushed**.
+`POST /admin/vocab/consolidate`); then 8 web, 9 deploy, 10 live Accept. Wire before Accept (log
+follow-ups): real-DB SQL smoke of the task-6 + task-7a SQL, profile-embedding-in-search, cross-capture
+**alias accretion** (Alex/Alexandru → one node). Code committed, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
