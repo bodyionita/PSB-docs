@@ -113,8 +113,10 @@ Rule-1/ADR-001 durability), **profile-in-search** (ADR-037 — ran the VPS `prof
 `node_profiles` empty post-reprocess; person hubs surface via the profile leg, confirmed in the PWA),
 **vocab-proposal→consolidation** round-trip (edge-rel propose → approve → forward-live + feed-visible run,
 synthetic seed reverted), **`ENTITY_MATCH_MIN_CONF` kept at 0.8** (conservative, zero false merges).
-Follow-up logged: reprocess/reindex leave `node_profiles` empty until the nightly job. **M3 is accepted —
-the only remaining step is the user archiving `PSB-vault`** ([08-logs/m3.md](08-logs/m3.md) "Task 10/11").
+Follow-up logged: reprocess/reindex leave `node_profiles` empty until the nightly job. **`PSB-vault`
+archived by the user (2026-07-14) → M3 CLOSED** — all acceptance criteria pass; the graph-native stack is
+live at `braindan.cc` ([08-logs/m3.md](08-logs/m3.md) "Task 10/11"). **Next milestone: M4 (chat) — a
+planning session (`/grilling` first per [09](09-session-protocol.md)).**
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

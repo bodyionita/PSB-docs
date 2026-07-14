@@ -265,8 +265,9 @@ nothing left to implementer discretion:
       reverted); **`ENTITY_MATCH_MIN_CONF` = keep 0.8** (user decision — conservative, zero false
       merges on the current sample; revisit as captures grow). Detail: [08-logs/m3.md](08-logs/m3.md)
       "Task 10/11 — remaining M3 live Accept criteria". Follow-up logged: reprocess/reindex leave
-      `node_profiles` empty until the nightly job (silent profile-in-search gap). **Open:** user
-      archives `PSB-vault` → **M3 fully closed.**
+      `node_profiles` empty until the nightly job (silent profile-in-search gap). **`PSB-vault`
+      archived by the user (2026-07-14) → M3 CLOSED** — all acceptance criteria pass; graph-native
+      stack live at `braindan.cc`. **Next: M4 (chat) — planning session (`/grilling` first).**
       - **Dangling edges** ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)): reorganize
         `remove_nodes` becomes type-aware — removes only content nodes (`memory`/`conversation`/
         `insight`/`idea`), never entity hubs (shared substrate); orphan hubs tolerated (later GC).
