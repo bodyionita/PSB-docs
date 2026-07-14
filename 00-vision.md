@@ -63,6 +63,7 @@ Nodes carry **planes** — configurable life areas used for scoping, filtering a
 | P7 | **The data is mine and recoverable** | Plain Markdown + git history + managed Postgres. Any component can burn down without memory loss. |
 | P8 | **Transparency** | Every background job is visible **while it runs** (live status + logs), manually triggerable, and its schedule inspectable — no cron-only ghosts; activity is recorded for automatic *and* manual actions. |
 | P9 | **The brain records my stance, not the model's output** | LLM statements become memory only through my uptake; unclear stance goes to review, never guessed. |
+| P10 | **Ingested data survives bug fixes** | Already-ingested data must try to survive fixes and format changes; because raw inputs are always retained (P7), prefer **reprocessing raw as a fresh ingestion** over data loss. A fix that doesn't auto-heal old data must **surface a migrate-vs-delete choice**, never leave it silently broken ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)). |
 
 ## Non-goals (v1)
 

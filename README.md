@@ -89,6 +89,23 @@ local dry-run) — the remaining step is the **prod cutover**: a push to `main` 
 Accept (capture→node→PSB-graph push < 30s, entity resolution, `inbox/` fallback, vocab consolidation,
 DB-wipe/reindex parity, `ENTITY_MATCH_MIN_CONF` tuning) → user archives `PSB-vault`. Code committed
 through `8ec472a`, **not pushed**.
+**Cutover DONE + Accept STARTED then PAUSED to replan (2026-07-14).** Pushed `8ec472a`; CI green; prod
+live on the graph schema (migrations 005/006/007; `/api/v1/health` all-green). Fixed a **deploy-key
+gap** on the VPS (graph-store key was missing → per-capture pushes soft-failed; reused the freed
+`vault_deploy_key`, force-recreated the api container → `PSB-graph` now populated). The 4 live captures
+then surfaced **organizer-quality defects** — 🔴 dangling edges (reorganize deletes shared entity
+hubs), person over-extraction, entity split (Horia/Horia Fenwick), diacritic mangling; `inbox/`
+clarified as the model-failure-only fallback. User paused to **replan quality** and set a binding
+principle: **already-ingested data must survive bug fixes** (reprocess raw, never silently drop) —
+lifted to **vision P10**. Grilled decision-by-decision → **[ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)**
+(hubs shared, never deleted by reorganize) · **[039](adr/039-entity-types-are-mention-only.md)** (entity
+types mention-only + coercion guard) · **[040](adr/040-token-overlap-retrieval-and-alias-accretion.md)**
+(token-overlap retrieval + alias accretion) · **[041](adr/041-diacritic-folding-derived-content.md)**
+(fold diacritics on all derived content, raw kept) · **[042](adr/042-reprocess-all-from-raw-and-data-survival.md)**
+(reusable `reprocess-all-from-raw` op + the data-survival principle). New **task 11** in [08](08-implementation-plan.md)
+(all must-fix; build → review → local-test the reprocess → deploy + reprocess prod → finish the
+remaining Accept criteria → archive `PSB-vault`). Code pushed through `8ec472a`; **no new code this
+session** (planning pass — paused before implementing task 11).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

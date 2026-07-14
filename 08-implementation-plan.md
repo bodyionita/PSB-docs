@@ -224,6 +224,35 @@ nothing left to implementer discretion:
       (`node_profiles.embedding`) unioned best-per-node with the chunk leg, all tiers, no weighting,
       `SearchResultItem` unchanged, reindex-decoupled; **migration 007** adds the profile HNSW index.
       Decision (task-10 session): **go straight to prod** for the live Accept (no local dry-run).
+      **Cutover done + Accept STARTED (2026-07-14):** code pushed, CI deploy green, prod on the graph
+      schema (migrations 005/006/007 applied), `/api/v1/health` all-green. Deploy-key gap fixed on the
+      VPS (the graph-store deploy key was missing → pushes soft-failed; reused the freed `vault_deploy
+      _key` as `graph_store_deploy_key`, force-recreated the api container → per-capture push works,
+      `PSB-graph` populated). Live captures then surfaced **organizer-quality defects** (dangling edges,
+      person over-extraction, entity split, diacritic mangling) → **replanned to task 11**; the Accept
+      resumes after task 11 lands. `inbox/` clarified = model-failure fallback only (gibberish → an
+      `unclear` memory, working as designed).
+- [ ] 11 — **organizer-quality + data-survival pass** (replanned 2026-07-14, grilled; ADR-038…042).
+      **All must-fix; M3 is accepted only after this + the remaining task-10 criteria pass.**
+      - **Dangling edges** ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)): reorganize
+        `remove_nodes` becomes type-aware — removes only content nodes (`memory`/`conversation`/
+        `insight`/`idea`), never entity hubs (shared substrate); orphan hubs tolerated (later GC).
+      - **Over-extraction** ([ADR-039](adr/039-entity-types-are-mention-only.md)): organizer prompt +
+        a structural guard coercing any entity-typed content node → `memory` (body/mentions kept).
+      - **Entity resolution** ([ADR-040](adr/040-token-overlap-retrieval-and-alias-accretion.md)):
+        token-overlap candidate retrieval (low-entropy guard) + alias accretion on link; conf-floor +
+        LLM + review unchanged (never guess).
+      - **Diacritics** ([ADR-041](adr/041-diacritic-folding-derived-content.md)): fold NFKD→ASCII on
+        **all** derived fields (slug/title/aliases/disambig/tags/body) at the `NodeWriter` chokepoint +
+        matching; raw kept un-folded (never-lose).
+      - **Reprocess op** ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reusable
+        `reprocess-all-from-raw` admin op (confirm-gated, visible) — resets capture-derived state,
+        replays raw chronologically through the fixed pipeline; preserves approved vocab (+ best-effort
+        merges), rebuilds the rest; raw + git history kept. Standing mechanism for **P10**.
+      - **Sequencing:** build all five + unit tests → independent review → **local dry-run of the
+        reprocess op** → deploy + reprocess prod (heals the 4 captures) → finish the remaining task-10
+        Accept criteria (reindex parity, profile-in-search, vocab-proposal→consolidation, threshold
+        tuning) → user archives `PSB-vault`.
 
 ## M4 — Chat (the grilled old-M3 plan, carried + retargeted to nodes)
 
