@@ -127,6 +127,15 @@ injection + entity-seeded) → backlog, **identity capsule → M5** (build_conte
 backlog. Doc reconciliations recorded (08 M4 kickoff note + task list; 04-pipelines condensation-effort +
 retrieval; 03/02/06 for 3 groups + migration 008). **Paused before implementation** per
 [09](09-session-protocol.md) — 8 M4 tasks open in [08](08-implementation-plan.md). **No code this session.**
+**M4 task 1 DONE (2026-07-14):** model routing engine — `ModelRoutingService` over the 3 groups
+(`chat`/`conspect`/`quick`, [ADR-043](adr/043-quick-routing-tier-m4.md)) reading config seeds overlaid
+with `app_settings.model_routing` (cache-bust on save, rule-7 degrade to seed); **per-call effort** through
+the provider boundary (`claude-max` honors `--effort`, Nebius ignores); a distinct **`claude-max-sonnet`**
+provider id (same CLI, config model, `quick` seed = sonnet@low / nebius); and **all 6 `conspect` call sites
+rewired** through the service (organize, nudge, entity resolution, profile gen, tag + edge consolidation).
+No migration (routing is `app_settings` jsonb). ruff clean, **396 tests green** (+25); **independent review
+APPROVE — no must-fix** (3 minors fixed) — [08-logs/m4.md](08-logs/m4.md) task 1. **Code committed locally,
+not pushed.** Next: M4 task 2 (retrieval — migration 008 + hybrid RRF).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

@@ -350,7 +350,7 @@ both Claude and Nebius; "not in your memories" verified; sessions persist; **plu
 M0 clause** (Settings-driven Nebius-primary drive recorded in `chat_messages.model` + the 21
 registry fallback unit tests).
 
-- [ ] 1 model routing engine — `ModelRoutingService` over **3 groups** (`chat`/`conspect`/`quick`, ADR-043) + per-call effort; `claude-max-sonnet` provider instance; **rewire the 6 `conspect` call sites** through the service
+- [x] 1 model routing engine — `ModelRoutingService` over **3 groups** (`chat`/`conspect`/`quick`, ADR-043) + per-call effort; `claude-max-sonnet` provider instance; **rewire the 6 `conspect` call sites** through the service — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 1)
 - [ ] 2 retrieval — **migration 008** (FTS `tsvector` on `chunks` ⊍ `node_profiles` + GIN); hybrid vector+FTS **RRF** (k=60) + recency prior + `since`/`until`/`as_of` on `/search`
 - [ ] 3 chat service (condensation-in-English → hybrid retrieval → **fenced** grounded prompt → cited-only parse → persistence; non-blocking `quick` titling)
 - [ ] 4 chat routers (`POST /chat`, `GET /chat/models`, `GET /chat/sessions[/{id}]`)
