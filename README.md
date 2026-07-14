@@ -136,6 +136,18 @@ rewired** through the service (organize, nudge, entity resolution, profile gen, 
 No migration (routing is `app_settings` jsonb). ruff clean, **396 tests green** (+25); **independent review
 APPROVE — no must-fix** (3 minors fixed) — [08-logs/m4.md](08-logs/m4.md) task 1. **Code committed locally,
 not pushed.** Next: M4 task 2 (retrieval — migration 008 + hybrid RRF).
+**M4 task 2 DONE (2026-07-14):** retrieval — **migration 008** (a generated `tsvector` on `chunks` **and**
+`node_profiles` + GIN, mirroring the ADR-037 vector union) and a rewritten hybrid `search_chunks`:
+vector (cosine) ⊍ FTS (`websearch_to_tsquery('english', …)`) legs, each best-per-node + candidate-pool-
+bounded, fused by **RRF** (rank-based, `k=60` — never blends cosine with `ts_rank`, [ADR-032](adr/032-prior-art-adoptions.md)
+§5), then a **mild recency prior** (bounded `[floor,1]` multiplicative on `occurred ?? created`, §7). The FTS
+leg **self-suppresses** on non-English / zero-lexeme queries (no language-detect dep). New temporal filters on
+`/search`: `since`/`until` occurred-window + simple node-date `as_of`. Config knobs (`rrf_k`/`candidates`/
+`recency_*`, Rule-9); `SearchResultItem` shape unchanged. ruff clean, **400 tests green** (+4) + **12 new
+real-PG16 smoke checks** (hybrid SQL isn't fake-testable); **independent review APPROVE-WITH-MINORS — no
+must-fix** (3 minors fixed: half-life div-by-zero guard, UTC-pinned recency date, deterministic rank tiebreak;
+1 logged for task 3 — tune the chat `min_score` floor to the RRF scale) — [08-logs/m4.md](08-logs/m4.md) task 2.
+**Code committed locally, not pushed.** Next: M4 task 3 (chat service).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
