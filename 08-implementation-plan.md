@@ -245,8 +245,13 @@ nothing left to implementer discretion:
       raw preserved). Surfaced + fixed a **prod-dormant** `claude-max` UTF-8 subprocess-encoding bug
       (`b0148a4`, Windows-only mojibake; pins `encoding="utf-8"`), independently reviewed
       (APPROVE-WITH-MINORS, no must-fix); applied the review minor `errors="replace"` + first
-      `ClaudeMaxProvider` tests (`f8a0e1b`, 378 tests). **Open:** push code + deploy → reprocess prod
-      (heals the 4 real captures) → remaining task-10 Accept criteria → archive `PSB-vault`.
+      `ClaudeMaxProvider` tests (`f8a0e1b`, 378 tests). **Pushed + deployed + prod reprocessed
+      2026-07-14** (`f8a0e1b`; CI+deploy green, no migration): `POST /admin/reprocess` succeeded 9/9
+      (28 nodes, 2 inbox, 0 failed, push=True); **verified live on the prod DB** — Mădălina
+      over-extraction+split healed to one folded hub, Horia accreted, 0 unfolded diacritics, 0
+      dangling edges, raw preserved. **Open:** remaining task-10 Accept criteria (reindex parity,
+      profile-in-search, vocab-proposal→consolidation, `ENTITY_MATCH_MIN_CONF` tuning) → archive
+      `PSB-vault`.
       - **Dangling edges** ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)): reorganize
         `remove_nodes` becomes type-aware — removes only content nodes (`memory`/`conversation`/
         `insight`/`idea`), never entity hubs (shared substrate); orphan hubs tolerated (later GC).
