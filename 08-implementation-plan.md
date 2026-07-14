@@ -189,8 +189,17 @@ nothing left to implementer discretion:
         **344 tests (+26), ruff clean; independent review APPROVE after fixes** (1 must-fix —
         prefix-colliding rel match — + 3 minors, all resolved); commit `542459d` (log: task 7b).
         **Open before Accept:** real-DB smoke of the `PgEdgeConsolidationStore` SQL.
-- [ ] 8 — web retarget (capture strip node_paths, search type icons, node preview with
-      edges/profile, Review list, Settings → Vocabulary)
+- [x] 8 — web retarget (capture strip node_paths, search type icons, node preview with
+      edges/profile, Review list, Settings → Vocabulary) — done 2026-07-14; all five surfaces
+      retargeted note→node against the M3 API; new **Review** tab + **Settings → Vocabulary** panel;
+      `ui/nodeTypes` icon map (governed-type fallback); Admin/Chat/Activity copy de-noted. No server
+      code touched (ADR-006). tsc/eslint/vite green; **real-browser walkthrough vs a mock API** drove
+      all five surfaces (search cards, node preview profile+edges, Review resolve, vocab approve,
+      capture node_paths) — console clean. **Independent review APPROVE-WITH-MINORS — no must-fix**
+      (3 minors fixed: "Writing notes"→"Writing nodes", preview renders disambig/aliases, `backups`
+      on `HealthResponse`) — [08-logs/m3.md](08-logs/m3.md) task 8. **Deferred to task-10 Accept:**
+      the live capture→node→search flow vs the real stack. **Out of scope (M8/admin):** edge-
+      consolidation + entity-merge UIs (endpoints exist, no web surface yet).
 - [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step, defaults.env).
       **GitHub-side prep already done (2026-07-14): `PSB-graph` created + VPS deploy key pasted with
       write access** — so task 9's first `push -u` should work first try; the pubkey-print step is now

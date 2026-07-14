@@ -57,10 +57,19 @@ pinned by **[ADR-036](adr/036-edge-retro-consolidation-walk-retypings-only-m3.md
 new-edge invention + node re-typing deferred; reconciles the ADR-035 §2 / 04-pipelines wording split).
 344 tests (+26), ruff clean, **independent review APPROVE after fixes** (1 must-fix prefix-colliding-rel
 + 3 minors, all resolved + regression-tested); commit `542459d`.
-**Next: task 8** — web retarget (capture strip node_paths, search type icons, node preview with
-edges/profile, Review list, Settings → Vocabulary); then 9 deploy, 10 live Accept. Wire before Accept
-(log follow-ups): real-DB SQL smoke of the task-6/7a/7b SQL, profile-embedding-in-search, cross-capture
-**alias accretion** (Alex/Alexandru → one node). Code committed, **not pushed**.
+**Task 8 done (2026-07-14):** web retarget — the PWA moved note→node across all five surfaces
+against the M3 API (03-api §Search & graph/§Review/§Settings): `SearchResultItem`/`NodeDetailResponse`
++ `getNode`/`types`/`review`/`vocabulary` clients, a `ui/nodeTypes` icon map (governed-type fallback),
+search **type icons** + type/plane filters, a node preview with the derived **profile** + canonical/
+derived **edges**, capture strip **node_paths** chips, a new **Review** tab (entity-ambiguity picker +
+vocab approve/reject), and **Settings → Vocabulary**. No server code touched (ADR-006). tsc/eslint/vite
+green; a **real-browser walkthrough vs a throwaway mock API** drove all five surfaces (console clean);
+**independent review APPROVE-WITH-MINORS — no must-fix** (3 minors fixed) — [08-logs/m3.md](08-logs/m3.md)
+task 8. Out of scope (M8/admin, endpoints exist but no web surface): edge-consolidation + entity-merge UIs.
+**Next: task 9** — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print, defaults.env;
+GitHub-side prep already done), then 10 live Accept. Wire before Accept (log follow-ups): real-DB SQL
+smoke of the task-6/7a/7b SQL, profile-embedding-in-search, cross-capture **alias accretion**
+(Alex/Alexandru → one node). Code committed, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
