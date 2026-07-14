@@ -200,10 +200,20 @@ nothing left to implementer discretion:
       on `HealthResponse`) — [08-logs/m3.md](08-logs/m3.md) task 8. **Deferred to task-10 Accept:**
       the live capture→node→search flow vs the real stack. **Out of scope (M8/admin):** edge-
       consolidation + entity-merge UIs (endpoints exist, no web surface yet).
-- [ ] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step, defaults.env).
+- [x] 9 — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print step, defaults.env) —
+      done 2026-07-14; deploy layer renamed vault→graph-store across `defaults.env`/`.env.example`
+      (`GRAPH_STORE_PATH=/srv/graph-store` + `GRAPH_STORE_REPO`), `docker-compose.yml` (store mount +
+      `graph_store_deploy_key` bind), `docker-entrypoint.sh` (`KEY_SRC`/sshCommand), `Dockerfile`
+      (`safe.directory /srv/graph-store` — was a functional miss), and `provision.sh`
+      (`GRAPH_STORE_DIR/REPO/DEPLOY_KEY`, two-pass hardening guard intact); new deploy-workflow step
+      prints the VPS graph-store deploy **PUBLIC** key into the Actions log (best-effort; private key
+      never leaves the box, ADR-016). App bootstrap (`ensure_ready`) still owns remote-wire + `push -u`;
+      no VPS git steps added (ADR-031 §6). YAML + `sh -n`/`bash -n` clean; **independent review APPROVE —
+      no must-fix** (1 informational: local untracked `server/.env` VAULT_PATH, fixed) —
+      [08-logs/m3.md](08-logs/m3.md) task 9. Commit `e97671b`, **not pushed**.
       **GitHub-side prep already done (2026-07-14): `PSB-graph` created + VPS deploy key pasted with
-      write access** — so task 9's first `push -u` should work first try; the pubkey-print step is now
-      a convenience, not a blocker.
+      write access** — so the first `push -u` should work first try; the pubkey-print step is a
+      convenience, not a blocker.
 - [ ] 10 — **live M3 Accept** (per accept draft above + threshold tuning + cutover: verify
       capture→node→PSB-graph push, then user archives PSB-vault)
 

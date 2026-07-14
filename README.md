@@ -66,10 +66,17 @@ vocab approve/reject), and **Settings → Vocabulary**. No server code touched (
 green; a **real-browser walkthrough vs a throwaway mock API** drove all five surfaces (console clean);
 **independent review APPROVE-WITH-MINORS — no must-fix** (3 minors fixed) — [08-logs/m3.md](08-logs/m3.md)
 task 8. Out of scope (M8/admin, endpoints exist but no web surface): edge-consolidation + entity-merge UIs.
-**Next: task 9** — deploy/CI (`GRAPH_STORE_REPO`, `/srv/graph-store` mount, pubkey-print, defaults.env;
-GitHub-side prep already done), then 10 live Accept. Wire before Accept (log follow-ups): real-DB SQL
-smoke of the task-6/7a/7b SQL, profile-embedding-in-search, cross-capture **alias accretion**
-(Alex/Alexandru → one node). Code committed, **not pushed**.
+**Task 9 done (2026-07-14):** deploy/CI retarget vault→graph store — `GRAPH_STORE_PATH=/srv/graph-store`
++ `GRAPH_STORE_REPO` in `defaults.env`/`.env.example`, `/srv/graph-store` mount + `graph_store_deploy_key`
+bind in compose, matching `docker-entrypoint.sh`/`Dockerfile` (`safe.directory` — a functional miss)
+/`provision.sh` (two-pass hardening guard intact), and a deploy-workflow step printing the VPS deploy
+**public** key into the Actions log (best-effort; private key never leaves the box). App bootstrap still
+owns remote-wire + `push -u` (ADR-031 §6); no VPS git steps. YAML + `sh -n` clean; **independent review
+APPROVE — no must-fix** — [08-logs/m3.md](08-logs/m3.md) task 9; commit `e97671b`.
+**Next: task 10** — live M3 Accept (capture→node→PSB-graph push, threshold tuning, then user archives
+`PSB-vault`). Wire before/at Accept (log follow-ups): real-DB SQL smoke of the task-6/7a/7b SQL,
+profile-embedding-in-search, cross-capture **alias accretion** (Alex/Alexandru → one node). Code
+committed through `e97671b`, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
