@@ -238,8 +238,14 @@ nothing left to implementer discretion:
       `entity_like_types` realizes the ADRs' `entity_types` = person/place/topic/event/project).
       374 tests (+30), ruff clean; real-DB smoke green (29 checks incl. token-overlap SQL) + a
       rolled-back reset-SQL smoke (11 checks, dev data intact). Detail: [08-logs/m3.md](08-logs/m3.md)
-      task 11. **Open:** independent review → full end-to-end reprocess dry-run + deploy + reprocess
-      prod (heals the 4 captures) → remaining task-10 Accept criteria → archive `PSB-vault`.
+      task 11. Independent review done (APPROVE-WITH-MINORS, no must-fix; 375 tests). **Local
+      end-to-end reprocess dry-run DONE 2026-07-14 — GREEN** (throwaway pgvector + local Ollama +
+      live claude-max: seeded 4 defect-repro captures → `reprocess-all` wiped + replayed 4/4, 0
+      failed; before/after asserted Horia+Horia-Fenwick dedup, no dangling edges, diacritics folded,
+      raw preserved). Surfaced + fixed a **prod-dormant** `claude-max` UTF-8 subprocess-encoding bug
+      (commit `c785102`, Windows-only mojibake; pins `encoding="utf-8"`). **Open:** independent review
+      of `c785102` → push code + deploy → reprocess prod (heals the 4 real captures) → remaining
+      task-10 Accept criteria → archive `PSB-vault`.
       - **Dangling edges** ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)): reorganize
         `remove_nodes` becomes type-aware — removes only content nodes (`memory`/`conversation`/
         `insight`/`idea`), never entity hubs (shared substrate); orphan hubs tolerated (later GC).
