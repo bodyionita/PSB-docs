@@ -214,7 +214,8 @@ nothing left to implementer discretion:
       **GitHub-side prep already done (2026-07-14): `PSB-graph` created + VPS deploy key pasted with
       write access** — so the first `push -u` should work first try; the pubkey-print step is a
       convenience, not a blocker.
-- [ ] 10 — **live M3 Accept** (per accept draft above + threshold tuning + cutover: verify
+- [x] 10 — **live M3 Accept** — ALL criteria GREEN (2026-07-14); only the `PSB-vault` archive
+      (user action) remains to close M3. (per accept draft above + threshold tuning + cutover: verify
       capture→node→PSB-graph push, then user archives PSB-vault). **Pre-Accept build (replanned in
       the task-10 session):** close the carried backend smokes and the `profile-embedding-in-search`
       gap. Real-DB SQL smoke of task-6/7a/7b stores + migration 006/007 = green (23 checks, local
@@ -232,7 +233,9 @@ nothing left to implementer discretion:
       person over-extraction, entity split, diacritic mangling) → **replanned to task 11**; the Accept
       resumes after task 11 lands. `inbox/` clarified = model-failure fallback only (gibberish → an
       `unclear` memory, working as designed).
-- [~] 11 — **organizer-quality + data-survival pass** (replanned 2026-07-14, grilled; ADR-038…042).
+- [x] 11 — **organizer-quality + data-survival pass** (replanned 2026-07-14, grilled; ADR-038…042).
+      Built + reviewed + deployed + prod-reprocessed + Accept criteria verified (2026-07-14); M3 Accept
+      complete pending the `PSB-vault` archive.
       **All must-fix; M3 is accepted only after this + the remaining task-10 criteria pass.**
       **Built 2026-07-14** (all five + `idea` reclassified content-only per the kickoff grill:
       `entity_like_types` realizes the ADRs' `entity_types` = person/place/topic/event/project).
@@ -249,9 +252,21 @@ nothing left to implementer discretion:
       2026-07-14** (`f8a0e1b`; CI+deploy green, no migration): `POST /admin/reprocess` succeeded 9/9
       (28 nodes, 2 inbox, 0 failed, push=True); **verified live on the prod DB** — Mădălina
       over-extraction+split healed to one folded hub, Horia accreted, 0 unfolded diacritics, 0
-      dangling edges, raw preserved. **Open:** remaining task-10 Accept criteria (reindex parity,
-      profile-in-search, vocab-proposal→consolidation, `ENTITY_MATCH_MIN_CONF` tuning) → archive
-      `PSB-vault`.
+      dangling edges, raw preserved.
+      **Remaining task-10 Accept criteria — ALL GREEN (2026-07-14, live verification, no code):**
+      **reindex parity EXACT** (snapshot-guarded `TRUNCATE nodes CASCADE` → `POST /admin/reindex`
+      rebuilt a byte-identical index from the `PSB-graph` store — canonical/derived/node-id
+      fingerprints all matched, `EXCEPT` set-diff 0/0; proves Rule-1/ADR-001 store-is-truth);
+      **profile-in-search** (ADR-037 — found `node_profiles` empty post-reprocess, ran the VPS
+      `profile-refresh` CLI → 17 profiles + HNSW; the exact two-leg search surfaces person hubs via
+      the profile leg; PWA "Madalina" → the person hub with profile snippet); **vocab-proposal→
+      consolidation** (seeded an `edge_rel` proposal → user Approve → `app_settings` forward-live +
+      feed-visible `vocab-consolidation` run linked to the review id + item resolved; synthetic seed
+      reverted); **`ENTITY_MATCH_MIN_CONF` = keep 0.8** (user decision — conservative, zero false
+      merges on the current sample; revisit as captures grow). Detail: [08-logs/m3.md](08-logs/m3.md)
+      "Task 10/11 — remaining M3 live Accept criteria". Follow-up logged: reprocess/reindex leave
+      `node_profiles` empty until the nightly job (silent profile-in-search gap). **Open:** user
+      archives `PSB-vault` → **M3 fully closed.**
       - **Dangling edges** ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)): reorganize
         `remove_nodes` becomes type-aware — removes only content nodes (`memory`/`conversation`/
         `insight`/`idea`), never entity hubs (shared substrate); orphan hubs tolerated (later GC).

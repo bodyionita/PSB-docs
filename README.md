@@ -106,6 +106,15 @@ types mention-only + coercion guard) · **[040](adr/040-token-overlap-retrieval-
 (all must-fix; build → review → local-test the reprocess → deploy + reprocess prod → finish the
 remaining Accept criteria → archive `PSB-vault`). Code pushed through `8ec472a`; **no new code this
 session** (planning pass — paused before implementing task 11).
+**Task 11 DONE + M3 Accept criteria ALL GREEN (2026-07-14).** Built/reviewed/deployed/prod-reprocessed
+(through `f8a0e1b`); then the four remaining task-10 Accept criteria verified live (no code): **reindex
+parity EXACT** (wipe → `/admin/reindex` rebuilt a byte-identical index from the `PSB-graph` store —
+Rule-1/ADR-001 durability), **profile-in-search** (ADR-037 — ran the VPS `profile-refresh` after finding
+`node_profiles` empty post-reprocess; person hubs surface via the profile leg, confirmed in the PWA),
+**vocab-proposal→consolidation** round-trip (edge-rel propose → approve → forward-live + feed-visible run,
+synthetic seed reverted), **`ENTITY_MATCH_MIN_CONF` kept at 0.8** (conservative, zero false merges).
+Follow-up logged: reprocess/reindex leave `node_profiles` empty until the nightly job. **M3 is accepted —
+the only remaining step is the user archiving `PSB-vault`** ([08-logs/m3.md](08-logs/m3.md) "Task 10/11").
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
