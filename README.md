@@ -80,11 +80,15 @@ smoke surfaced a real gap → replanned: **`profile-embedding-in-search` was an 
 [ADR-030](adr/030-entity-substrate-and-lifecycle.md) §4 requirement** (search was chunks-only; the
 stored profile vector never queried). Mechanism pinned by **[ADR-037](adr/037-profile-embedding-in-search-m3.md)**
 — a second per-profile vector leg unioned best-per-node with the chunk leg (all tiers, no weighting,
-`SearchResultItem` unchanged, reindex-decoupled); **migration 007** adds the profile HNSW index; being
-built now. Alias *accretion* stays a documented follow-up (the exact short-circuit serves "mentioned
-twice → one node"). **Live-Accept decision: go straight to prod** (no local dry-run) —
-capture→node→PSB-graph push, threshold-tune `ENTITY_MATCH_MIN_CONF`, then user archives `PSB-vault`.
-Code committed through `e97671b`, **not pushed**.
+`SearchResultItem` unchanged, reindex-decoupled); **migration 007** adds the profile HNSW index.
+**Built + independently reviewed (APPROVE, no must-fix)** — commits `d0fc52e`/`8ec472a`; 344 tests +
+26-check real-DB smoke green, ruff clean. Alias *accretion* stays a documented follow-up (the exact
+short-circuit serves "mentioned twice → one node"). **Live-Accept decision: go straight to prod** (no
+local dry-run) — the remaining step is the **prod cutover**: a push to `main` auto-deploys (CI runs
+`alembic upgrade head` on prod; migration 005 drops the pre-pivot note tables), then a joint live
+Accept (capture→node→PSB-graph push < 30s, entity resolution, `inbox/` fallback, vocab consolidation,
+DB-wipe/reindex parity, `ENTITY_MATCH_MIN_CONF` tuning) → user archives `PSB-vault`. Code committed
+through `8ec472a`, **not pushed**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
