@@ -381,7 +381,7 @@ stamped + counter reset — all via `GET /admin/providers`; **prod** endpoint en
 `reachable` + `last_success_at` populated for anything exercised since boot; the Settings card renders
 read-only on device; independent review clean on both tasks.
 
-- [ ] 1 server — `ProviderStatusTracker` collaborator + wire `record_success`/`record_failure` at the 3 registry call sites (chat/STT/embedding) + `GET /admin/providers` (live `health()` probe via `asyncio.gather`) + response models + unit tests → independent review → pause
+- [x] 1 server (2026-07-15) — `ProviderStatusTracker` collaborator (in-memory, sticky `last_error` + `last_success_at` + `consecutive_failures`, injectable clock) wired at all 3 registry call sites (chat/STT/**embedding** — the previously-unrecorded no-fallback leg, ADR-044's key blind spot; recorded then re-raised, nothing swallowed) + session-gated `GET /admin/providers` (live concurrent `health()` probe via `asyncio.gather`, defensive against a raising probe) + `capabilities` from configuration (`can_chat`/`can_transcribe`/`can_embed`, not the class hierarchy) + response models. `/health` untouched, no migration. 476 tests green (+16), ruff clean; **independent review APPROVE-WITH-MINORS — no must-fix** (added the one worthwhile minor: an HTTP-level endpoint test covering the `last_error` present/null mapping + session gating). Commit `9dad941`, **not pushed**.
 - [ ] 2 web + live Accept — read-only Settings **Providers** card (thin TanStack client, mock-API walkthrough) → deploy → live wiring check + local forced-failure→recovery proof → independent review → pause
 
 ## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))

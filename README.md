@@ -237,6 +237,15 @@ in-memory per-provider status on the registry (no migration; sticky `last_error`
 (live `Provider.health()` reachability probe — *not* a success guarantee; `/health` untouched) + a read-only
 Settings **Providers** card. Closes the P8/rule-7 silent-fallback gap. **2 tasks** open in [08 §M4 follow-up](08-implementation-plan.md)
 (server; web + live Accept). **Paused before implementation — no code this session.** Next: build task 1, or **M5** planning.
+**M4 follow-up 2 · Task 1 (server) DONE (2026-07-15):** in-memory `ProviderStatusTracker` on the registry
+(sticky `last_error` + `last_success_at` + `consecutive_failures`, injectable clock) wired at **all three**
+call sites — chat, STT, and the previously-unrecorded no-fallback **embedding** leg (ADR-044's key blind
+spot; records then re-raises, nothing swallowed) — plus session-gated **`GET /admin/providers`** (live
+concurrent `health()` probe, defensive against a raising probe) with `capabilities` derived from
+configuration (`can_chat`/`can_transcribe`/`can_embed`), not the class hierarchy. `/health` untouched, no
+migration. 476 tests green (+16), ruff clean, **independent review APPROVE-WITH-MINORS — no must-fix** (the
+one worthwhile minor, an HTTP-level endpoint test, was added) — [08-logs/m4.md](08-logs/m4.md). **Code
+committed locally (`9dad941`), not pushed.** Next: **Task 2** (web Providers card + live Accept), or **M5** planning.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
