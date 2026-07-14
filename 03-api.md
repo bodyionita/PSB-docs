@@ -49,10 +49,10 @@ Non-streaming; the web animates a client-side reveal. Retrieval = passive node-g
 
 | | |
 |---|---|
-| `GET /chat/models` | registry ids + labels; `default` = the Chat group's active model |
+| `GET /chat/models` | `{ models: [{ id, label, effort }], default }` — `label` is a **friendly display name** derived from the configured model (`claude-opus-4-8` → "Claude Opus 4.8"; `meta-llama/Llama-3.3-70B-Instruct` → "Llama 3.3 70B"; unknown → raw id), `effort` = the reasoning effort the Chat group applies to that model (`null` for effort-less models like Nebius or one with no configured Chat-group effort); `default` = the Chat group's active model |
 | `GET /chat/sessions` | `[{ id, title, created_at, last_model }]` newest first |
 | `GET /chat/sessions/{id}` | `{ id, title, messages: [{ role, content, model, sources, created_at }] }` |
-| `POST /chat` | `{ "message", "session_id"?, "model"?, "planes"?, "top_k"? }` → `{ session_id, answer, model_used, fallback_used, sources: [{ node_id, store_path, type, title, snippet, score, planes }] }`. Implicit session creation; `sources` = cited nodes only, renumbered `[1..m]` (empty for general / "not in your memories" answers) |
+| `POST /chat` | `{ "message", "session_id"?, "model"?, "planes"?, "top_k"? }` → `{ session_id, answer, model_used, fallback_used, effort_used, sources: [{ node_id, store_path, type, title, snippet, score, planes }] }`. Implicit session creation; `sources` = cited nodes only, renumbered `[1..m]` (empty for general / "not in your memories" answers); `effort_used` = the reasoning effort applied to the answering model (`null` for effort-less models like Nebius) — feeds the per-message "answered by `<label>` · `<effort>`" caption on a fresh turn (**not persisted** — history renders the model label without effort) |
 | `POST /chat/sessions/{id}/remember` | **(M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))** distill this session now (manual trigger of the chat-distiller for one session) → `202 { run_id }` |
 
 ## Search & graph
