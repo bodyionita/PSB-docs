@@ -243,8 +243,8 @@ nothing left to implementer discretion:
       live claude-max: seeded 4 defect-repro captures → `reprocess-all` wiped + replayed 4/4, 0
       failed; before/after asserted Horia+Horia-Fenwick dedup, no dangling edges, diacritics folded,
       raw preserved). Surfaced + fixed a **prod-dormant** `claude-max` UTF-8 subprocess-encoding bug
-      (commit `c785102`, Windows-only mojibake; pins `encoding="utf-8"`). **Open:** independent review
-      of `c785102` → push code + deploy → reprocess prod (heals the 4 real captures) → remaining
+      (commit `b0148a4`, Windows-only mojibake; pins `encoding="utf-8"`). **Open:** independent review
+      of `b0148a4` → push code + deploy → reprocess prod (heals the 4 real captures) → remaining
       task-10 Accept criteria → archive `PSB-vault`.
       - **Dangling edges** ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md)): reorganize
         `remove_nodes` becomes type-aware — removes only content nodes (`memory`/`conversation`/
