@@ -160,6 +160,17 @@ keyword-only `min_score` override (default keeps `/search` unchanged). ruff clea
 + **7 real-PG chat-store smoke checks**; **independent review APPROVE — no must-fix** (1 minor fixed —
 `_clean_title` tests; 2 logged) — [08-logs/m4.md](08-logs/m4.md) task 3; commits `6406bd9`/`0559799`.
 **Code committed locally, not pushed.** Next: M4 task 4 (chat routers).
+**M4 task 4 DONE (2026-07-14):** chat routers (`app/routers/chat.py`, thin over the task-3 `ChatService`) —
+**`POST /chat`** (`RegistryExhausted`→**503** with the user turn still persisted, `ChatSessionNotFound`→**404**;
+picker/`planes`/`top_k` forwarded, `model_used`/`fallback_used` surfaced), **`GET /chat/models`** (a new
+`ModelRoutingService.chat_catalog` over `registry.chat_models()`; `default` = the Chat group's active model),
+**`GET /chat/sessions[/{id}]`** (read paths added to `ChatService`, bounded by a new `chat_sessions_list_limit`).
+Added a provider **`can_chat`**+`label` seam (the OpenAI-compatible class also backs STT/embedding — so
+`chat_models()` filters on real capability, not the `ChatProvider` class) and **boundary uuid validation** on
+`session_id` (body + path → 422 on malformed, so the uuid column never 500s). ruff clean, **439 tests green**
+(+16); **independent review APPROVE after fixes** — 2 must-fix (STT/embedding providers leaking into the picker;
+malformed-session 500), **both resolved + regression-tested** — [08-logs/m4.md](08-logs/m4.md) task 4; commit
+`5059570`. **Code committed locally, not pushed.** Next: M4 task 5 (settings routers).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

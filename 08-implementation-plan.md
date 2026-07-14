@@ -353,7 +353,7 @@ registry fallback unit tests).
 - [x] 1 model routing engine — `ModelRoutingService` over **3 groups** (`chat`/`conspect`/`quick`, ADR-043) + per-call effort; `claude-max-sonnet` provider instance; **rewire the 6 `conspect` call sites** through the service — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 1)
 - [x] 2 retrieval — **migration 008** (FTS `tsvector` on `chunks` ⊍ `node_profiles` + GIN); hybrid vector+FTS **RRF** (k=60) + recency prior + `since`/`until`/`as_of` on `/search` — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 2)
 - [x] 3 chat service (condensation-in-English → hybrid retrieval → **fenced** grounded prompt → cited-only parse → persistence; non-blocking `quick` titling) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 3)
-- [ ] 4 chat routers (`POST /chat`, `GET /chat/models`, `GET /chat/sessions[/{id}]`)
+- [x] 4 chat routers (`POST /chat`, `GET /chat/models`, `GET /chat/sessions[/{id}]`) — **DONE 2026-07-14** ([08-logs/m4.md](08-logs/m4.md) task 4)
 - [ ] 5 settings routers (enriched `GET /settings` + `PUT /settings/models`, all 3 groups)
 - [ ] 6 web chat screen (list/thread, picker + plane chips, reveal, source cards, fallback banner, "not from your memories" chip)
 - [ ] 7 web Settings → Models panel (3 group controls)
