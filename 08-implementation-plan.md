@@ -312,18 +312,52 @@ into the chat system prompt. (g) **challenge mode** — a chat preset that argue
 using the user's own cited history (ADR-033 #4).
 LLM-free at read time throughout — no reranker, no retrieval-loop LLM (ADR-032 rejections).
 
+**M4 KICKOFF GRILL — BUILD-READY (2026-07-14, grilled decision-by-decision; recorded per [09](09-session-protocol.md)).**
+The addendum's "re-check at kickoff" resolved to a **lean spine + explicit deferrals** (Accept criteria
+need none of the deferred items):
+- **Retrieval (build):** (b) **hybrid vector+FTS fused by RRF** (k=60) — the FTS leg mirrors the ADR-037
+  vector union: `tsvector` over **`chunks` ⊍ `node_profiles`** (**migration 008**: two generated `tsvector`
+  cols + GIN, `'english'`); (d) **recency prior** = bounded multiplicative nudge (floor ~0.9, config
+  half-life ~180d, applied to the fused list pre-cut); (e) **temporal** = `since`/`until` window + **simple
+  node-date `as_of`** (`occurred_start ≤ as_of`) on `/search` (params only, not auto-extracted from chat);
+  (c) **English condensation**. FTS-noise guard = emergent self-suppression (English corpus) + skip on
+  zero-lexeme tsquery — **no language-detect dependency**.
+- **Deferred (NOT M4):** (a) **1-hop edge-neighbor injection + entity-seeded expansion** → **Backlog**
+  (reconciles the addendum vs the §5 "backlog" line in favor of backlog); (f) **identity capsule** →
+  **M5** (its `build_context` level-0 depends on it — M5 owns it, not a silent gap); (g) **challenge
+  mode** → **Backlog**.
+- **Chat behavior:** condensation on **turn ≥2** condenses last **N=15** (config) → standalone **English**
+  query, runs on **`conspect`** and **inherits the conspect group's effort** (the [04-pipelines §5](04-pipelines.md)
+  "low effort" note is corrected to this — ADR-025 is per-group, not per-call-site). Thin retrieval →
+  answers **general questions uncited**; "not in your memories" for personal questions with no hits;
+  **prompt-driven + `min_score` floor, no classifier**. Retrieved context is **fenced as data-not-
+  instructions** (injection hygiene now, before connector/MCP content shares the path). Titling runs
+  **best-effort, non-blocking, after** the first exchange.
+- **Model routing = three groups (both `chat` + `conspect` wired now).** `ModelRoutingService` governs
+  `chat`, `conspect`, **and a new `quick` tier** ([ADR-043](adr/043-quick-routing-tier-m4.md), extends
+  ADR-025 2→3); all **6 `conspect` call sites** rewired through the service (mechanical, guarded by
+  ingestion tests + independent review); effort per-call to `claude-max` (ADR-025 §4). **`quick`** =
+  Claude **Sonnet 4.6** (config, low effort) / Nebius fallback, provider id `claude-max-sonnet`, **only
+  M4 caller = session titling** (LLM-generated); all three UI-editable in Settings → Models.
+- **Web:** **banner = fallback/model transparency** (`fallback_used`); **"Not from your memories"** = a
+  subtle per-message chip derived from **empty `sources`**.
+- **Accept (live chain-and-record):** **(A) required** — Settings-driven Nebius-primary drive recorded on
+  `chat_messages.model`; **(B) true-fallback (claude-max forced down → `fallback_used=true`) optional**.
+  The 21 registry unit tests stay green.
+
 **Accept:** questions over known graph content answered with correct `[n]` node citations on
 both Claude and Nebius; "not in your memories" verified; sessions persist; **plus the deferred
 M0 clause** (Settings-driven Nebius-primary drive recorded in `chat_messages.model` + the 21
 registry fallback unit tests).
 
-- [ ] 1 model routing engine (`ModelRoutingService` + per-call effort)
-- [ ] 2 chat service (condensation → node-grouped top-k → grounded prompt → cited-only parse → persistence)
-- [ ] 3 chat routers (`POST /chat`, `GET /chat/models`, `GET /chat/sessions[/{id}]`)
-- [ ] 4 settings routers (enriched `GET /settings` + `PUT /settings/models`)
-- [ ] 5 web chat screen (list/thread, picker + plane chips, reveal, source cards, banner)
-- [ ] 6 web Settings → Models panel
-- [ ] 7 live M4 Accept (incl. deferred M0 clause)
+- [ ] 1 model routing engine — `ModelRoutingService` over **3 groups** (`chat`/`conspect`/`quick`, ADR-043) + per-call effort; `claude-max-sonnet` provider instance; **rewire the 6 `conspect` call sites** through the service
+- [ ] 2 retrieval — **migration 008** (FTS `tsvector` on `chunks` ⊍ `node_profiles` + GIN); hybrid vector+FTS **RRF** (k=60) + recency prior + `since`/`until`/`as_of` on `/search`
+- [ ] 3 chat service (condensation-in-English → hybrid retrieval → **fenced** grounded prompt → cited-only parse → persistence; non-blocking `quick` titling)
+- [ ] 4 chat routers (`POST /chat`, `GET /chat/models`, `GET /chat/sessions[/{id}]`)
+- [ ] 5 settings routers (enriched `GET /settings` + `PUT /settings/models`, all 3 groups)
+- [ ] 6 web chat screen (list/thread, picker + plane chips, reveal, source cards, fallback banner, "not from your memories" chip)
+- [ ] 7 web Settings → Models panel (3 group controls)
+- [ ] 8 live M4 Accept (incl. deferred M0 clause — (A) required, (B) optional)
 
 ## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))
 
@@ -331,8 +365,10 @@ registry fallback unit tests).
 (+temporal filters), `get_node`, `traverse` (center+depth+rel, **cursor-paginated**),
 `build_context` (get_node+traverse in one round-trip — [ADR-032](adr/032-prior-art-adoptions.md)),
 `list_planes`/`list_types`, `capture` (full organizer pipeline, `source: mcp`, burst-queued).
-`build_context` level-0 serves the **identity capsule** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)).
-No logic of its own; smallest milestone, biggest compounding effect (external LLMs start
+`build_context` level-0 serves the **identity capsule** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md))
+— **building the capsule itself (the derived ~200-token "who I am" preamble + its sleep-cycle refresh)
+is deferred here from M4** (M4 kickoff grill); M4 chat consumes it once M5 lands it, and it also feeds
+the M4 chat system prompt at that point. No logic of its own; smallest milestone, biggest compounding effect (external LLMs start
 feeding the brain early). **Canonical usage pattern documented at M5 (ADR-033 #6):
 research-via-MCP** — the calling LLM queries the graph for what's known, finds gaps, does
 external research on its own plan, submits the distillate via `capture` with source refs
@@ -453,14 +489,18 @@ planning session:
 
 ## Backlog (do not build unprompted)
 
-**Chat/retrieval:** seeded **Personalized PageRank** expansion (SPRIG GraphRRF — replaces the
-flat 1-hop union behind the same function; needs hub down-weighting) → agentic traversal (chat
-model gets `search`/`get_node`/`traverse` tools; only if M5 MCP usage proves one-shot fails —
-[ADR-032](adr/032-prior-art-adoptions.md)) · cross-encoder rerank (rejected for the hot path;
-revisit only if RRF ordering demonstrably fails) · LLM session titles · session rename/delete ·
+**Chat/retrieval:** **graph-aware retrieval lite** — flat **1-hop canonical-edge neighbor injection
+(`{rel,title,type}`) + entity-seeded expansion** (deferred from M4; the addendum-(a) work, PPR-swappable
+behind one function) → seeded **Personalized PageRank** expansion (SPRIG GraphRRF — replaces the flat
+union behind the same function; needs hub down-weighting) → agentic traversal (chat model gets
+`search`/`get_node`/`traverse` tools; only if M5 MCP usage proves one-shot fails —
+[ADR-032](adr/032-prior-art-adoptions.md)) · **challenge mode** (a chat preset arguing against an idea
+from the user's own cited history — ADR-033 #4, deferred from M4) · **bitemporal `as_of`** (edge
+`since`/`until` validity reconstruction; M4 shipped only simple node-date `as_of`) · cross-encoder rerank
+(rejected for the hot path; revisit only if RRF ordering demonstrably fails) · session rename/delete ·
 true token streaming (streaming provider interface + SSE).
 **Graph:** node editing in web · undo a manual ingestion (soft-delete via `git rm`,
-`captures.node_paths`) · entity extraction beyond person/idea · hybrid keyword+vector search.
+`captures.node_paths`) · entity extraction beyond person/idea.
 **Sources:** LLM-chat exports connector (promoted by the pivot — stance-gated like the
 chat-distiller) · WhatsApp · Instagram spike ([ADR-009](adr/009-instagram-connector-deferred.md)) ·
 email · calendar.

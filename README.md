@@ -115,8 +115,18 @@ Rule-1/ADR-001 durability), **profile-in-search** (ADR-037 — ran the VPS `prof
 synthetic seed reverted), **`ENTITY_MATCH_MIN_CONF` kept at 0.8** (conservative, zero false merges).
 Follow-up logged: reprocess/reindex leave `node_profiles` empty until the nightly job. **`PSB-vault`
 archived by the user (2026-07-14) → M3 CLOSED** — all acceptance criteria pass; the graph-native stack is
-live at `braindan.cc` ([08-logs/m3.md](08-logs/m3.md) "Task 10/11"). **Next milestone: M4 (chat) — a
-planning session (`/grilling` first per [09](09-session-protocol.md)).**
+live at `braindan.cc` ([08-logs/m3.md](08-logs/m3.md) "Task 10/11").
+**M4 (chat) GRILLED TO BUILD-READY (2026-07-14 — planning session, decision-by-decision).** Resolved to
+a **lean spine + explicit deferrals**: build the chat loop + **hybrid vector+FTS RRF** retrieval
+(migration 008, FTS mirrors the ADR-037 chunks⊍profiles union) + recency prior + `since`/`until`/simple
+`as_of` + English condensation + **fenced** grounded prompt + cited-only `[n]`; **3 UI-editable routing
+groups** (`chat`/`conspect`/`quick`) with all 6 conspect call-sites rewired + per-call effort; new
+**[ADR-043](adr/043-quick-routing-tier-m4.md)** adds the **`quick` tier** (Sonnet-4.6-low / Nebius) for
+trivial tasks (M4's only caller = LLM session titling). **Deferred:** graph-aware expansion (1-hop
+injection + entity-seeded) → backlog, **identity capsule → M5** (build_context owns it), challenge mode →
+backlog. Doc reconciliations recorded (08 M4 kickoff note + task list; 04-pipelines condensation-effort +
+retrieval; 03/02/06 for 3 groups + migration 008). **Paused before implementation** per
+[09](09-session-protocol.md) — 8 M4 tasks open in [08](08-implementation-plan.md). **No code this session.**
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

@@ -64,7 +64,13 @@ login header; kept as a single config constant so it's changeable at zero cost.
 - Source citations `[n]` rendered as **expandable cards** — only the **cited** nodes
   (`sources[]`), title + type icon + plane badge + snippet; tap to expand.
 - **Plane-filter chips** in the composer (optional retrieval scoping → `POST /chat` `planes`).
-- **"Not in your memories"** answers render plainly, no source cards.
+- **Grounding indicator:** an answer with **no source cards** (empty `sources[]` — both the
+  general-knowledge and "not in your memories" cases) carries a subtle **"not from your memories"
+  chip** so ungrounded replies are always visibly distinct from cited ones (M4 kickoff grill). This
+  is orthogonal to the `fallback_used` model banner above.
+- **Session titles** are **LLM-generated** on the `quick`/Sonnet tier ([ADR-043](adr/043-quick-routing-tier-m4.md)),
+  best-effort + non-blocking after the first exchange; the list shows the title (or the first
+  message until the title lands).
 - **"Remember this" (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)):**
   per-session action triggering immediate distillation (`POST /chat/sessions/{id}/remember`).
 
@@ -98,12 +104,13 @@ login header; kept as a single config constant so it's changeable at zero cost.
   vocabularies with pending LLM proposals — approve/reject; approval queues the
   retro-consolidation job.
 - **Connectors (M9):** per-connector config incl. the lookback override (default 6 months).
-- **Models section (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):** two
-  routing groups — **Chat** and **Conspect** — each an active-model dropdown + fallback dropdown +
-  an **effort selector shown only for models that support it** (Claude yes, Nebius no). Choices +
-  effort levels come from `GET /settings` (registry-sourced, never hardcoded); saved via
-  `PUT /settings/models`. This is where the M0/M4 model-and-effort control lives; the chat composer
-  picker is a per-conversation override of the Chat group's active model.
+- **Models section (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md) +
+  [ADR-043](adr/043-quick-routing-tier-m4.md)):** **three** routing groups — **Chat**, **Conspect**,
+  and **Quick** (trivial tasks, e.g. session titling; default Sonnet-low / Nebius) — each an
+  active-model dropdown + fallback dropdown + an **effort selector shown only for models that support
+  it** (Claude yes, Nebius no). Choices + effort levels come from `GET /settings` (registry-sourced,
+  never hardcoded); saved via `PUT /settings/models`. This is where the M0/M4 model-and-effort control
+  lives; the chat composer picker is a per-conversation override of the Chat group's active model.
 - **Jobs & connectors:** the roster (last-run status, "run now", schedules) lives in the **M8 ops
   console** (screen 3); per-connector *config* lands here at M9. (The conspect model that was
   drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)

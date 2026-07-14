@@ -127,6 +127,11 @@ New config: `GRAPH_STORE_PATH`, `GRAPH_STORE_REPO`, `NODE_TYPES` (9), `EDGE_RELS
 `neighborhood_hash`, `embedding`, fk → nodes cascade). **Migration 007** (task 10,
 [ADR-037](adr/037-profile-embedding-in-search-m3.md)): HNSW `vector_cosine_ops` index on
 `node_profiles.embedding` so the profile leg of search is ANN-indexed like `chunks`.
+**Migration 008** (M4 retrieval): generated `tsvector` columns for the hybrid FTS leg —
+`chunks.tsv GENERATED ALWAYS AS (to_tsvector('english', text)) STORED` + a matching
+`node_profiles.tsv` over the profile text (mirrors the ADR-037 vector union so RRF fuses the same
+node universe), each with a **GIN** index. Generated + store-derived, so `POST /admin/reindex`
+restores them for free (Rule 1 clean); the `'english'` config matches the asserted English corpus.
 
 ### Derived graph index (rebuildable from the graph store)
 
@@ -204,7 +209,7 @@ Chat-distiller cursor tracks session activity for nightly distillation.
 **`auth_sessions`** — unchanged. **MCP bearer token**: stored as a hash in env/settings
 (single-user), revocable independently ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)).
 
-**`app_settings`** — unchanged shape; keys grow (`model_routing` [ADR-025], vocabulary,
+**`app_settings`** — unchanged shape; keys grow (`model_routing` — jsonb, **3 groups** `chat`/`conspect`/`quick` each `{active, fallback, effort_by_provider}`, [ADR-025] + [ADR-043](adr/043-quick-routing-tier-m4.md); config seeds the default when unset), vocabulary,
 connector lookback overrides — default **6 months** per connector, UI-overridable).
 
 ## 4. Chunking policy

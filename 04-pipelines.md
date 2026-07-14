@@ -155,26 +155,34 @@ file → read → sha256 whole file ── unchanged? skip
 [traverse] get_node/neighbors — served to the web, the map (M7) and MCP (M5) by one GraphService
 
 [chat]                                             persist user msg BEFORE any model call
-   │ turn 1? embed raw msg; else CONDENSE last N turns → standalone query IN ENGLISH
-   │ (conspect chain, low effort; all-down ⇒ degrade to raw msg — ADR-032: the corpus is
-   │ English; a Romanian tsquery matches nothing, vectors stay cross-lingual)
+   │ turn 1? embed raw msg; else CONDENSE last N=15 turns (config) → standalone query IN
+   │ ENGLISH (conspect chain — inherits the conspect group's effort, ADR-025 is per-group not
+   │ per-call-site; all-down ⇒ degrade to raw msg — ADR-032: the corpus is English; a
+   │ Romanian tsquery matches nothing (FTS self-suppresses), vectors stay cross-lingual)
    ▼
-   M4 retrieval (ratified + ADR-032): vector top_k ⊍ tsvector FTS fused by RRF (rank-based,
-   k=60; degenerate-signal suppression; FTS weight→0 on non-English raw queries) + mild
-   recency prior on occurred ?? created + 1-hop edge-neighbor {rel,title,type} injection
-   (config-capped) + entity-seeded expansion (falls back to vector/FTS seeds, never a hard
-   gate; expansion function PPR-swappable) → numbered context [1..k]
+   M4 retrieval (M4 kickoff grill — lean spine): vector top_k ⊍ tsvector FTS (over chunks ⊍
+   node_profiles, migration 008) fused by RRF (rank-based, k=60; FTS self-suppresses on the
+   English corpus + skips on a zero-lexeme tsquery — no language-detect dep) + mild recency
+   prior on occurred ?? created (bounded multiplicative, floor ~0.9, config half-life) →
+   numbered context [1..k]. (Graph-aware expansion — 1-hop edge-neighbor injection + entity-
+   seeded, PPR-swappable — is DEFERRED to backlog; see 08 §Backlog.)
    ▼
-   chat model (Settings chat group; per-conversation picker overrides active model)
+   FENCE each numbered context item as data-not-instructions (injection hygiene, before
+   connector/MCP content shares this path); chat model (Settings chat group; per-conversation
+   picker overrides active model)
    ▼
-   answer with [n] → keep ONLY cited nodes, renumber [1..m]
+   answer with [n] → keep ONLY cited nodes, renumber [1..m] (out-of-range [n] dropped, never errors)
    ▼
    persist assistant msg (model = model_used, sources = cited nodes)
 ```
 
-Prompt rules: hybrid, grounding-biased; "that's not in your memories" when context is silent;
-reply in the user's language. Non-streaming + client-side reveal. **Backlog:** graph-aware
-context (one-hop canonical-edge expansion of retrieved nodes), then agentic traversal.
+Prompt rules: hybrid, grounding-biased; **general questions answered uncited** (empty `sources`);
+"that's not in your memories" for personal questions with no hits (prompt-driven + `min_score`
+floor, no classifier); reply in the user's language. Non-streaming + client-side reveal; the web
+surfaces a **fallback/model banner** (`fallback_used`) and a **"not from your memories" chip** (empty
+`sources`). Session **titling** runs on the **`quick`** tier ([ADR-043](adr/043-quick-routing-tier-m4.md)),
+best-effort + non-blocking after the first exchange. **Backlog:** graph-aware context (one-hop
+canonical-edge expansion of retrieved nodes), then agentic traversal.
 
 ## 6. Reflection & life-manager agents (M10/M11 — scope recorded, grilled at their milestones)
 
