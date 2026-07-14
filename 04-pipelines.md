@@ -116,10 +116,13 @@ file → read → sha256 whole file ── unchanged? skip
 - **Vocabulary consolidation (M3, on-demand — [ADR-027](adr/027-typed-vocabulary-governance.md) §3 /
   [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)):** approving a type proposal (via `PUT
   /settings/vocabulary` or the Review queue) writes the addition to `app_settings` (effective vocab =
-  seeds ∪ approved, forward-live) and opens the `vocab-consolidation` job. It re-walks the graph and,
-  ADR-024 propose→apply: for a new **edge rel** proposes + (on confirm) applies edge re-typings
-  (frontmatter rewrites); for a new **node type** surfaces candidate re-typings **propose-only** in
-  M3 (the folder-move/re-slug apply machinery is a deferred follow-up, ADR-035).
+  seeds ∪ approved, forward-live) and opens the `vocab-consolidation` job. On-demand retro-walk
+  (`POST /admin/vocab/consolidate`, ADR-024 propose→apply): for a new **edge rel** proposes + (on
+  confirm) applies **re-typings of existing edges** — frontmatter `rel:` rewrites, bounded edge
+  inventory ([ADR-036](adr/036-edge-retro-consolidation-walk-retypings-only-m3.md); inventing
+  brand-new edges from node bodies is a deferred follow-up); for a new **node type** surfaces
+  candidate re-typings **propose-only** in M3 (the folder-move/re-slug apply machinery is a deferred
+  follow-up, ADR-035).
 
 ## 5. Chat / search pipeline (M4 — the grilled chat plan carried, retargeted to nodes)
 

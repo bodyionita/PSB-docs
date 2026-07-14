@@ -99,6 +99,7 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 |---|---|
 | `POST /admin/reindex` | async full pass: rescan store → materialize canonical edges → recompute derived edges → `202 { run_id }`; single-flight `409`. (No render/commit step — similarity never touches files, ADR-026) |
 | `POST /admin/tags/consolidate` | two-step tag cleanup (propose → apply), [ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md) |
+| `POST /admin/vocab/consolidate` | **(M3, [ADR-036](adr/036-edge-retro-consolidation-walk-retypings-only-m3.md))** two-step edge retro-consolidation for an approved edge rel: propose (`{rel, apply:false}` → `200 {plan_id, retypings:[{src_id, to, from_rel, to_rel}]}`, bounded edge inventory, no writes) → apply (`{rel, apply:true, plan}` → `202 {run_id}`, rewrites edge `rel:` frontmatter + reindex + force-commit). Edges only; node re-typing stays propose-only (ADR-035). `400` unknown/empty rel or empty apply plan; `503` distill down on propose |
 | `POST /admin/entities/merge` | **(M3, [ADR-030](adr/030-entity-substrate-and-lifecycle.md))** two-step: propose (`{loser, survivor, apply:false}` → inbound-edge inventory) → apply (`apply:true`) — immediate, after a forced commit+push; unions aliases, writes the tombstone, reindexes |
 | `POST /admin/backup` | force store git commit+push → `{ committed, pushed }` |
 | `POST /admin/captures/{id}/reorganize` | re-organize a capture's raw text, replace its nodes; `202` |
