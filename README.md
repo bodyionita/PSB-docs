@@ -171,6 +171,16 @@ Added a provider **`can_chat`**+`label` seam (the OpenAI-compatible class also b
 (+16); **independent review APPROVE after fixes** — 2 must-fix (STT/embedding providers leaking into the picker;
 malformed-session 500), **both resolved + regression-tested** — [08-logs/m4.md](08-logs/m4.md) task 4; commit
 `5059570`. **Code committed locally, not pushed.** Next: M4 task 5 (settings routers).
+**M4 task 5 DONE (2026-07-14):** settings routers — **`GET /settings`** (all 3 routing groups `chat`/`conspect`/
+`quick` with effective saved-over-seed routing + the registry's pickable models, each carrying `supports_effort`
++ **provider-sourced `effort_levels`** — no hardcoded lists in web) and **`PUT /settings/models`** (saves one
+group, busts the routing cache **forward-live**; unknown active/fallback id, effort on a non-effort model, bad
+level, or bad group → **422** before any `app_settings` write). Added a `ModelRoutingService.save_group`/
+`all_settings` + `GroupSettings`/`UnknownModel`, a `ChatProvider.effort_levels` seam, and extended
+`ChatModelOption` (defaulted, so `GET /chat/models` is unchanged). ruff clean, **449 tests green** (+12);
+**independent review APPROVE — no must-fix** (2 minors: flagged test edges added; a deliberate ADR-025-accepted
+display-verbatim choice logged) — [08-logs/m4.md](08-logs/m4.md) task 5; commit `bb6857a`. **Code committed
+locally, not pushed.** Next: M4 task 6 (web chat screen).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
