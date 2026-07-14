@@ -228,6 +228,15 @@ fallback). Grounded cited chat over the graph is **live at `braindan.cc`** — [
 **Follow-ups (out of M4):** UI "Claude Max"→"Claude"+effort-label relabel (needs a planning pass); optional
 provider-observability surface (a provider silently fell back with no visible reason — rule 7 / vision P8).
 **Code pushed through `419ece4`.** Next: **M5 (MCP server)** — planning session (`/grilling` first).
+**M4 follow-up 1 (relabel) DONE (2026-07-15):** friendly model names ("Claude Opus 4.8"/"Claude Sonnet 4.6"/
+"Llama 3.3 70B") + effort labels on the chat picker + per-message "answered by" caption; server-derived labels
+(rule 9), 460 tests green, independent review APPROVE, **pushed to prod** (`ba07eb7`/`753eff5`) — [08-logs/m4.md](08-logs/m4.md).
+**M4 follow-up 2 (provider observability) GRILLED TO BUILD-READY (2026-07-15 — [ADR-044](adr/044-provider-observability-surface.md)):**
+in-memory per-provider status on the registry (no migration; sticky `last_error` + `last_success_at` +
+`consecutive_failures`, recorded at chat/STT/embedding call sites) behind a session-gated **`GET /admin/providers`**
+(live `Provider.health()` reachability probe — *not* a success guarantee; `/health` untouched) + a read-only
+Settings **Providers** card. Closes the P8/rule-7 silent-fallback gap. **2 tasks** open in [08 §M4 follow-up](08-implementation-plan.md)
+(server; web + live Accept). **Paused before implementation — no code this session.** Next: build task 1, or **M5** planning.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

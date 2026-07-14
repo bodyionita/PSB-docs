@@ -361,6 +361,29 @@ registry fallback unit tests).
 
 **→ M4 (chat) ACCEPT COMPLETE (2026-07-14)** — grounded cited chat over the graph is live at `braindan.cc` on both Claude and Nebius; model routing + Settings panel + fallback transparency all verified live. Next: **M5 (MCP server)** — planning session (`/grilling` first) per [09](09-session-protocol.md).
 
+### M4 follow-up — provider observability (GRILLED TO BUILD-READY 2026-07-15 — [ADR-044](adr/044-provider-observability-surface.md))
+
+The M4 Accept surfaced that a provider can **silently fall back with no visible reason** (the Nebius
+model-id defect — [08-logs/m4.md](08-logs/m4.md) task 8); this closes that **vision P8 / rule-7** gap.
+Grilled decision-by-decision (2026-07-15, recorded per [09](09-session-protocol.md)):
+**in-memory** per-provider status on the registry (no migration, no persistence — a chat/STT fallback is
+a degradation signal, not a durable job failure; the failing mode is persistent so memory repopulates on
+the next call) captured at **every** provider call site (chat + STT + embedding); a **sticky** `last_error`
++ `last_success_at` + `consecutive_failures`; a new **session-gated `GET /admin/providers`** (`/health`
+left untouched) whose `reachable` field is a **live `Provider.health()` probe** (config-reachability, *not*
+a success guarantee — the seam that would have shown Nebius green throughout); and a **read-only Settings
+Providers card** (dot + last-error, ADR-006 thin client) so it's a 30-second glance on the phone. Full
+rationale + rejections in [ADR-044](adr/044-provider-observability-surface.md).
+
+**Accept:** `ProviderStatusTracker` unit tests green; a **local forced-failure** (reproduce the Nebius
+bad-model-id) drives `last_error`(sticky) + `consecutive_failures` up and, on recovery, `last_success_at`
+stamped + counter reset — all via `GET /admin/providers`; **prod** endpoint enumerates all providers with
+`reachable` + `last_success_at` populated for anything exercised since boot; the Settings card renders
+read-only on device; independent review clean on both tasks.
+
+- [ ] 1 server — `ProviderStatusTracker` collaborator + wire `record_success`/`record_failure` at the 3 registry call sites (chat/STT/embedding) + `GET /admin/providers` (live `health()` probe via `asyncio.gather`) + response models + unit tests → independent review → pause
+- [ ] 2 web + live Accept — read-only Settings **Providers** card (thin TanStack client, mock-API walkthrough) → deploy → live wiring check + local forced-failure→recovery proof → independent review → pause
+
 ## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))
 
 **Scope.** Token-authenticated MCP server on the VPS exposing the service layer: `search`

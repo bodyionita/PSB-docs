@@ -111,6 +111,11 @@ login header; kept as a single config constant so it's changeable at zero cost.
   it** (Claude yes, Nebius no). Choices + effort levels come from `GET /settings` (registry-sourced,
   never hardcoded); saved via `PUT /settings/models`. This is where the M0/M4 model-and-effort control
   lives; the chat composer picker is a per-conversation override of the Chat group's active model.
+- **Providers status (M4 follow-up, [ADR-044](adr/044-provider-observability-surface.md)):** a
+  **read-only** card over `GET /admin/providers` — one row per provider with a status dot (**green** =
+  `consecutive_failures == 0`, **amber** = `> 0`) + the sticky `last_error` line. Surfaces *why* a
+  provider last fell back (the M4 silent-fallback gap, vision P8). No actions, no editing — a thin
+  TanStack-Query read (ADR-006).
 - **Jobs & connectors:** the roster (last-run status, "run now", schedules) lives in the **M8 ops
   console** (screen 3); per-connector *config* lands here at M9. (The conspect model that was
   drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)
