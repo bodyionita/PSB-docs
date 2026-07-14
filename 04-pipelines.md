@@ -76,7 +76,10 @@ the vision-P10 data-survival op). Confirm-gated + single-flight; runs in the bac
 vocabulary (`app_settings`); standing merges are **reported, not dropped**. Then **replay every
 capture's raw input chronologically** (combined text where a follow-up was answered) through the
 current pipeline — each replay is a normal organize→resolve→write→index, so it inherits every fix
-and alias accretion rebuilds deterministically — recompute derived edges, and force one commit+push.
+and alias accretion rebuilds deterministically — recompute derived edges, **rebuild the derived
+profiles the reset truncated** (a profile-refresh over the replayed graph, so the profile search leg
+[ADR-037] is live immediately rather than empty until the nightly job), and force one commit+push.
+The run reports per-heal totals (`coerced`/`accreted`/`profiles_refreshed`) for auditability.
 Idempotent; raw is never touched, so a bad reprocess is recovered by fixing code and re-running.
 
 ## 2. Ingestion pipeline (connectors, scheduled)
