@@ -253,12 +253,14 @@ recovered), capability chips, an "unreachable" tag, and last-success time; wire 
 Pydantic models; `relativeTime` hoisted to a shared `ui/` helper. No server code (ADR-006). tsc/eslint/build
 green; a **real-browser walkthrough vs a throwaway mock API** drove every render state **and a forced-failure→
 recovery transition** (amber→green, failures cleared, `last_error` stays sticky+muted). **Independent review
-APPROVE-WITH-MINORS — no must-fix** (3 minors all fixed). Commit `a82500b`. **DEPLOYED to prod (2026-07-15):**
-pushed `9dad941` + `a82500b`; CI run `29390674935` all green; `braindan.cc` live, `/health` all-true;
-`GET /admin/providers` confirmed deployed + session-gated (`401` unauth). **Remaining = the user's on-device
-glance** (auth-gated, agent must not handle the login secret): log into `braindan.cc` → Settings → **Providers**
-and confirm the card enumerates every provider read-only — [08-logs/m4.md](08-logs/m4.md). Next: **user's
-on-device Providers glance to close Task 2**, then **M5** planning (`/grilling` first).
+APPROVE-WITH-MINORS — no must-fix** (3 minors all fixed). Commit `a82500b`. **DEPLOYED to prod + live Accept VERIFIED
+→ Task 2 DONE → M4 follow-up 2 (provider observability) COMPLETE (2026-07-15):** pushed `9dad941` + `a82500b`
+(CI run `29390674935` all green); the real `braindan.cc` Settings → **Providers** card (read in the browser pane
+against the live endpoint, existing prod session — agent never handled the login secret) **enumerates all 6
+registered providers read-only** (claude-max/-sonnet + nebius = Chat, openai/groq = Speech, ollama = Embedding),
+green dots, config-derived capabilities, **0 interactive controls**; all "No successful call yet" (correct
+post-redeploy zero-state). **Both M4 follow-ups now complete; graph-native chat + observability live at
+`braindan.cc`** — [08-logs/m4.md](08-logs/m4.md). Next: **M5 (MCP server)** — planning session (`/grilling` first).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
