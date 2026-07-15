@@ -127,7 +127,7 @@ on reads, a write marker on `capture`). An invokable **research-via-MCP Prompt**
 |---|---|
 | `search(query, top_k?, planes?, types?, as_of?, since?/until?)` | SearchService (as `POST /search`, incl. RRF hybrid + temporal filters — [ADR-032](adr/032-prior-art-adoptions.md)) |
 | `get_node(id)` | as `GET /nodes/{id}` |
-| `traverse(id, rel?, depth?=1, cursor?)` | new **`GraphService.neighbors`** one-hop primitive (also serves `GET /nodes/{id}/neighbors`, M7) — center+rel filter, both directions, **cursor-paginated** (LLM context is finite) |
+| `traverse(id, rel?, direction?=both, cursor?)` | new **`GraphService.neighbors`** one-hop primitive (also serves `GET /nodes/{id}/neighbors`, M7) — center+rel filter, `direction` ∈ {out, in, both}, **cursor-paginated** (LLM context is finite) |
 | `build_context(id, depth?)` | convenience: get_node + neighbors bundled in one round-trip, **depth ≤ 2** with fanout caps ([ADR-032](adr/032-prior-art-adoptions.md), Basic-Memory pattern); **level-0 = the identity capsule** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md) #1) |
 | `list_planes()` / `list_types()` | vocabulary listings |
 | `capture(text)` | the **full organizer pipeline**, identical to `POST /capture/text` (`source: mcp`, **burst-queued**, **fast ack** — returns id+status, LLM verifies via `search`) — external LLMs never write nodes/edges directly |
