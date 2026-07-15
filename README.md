@@ -275,6 +275,21 @@ row per provider** (friendly name, no raw id). **Supersedes** the routing-unit o
 **5 tasks** open in [08 §M4 follow-up 3](08-implementation-plan.md) (server core · migration · server API ·
 web · live Accept). **Paused before implementation** per [09](09-session-protocol.md) — **no code this session.**
 Next: build task 1 (server core), or **M5 (MCP server)** planning (`/grilling` first).
+**M4 follow-up 3 · Task 1 (server core) DONE (2026-07-15):** the internal provider ≠ model engine — the two fake
+single-model provider ids that shared the one `claude` CLI collapse into **one `claude` provider serving Opus +
+Sonnet** via per-call `--model`; the routable unit is now a **model id** (raw vendor string, provider derived).
+Config named scalars (`CLAUDE_OPUS_MODEL`/`CLAUDE_SONNET_MODEL`/`CLAUDE_EFFORT`) + model-string seed chains;
+`ClaudeMaxProvider`→**`ClaudeProvider`** (`claude_max.py`→`claude.py`); registry gains a chat-model **catalog** +
+**model→provider index** (routes by model id, runtime status keyed by **provider id** — a within-`claude` fallback
+is one provider event, ADR-045 §6); **`effort_by_provider`→`effort_by_model`** through the service, jsonb, and wire;
+`build_registry` = **5 providers**. Model labels are derived per model id (`labels.py`, rule 9); a new
+`provider_label` carries the friendly provider name for the Providers card. **Deliberate behavior change (ADR-045
+§5):** the `quick` group's effort seed is now `claude_effort` (medium), not the old per-tier low — the tier's
+cheapness comes from the Sonnet **model** now; retunable in Settings. 478 tests green (+ conftest that isolates the
+Claude Code shell's colliding `CLAUDE_EFFORT`; no prod risk), ruff clean, **independent review APPROVE — no
+must-fix** ([08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 1"); commit `7c69449`, **not pushed**. **⚠ Do not
+deploy before task 2 (migration)** — pre-existing saved `model_routing` would degrade to seed until it lands.
+Next: **Task 2** (idempotent Alembic migration of saved routing + legacy-tolerant `chat_messages.model` labels).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
