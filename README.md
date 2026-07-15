@@ -418,6 +418,19 @@ pgvector: unauth `/mcp`→401, OAuth→token, `initialize`→instructions, list 
 added. **Commit(s) pending, not pushed;** independent review pending. Deploy (Caddy `/mcp` route + provisioning) is
 **task 5**. Next: **M5 task 5** (deploy + infra: Caddy root routes, Cloudflare passthrough, secret provisioning,
 compose/env; push → migrations 010/011 apply).
+**M5 task 5 DONE + M5 task 6 IN PROGRESS (2026-07-15):** MCP + OAuth surface **deployed live at `braindan.cc`**
+(Caddy root routes, migrations 010/011 applied, `MCP_TOKEN_HMAC_SECRET`/Cloudflare-cache-bypass set by the user);
+a real Claude connector connects (a live 421-on-connect bug — FastMCP DNS-rebind allowed only localhost — was
+fixed in `1ed0ee0`) and **`search` is verified grounded over the graph**. The **OAuth-focused independent
+security review** ran — **APPROVE-WITH-MINORS, no must-fix** (no auth bypass / token forgery / replay / PKCE
+downgrade / SQLi / XSS; gate PASSES); its **hardening batch #1–#5** (CF-Connecting-IP rate-limit key, production
+secret boot-guard, clickjacking headers, loopback-only plaintext redirect, constant-time CSRF) is **built,
+reviewed, and now DEPLOYED + live-verified** (`1ed5a68`+`2dc8f92`, CI `29445868984` green; `/health` all-true
+confirms the boot guard passed → both prod secrets real; `X-Frame-Options`/CSP live on `/mcp`+`/authorize`).
+**Remaining to close M5 (user-driven live Accept — needs the real Claude connector, agent can't act as the
+external client):** `capture`→node · `get_node`/`traverse`/`build_context` · activity-visible MCP capture ·
+**revoke-all lockout** (run last, destructive) → then the **ChatGPT fast-follow** before M6. Code pushed through
+`2dc8f92`. — [08-logs/m5.md](08-logs/m5.md) task 6.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
