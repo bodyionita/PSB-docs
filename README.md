@@ -365,6 +365,22 @@ MCP `traverse`/`build_context` (task 4) + the M7 map. Config knobs (rule 9), wir
 dep. **499 tests green** (+16 unit) + real-PG edge-SQL smoke (un-fakeable union/keyset/tombstone; needs local pgvector up —
 pre-push gate), ruff clean; **independent review APPROVE — no must-fix** (3 of 6 minors fixed) — [08-logs/m5.md](08-logs/m5.md).
 Commits `ff4a729`/`bb33ae7`, **not pushed.** Next: **M5 task 2** (identity capsule distiller → `build_context` L0 + `identity://me` + wire into the M4 chat system prompt).
+**M5 task 2 DONE (2026-07-15):** identity capsule — new `app/identity/` package: `PgCapsuleSourceStore`
+(top profile hubs by canonical graph degree + recent memories + recent insights, tombstone-excluded) +
+`PgIdentityCapsuleStore` (`{text, generated_at, source_refs}` blob in `app_settings`, no migration, rule-1
+rebuildable) + `IdentityCapsuleService` — one `conspect` distill of the **fenced** blended source into a
+~300-token capsule; **best-effort (rule 7)** (no source / LLM down / empty **keeps the last capsule**);
+**single-flight** nightly job **04:35** (after profile-refresh/backfill) + on-demand **`POST
+/admin/identity-capsule/refresh`** (`202`/`409`) + CLI, each wrapped in `agent_runs`. Served as
+`build_context` **L0** (cheap `IdentityCapsuleReader` seam, never distilled inline, best-effort) **and**
+prepended to the M4 chat system prompt (fenced data-not-instructions) — in-app chat finally consumes it.
+The `identity://me` MCP resource stays task 4. Config knobs (rule 9). Also **closed the task-1 pre-push
+gate** (real local pgvector; fixed two smoke-harness fragilities — Windows UTF-8 + global-read isolation,
+`8afbb25`). **524 unit tests green + smoke 63/63** (5 new real-PG capsule checks), ruff clean; **independent
+review APPROVE-WITH-MINORS — no must-fix** (1 typing regression fixed `cb3c25a`; 3 logged) —
+[08-logs/m5.md](08-logs/m5.md) task 2. Commits `8afbb25`/`2ea5834`/`cb3c25a`, **not pushed.** Next: **M5
+task 3** (OAuth 2.1 AS: `authlib` `.well-known`/DCR/`/authorize`+PKCE/`/token`+refresh, opaque HMAC DB
+tokens, revoke-all + client/token migration).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
