@@ -356,6 +356,15 @@ token distribution" open question** (it's the add-connector OAuth flow). Accept 
 (revoke-all locks it out); **ChatGPT fast-follow before M6**. **6 tasks** open in [08 §M5](08-implementation-plan.md).
 **Paused before implementation** per [09](09-session-protocol.md) — **no code this session.** Next: build **M5 task 1**
 (traverse primitive + `build_context` core), or respawn.
+**M5 task 1 DONE (2026-07-15):** the graph read side — `PgNeighborStore.neighbors` (one-hop, both-dir union, rel/direction
+filters, **keyset pagination** on `(origin,rel,dir,node_id)`, tombstoned endpoints excluded both ends) + `GraphService`
+`neighbors` (opaque base64 cursor, limit-clamped, `InvalidDirection`/`InvalidCursor`) and `build_context` (get_node via a
+`NodeReader` seam over search + a bounded neighbor tree: **depth ≤2** = 03-api contract, per-node **fanout cap** + `truncated`
+flag, path **cycle guard**; **L0 identity capsule deferred to task 2**). Thin over the `edges` table, no LLM call; shared by
+MCP `traverse`/`build_context` (task 4) + the M7 map. Config knobs (rule 9), wired into `app.state` + a `get_graph_service`
+dep. **499 tests green** (+16 unit) + real-PG edge-SQL smoke (un-fakeable union/keyset/tombstone; needs local pgvector up —
+pre-push gate), ruff clean; **independent review APPROVE — no must-fix** (3 of 6 minors fixed) — [08-logs/m5.md](08-logs/m5.md).
+Commits `ff4a729`/`bb33ae7`, **not pushed.** Next: **M5 task 2** (identity capsule distiller → `build_context` L0 + `identity://me` + wire into the M4 chat system prompt).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

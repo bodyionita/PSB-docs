@@ -458,7 +458,7 @@ an **MCP-SDK-client protocol + scripted-OAuth integration harness** (pre-push ga
 **OAuth-focused independent security review**. **ChatGPT is a fast-follow verification before
 M6** (may need thin `search`/`fetch` aliases; its quirks must not block M5's close).
 
-- [ ] **Task 1** — traverse primitive (`GraphService.neighbors`) + `build_context` core (service layer; M7-reused; fakes + real-PG edge-SQL smoke)
+- [x] **Task 1** — traverse primitive (`GraphService.neighbors`) + `build_context` core (service layer; M7-reused; fakes + real-PG edge-SQL smoke). **DONE 2026-07-15** — `PgNeighborStore.neighbors` (both-dir union, rel/direction filters, keyset pagination on `(origin,rel,dir,node_id)`, tombstone-excluded both ends) + `GraphService.neighbors`/`build_context` (opaque cursor, depth ≤2 + fanout cap + cycle guard, `NodeReader` seam over search; L0 capsule deferred to task 2). 16 unit tests + real-PG smoke; independent review APPROVE, no must-fix (3 minors fixed) — [08-logs/m5.md](08-logs/m5.md). Commits `ff4a729`/`bb33ae7`, **not pushed**.
 - [ ] **Task 2** — identity capsule (broadened-source 300-token distiller → `app_settings` blob + nightly refresh + on-demand trigger) **+ wire into the M4 chat system prompt**
 - [ ] **Task 3** — OAuth 2.1 AS (`authlib`: `.well-known`, DCR, `/authorize` gate, `/token`+PKCE+refresh, opaque HMAC DB tokens, revoke-all) + migration (client/token tables)
 - [ ] **Task 4** — MCP server + tools (SDK Streamable HTTP under `/mcp`; six tools; markdown renderers; `instructions`+descriptions+annotations+research Prompt; `capture` source-tag + burst queue; capsule L0 + `identity://me`; resource-server token validation) + protocol integration harness
