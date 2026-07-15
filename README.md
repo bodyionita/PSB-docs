@@ -253,9 +253,12 @@ recovered), capability chips, an "unreachable" tag, and last-success time; wire 
 Pydantic models; `relativeTime` hoisted to a shared `ui/` helper. No server code (ADR-006). tsc/eslint/build
 green; a **real-browser walkthrough vs a throwaway mock API** drove every render state **and a forced-failure→
 recovery transition** (amber→green, failures cleared, `last_error` stays sticky+muted). **Independent review
-APPROVE-WITH-MINORS — no must-fix** (3 minors all fixed). Commit `a82500b`, **not pushed**. **Remaining
-(deploy-gated, user's call):** push `9dad941` + `a82500b` → prod enumerates all providers + card renders on
-device — [08-logs/m4.md](08-logs/m4.md). Next: **push for the live Accept**, or **M5** planning.
+APPROVE-WITH-MINORS — no must-fix** (3 minors all fixed). Commit `a82500b`. **DEPLOYED to prod (2026-07-15):**
+pushed `9dad941` + `a82500b`; CI run `29390674935` all green; `braindan.cc` live, `/health` all-true;
+`GET /admin/providers` confirmed deployed + session-gated (`401` unauth). **Remaining = the user's on-device
+glance** (auth-gated, agent must not handle the login secret): log into `braindan.cc` → Settings → **Providers**
+and confirm the card enumerates every provider read-only — [08-logs/m4.md](08-logs/m4.md). Next: **user's
+on-device Providers glance to close Task 2**, then **M5** planning (`/grilling` first).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
