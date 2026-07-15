@@ -328,6 +328,18 @@ friendly labels and its default follows the saved Chat routing **forward-live** 
 APPROVE — no must-fix**. Commit `fc193c0`, **not pushed**. Next: **Task 5** (live M4 follow-up 3 Accept — deploy the
 5 commits `7c69449`→`fc193c0`; migration 009 applies; saved routing preserved; card shows 5 rows / one "Claude"; chat
 still grounded → independent review → pause).
+**M4 follow-up 3 · Task 5 DONE → M4 follow-up 3 (provider/model/effort separation) COMPLETE (2026-07-15).**
+Pushed the 5 commits `7c69449`→`fc193c0`; CI run `29397900778` all green; **migration 009 applied** on prod
+(`alembic upgrade head` under `set -e`); `/api/v1/health` all-true. All Accept criteria met — the registry exposes
+**5 providers with one `claude`** serving Opus+Sonnet, the **Providers card shows one "Claude" row** (no raw id),
+Settings → Models picks **model ids** with `effort_by_model`, saved `model_routing` was **migrated in place** (not
+silently reset — prefix hazard handled), chat stays **grounded + cited on Opus/Sonnet/Llama**, and **no `claude-max`/
+`claude_max` string remains** in code/config/UI except the deliberate legacy-fold map + migration test input. Live
+PWA surfaces user-confirmed against the existing prod session (agent never handled the login secret); **independent
+review APPROVE — no must-fix** (a fresh agent re-derived all 8 criteria from ADR-045 + 03-api and checked the
+`a82500b..fc193c0` diff). Provider is now first-class and distinct from model; grounded chat + provider observability
+live at `braindan.cc` — [08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 5". **Code pushed through `fc193c0`.**
+Next: **M5 (MCP server)** — planning session (`/grilling` first).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
