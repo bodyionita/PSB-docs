@@ -105,6 +105,7 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 | `POST /admin/backup` | force store git commit+push → `{ committed, pushed }` |
 | `POST /admin/captures/{id}/reorganize` | re-organize a capture's raw text, replace its **content** nodes ([ADR-038](adr/038-reorganize-preserves-shared-entity-hubs.md): entity hubs are shared substrate — never deleted); `202` |
 | `GET /admin/providers` | **(M4 follow-up, [ADR-044](adr/044-provider-observability-surface.md); [ADR-045](adr/045-provider-model-effort-separation.md))** provider observability — **one row per PROVIDER** (5: `claude`, `nebius`, `groq`, `openai`, `ollama`): `{ id, label, capabilities:[chat\|stt\|embedding], reachable, last_error:{message,at}\|null, last_success_at, consecutive_failures }`. `label` is the **friendly provider name** ("Claude", "Nebius", …), **not** a model — ADR-045 (`claude` serves Opus+Sonnet as *models*, one health signal for one CLI/credential; no per-model breakdown, no raw id in the UI). `reachable` is a **live `Provider.health()` probe** (config-reachability, **not** a success guarantee); `last_error` is **sticky** (a later success does not clear it) with `last_success_at`/`consecutive_failures` beside it — state is **in-memory** on the registry (resets on redeploy, no persistence). Session-gated; **no LLM call**. `/health` stays public + untouched |
+| `POST /admin/mcp/revoke-all` | **(M5 task 3, [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) §2)** the **"revoke all MCP access"** switch — flags every live MCP access + refresh token in one UPDATE → `{ revoked }`. Instant + total (single-user; per-connector management → M8). Session-gated (the OAuth flow itself is the public surface; revocation is the private control). A connector must re-run the OAuth flow after this |
 | `GET /health` | no auth: `{ status, db, store, git_remote, backups }`, `503` when degraded ([ADR-014](adr/014-vault-history-durability.md) §6) |
 
 ## MCP server (M5, [ADR-028](adr/028-one-service-layer-mcp-peer-surface.md) + [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md))
@@ -143,8 +144,12 @@ Cloudflare un-cached):
 | `GET/POST /authorize` | the choke point — **Argon2id password + explicit consent** (valid PWA session short-circuits to consent), **CSRF + rate-limited**, **PKCE** |
 | `POST /token` | code→token + refresh; **opaque HMAC-hashed DB tokens** (~1h access, long-lived sliding refresh) |
 
-Tokens are **independently revocable** (ADR-028 §5) — a **"revoke all MCP access"** control is
-the M5 mechanism (single-user; per-connector management → M8). Single full-access scope in M5.
+Tokens are **independently revocable** (ADR-028 §5) — a **"revoke all MCP access"** control
+(`POST /admin/mcp/revoke-all`, session-gated) is the M5 mechanism (single-user; per-connector
+management → M8). Access tokens are opaque, HMAC-hashed in `mcp_tokens` (~1h), with a long-lived
+**sliding refresh** rotated on each `/token` use (reuse of a rotated-out refresh revokes the
+client — replay guard); `/authorize` requires **PKCE S256** + a double-submit-CSRF-protected,
+rate-limited password/consent gate. Single full-access scope (`brain`) in M5.
 Token distribution is the add-connector OAuth flow (no manual token). **Accept gate = a real
 Claude connector** (mobile app / claude.ai web) live; **ChatGPT is a fast-follow before M6**
 (may add thin `search`/`fetch` aliases for its deep-research connector).

@@ -381,6 +381,24 @@ review APPROVE-WITH-MINORS — no must-fix** (1 typing regression fixed `cb3c25a
 [08-logs/m5.md](08-logs/m5.md) task 2. Commits `8afbb25`/`2ea5834`/`cb3c25a`, **not pushed.** Next: **M5
 task 3** (OAuth 2.1 AS: `authlib` `.well-known`/DCR/`/authorize`+PKCE/`/token`+refresh, opaque HMAC DB
 tokens, revoke-all + client/token migration).
+**M5 task 3 DONE (2026-07-15):** the self-hosted **OAuth 2.1 authorization server** gating the MCP surface
+([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) §2) — new **`app/oauth/`** package (errors · store ·
+metadata · consent · service) + a **root-mounted** `routers/oauth.py` (`/.well-known/oauth-*` discovery, open
+DCR `/register`, the `GET+POST /authorize` password+consent gate, `/token`) + session-gated `POST
+/admin/mcp/revoke-all` + **migration 010** (`mcp_oauth_clients`/`mcp_auth_codes`/`mcp_tokens`, all rebuildable
+op-state). **authlib supplies only the security-critical crypto** (PKCE S256, secure token gen, RFC-8414
+metadata schema); the flow is hand-rolled over asyncpg (rule 5), mirroring the session-token HMAC discipline.
+Opaque HMAC-hashed codes+tokens; **atomic single-use** codes with replay-revoke; **refresh rotation** with
+reuse detection; PKCE-required + **double-submit CSRF** + login-rate-limited password/consent gate with a
+**PWA-session short-circuit**; RFC-8707 resource binding; the **revoke-all** switch; `validate_access_token`
+seam ready for task 4. Config (`public_base_url`, `mcp_token_hmac_secret`, `mcp_oauth_scope`, TTLs). **573 unit
+tests green** (+49) + **11 real-PG smoke checks** (single-use consume, revoke-all count, FK cascade → 74/74) +
+a **scripted HTTP E2E** (real ASGI + real `PgOAuthStore` + local pgvector: discovery→DCR→authorize→token→
+validate→refresh→revoke, all PASS); migration 010 up/down round-trip verified; ruff clean. `authlib>=1.3`
+added to `pyproject`/lock. **Commit(s) pending, not pushed;** independent review pending. `MCP_TOKEN_HMAC_SECRET`/
+`PUBLIC_BASE_URL` provisioning + Caddy root routes are **task 5**. Next: **M5 task 4** (MCP server: SDK
+Streamable HTTP under `/mcp`, six tools + markdown renderers + `instructions`/prompt, `capture` source+burst,
+capsule L0 + `identity://me`, resource-server token validation).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
