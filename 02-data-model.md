@@ -203,13 +203,13 @@ a queue kind** — no separate table; approved vocabulary lives in config + `app
 the reflection agent (M10). (Table kept until M10 replaces it; no new writers.)
 
 **`chat_sessions` / `chat_messages`** — unchanged ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):
-`chat_messages.model` records the resolved model; `sources` = cited **nodes** (renumbered).
+`chat_messages.model` records the resolved **model id** (the vendor string; [ADR-045](adr/045-provider-model-effort-separation.md) — legacy provider-id rows like `claude-max`/`nebius` are **left untouched** and stay label-tolerated, not rewritten); `sources` = cited **nodes** (renumbered).
 Chat-distiller cursor tracks session activity for nightly distillation.
 
 **`auth_sessions`** — unchanged. **MCP bearer token**: stored as a hash in env/settings
 (single-user), revocable independently ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)).
 
-**`app_settings`** — unchanged shape; keys grow (`model_routing` — jsonb, **3 groups** `chat`/`conspect`/`quick` each `{active, fallback, effort_by_provider}`, [ADR-025] + [ADR-043](adr/043-quick-routing-tier-m4.md); config seeds the default when unset), vocabulary,
+**`app_settings`** — unchanged shape; keys grow (`model_routing` — jsonb, **3 groups** `chat`/`conspect`/`quick` each `{active, fallback, effort_by_model}` where `active`/`fallback` + the `effort_by_model` keys are **model ids** (vendor strings; [ADR-045](adr/045-provider-model-effort-separation.md) — was `effort_by_provider`/provider ids, **migrated in place** by an idempotent Alembic revision, vision P10), [ADR-025] + [ADR-043](adr/043-quick-routing-tier-m4.md); config seeds the default when unset), vocabulary,
 connector lookback overrides — default **6 months** per connector, UI-overridable).
 
 ## 4. Chunking policy

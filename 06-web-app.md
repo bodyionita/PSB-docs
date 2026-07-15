@@ -105,17 +105,22 @@ login header; kept as a single config constant so it's changeable at zero cost.
   retro-consolidation job.
 - **Connectors (M9):** per-connector config incl. the lookback override (default 6 months).
 - **Models section (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md) +
-  [ADR-043](adr/043-quick-routing-tier-m4.md)):** **three** routing groups — **Chat**, **Conspect**,
-  and **Quick** (trivial tasks, e.g. session titling; default Sonnet-low / Nebius) — each an
-  active-model dropdown + fallback dropdown + an **effort selector shown only for models that support
-  it** (Claude yes, Nebius no). Choices + effort levels come from `GET /settings` (registry-sourced,
-  never hardcoded); saved via `PUT /settings/models`. This is where the M0/M4 model-and-effort control
-  lives; the chat composer picker is a per-conversation override of the Chat group's active model.
-- **Providers status (M4 follow-up, [ADR-044](adr/044-provider-observability-surface.md)):** a
-  **read-only** card over `GET /admin/providers` — one row per provider with a status dot (**green** =
-  `consecutive_failures == 0`, **amber** = `> 0`) + the sticky `last_error` line. Surfaces *why* a
-  provider last fell back (the M4 silent-fallback gap, vision P8). No actions, no editing — a thin
-  TanStack-Query read (ADR-006).
+  [ADR-043](adr/043-quick-routing-tier-m4.md), [ADR-045](adr/045-provider-model-effort-separation.md)):**
+  **three** routing groups — **Chat**, **Conspect**, and **Quick** (trivial tasks, e.g. session titling;
+  default Sonnet-low / Nebius) — each an active-**model** dropdown + fallback dropdown + an **effort
+  selector shown only for models that support it** (Claude yes, Nebius no). The dropdowns pick a **model**
+  (ADR-045 — "Claude Opus 4.8" / "Claude Sonnet 4.6" / "Llama 3.3 70B"; the *provider* is derived, so both
+  Claude models sit under the one `claude` provider and no `claude-max` id is shown); effort is keyed by
+  model (`effort_by_model`). Choices + effort levels come from `GET /settings` (registry-sourced, never
+  hardcoded); saved via `PUT /settings/models`. This is where the M0/M4 model-and-effort control lives;
+  the chat composer picker is a per-conversation override of the Chat group's active model.
+- **Providers status (M4 follow-up, [ADR-044](adr/044-provider-observability-surface.md);
+  [ADR-045](adr/045-provider-model-effort-separation.md)):** a **read-only** card over
+  `GET /admin/providers` — **one row per provider** (5: Claude, Nebius, Groq, OpenAI, Ollama) labeled by
+  **friendly provider name** (ADR-045 — `claude` appears **once**, serving Opus+Sonnet; no raw id, no
+  per-model breakdown) with a status dot (**green** = `consecutive_failures == 0`, **amber** = `> 0`) +
+  the sticky `last_error` line. Surfaces *why* a provider last fell back (the M4 silent-fallback gap,
+  vision P8). No actions, no editing — a thin TanStack-Query read (ADR-006).
 - **Jobs & connectors:** the roster (last-run status, "run now", schedules) lives in the **M8 ops
   console** (screen 3); per-connector *config* lands here at M9. (The conspect model that was
   drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)

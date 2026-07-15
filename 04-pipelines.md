@@ -16,7 +16,9 @@ at each milestone. 2.x history in git.)
 Pipelines are decoupled: each fails, retries and evolves independently. Every step transition is
 persisted (`captures.status`, `agent_runs`) — nothing silent (vision P8). All LLM calls resolve
 through the provider registry ([ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md));
-routing + effort are UI-editable per group ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md));
+routing + effort are UI-editable per group ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)) —
+a group's chain is a chain of **model ids** ([ADR-045](adr/045-provider-model-effort-separation.md): provider ≠
+model; `claude` is one provider serving Opus + Sonnet, resolved to its provider + vendor string per call);
 STT walks Groq→OpenAI ([ADR-020](adr/020-stt-fallback-chain-groq-primary.md)).
 
 **The organizer is the single writer of graph structure** (01 invariant 7): every pipeline that

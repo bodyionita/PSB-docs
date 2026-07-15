@@ -260,7 +260,21 @@ against the live endpoint, existing prod session — agent never handled the log
 registered providers read-only** (claude-max/-sonnet + nebius = Chat, openai/groq = Speech, ollama = Embedding),
 green dots, config-derived capabilities, **0 interactive controls**; all "No successful call yet" (correct
 post-redeploy zero-state). **Both M4 follow-ups now complete; graph-native chat + observability live at
-`braindan.cc`** — [08-logs/m4.md](08-logs/m4.md). Next: **M5 (MCP server)** — planning session (`/grilling` first).
+`braindan.cc`** — [08-logs/m4.md](08-logs/m4.md).
+**M4 follow-up 3 (provider/model/effort separation) GRILLED TO BUILD-READY (2026-07-15 — [ADR-045](adr/045-provider-model-effort-separation.md)):**
+the code conflated **provider** with **model** (two fake `claude-max`/`claude-max-sonnet` ids over one
+`claude` CLI → duplicate Providers-card rows + a `claude-max` id leaking into the UI). Grilled
+decision-by-decision to make **provider/model/effort** first-class: the **routable unit is a model id**
+(provider derived; Option A), a **model id = the raw vendor string**, `claude` collapses to **one provider
+serving Opus+Sonnet** via per-call `--model`, concept fixed across all providers while the picker stays
+**chat-only**, config uses **named scalars** (`CLAUDE_OPUS_MODEL`/`CLAUDE_SONNET_MODEL`/`CLAUDE_EFFORT`),
+saved routing **migrated in place** (idempotent Alembic) while historical `chat_messages.model` is **left +
+legacy-tolerated** (P10), `effort_by_provider`→**`effort_by_model`**, and the Providers card renders **one
+row per provider** (friendly name, no raw id). **Supersedes** the routing-unit of [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)
++ the `claude-max-sonnet` mechanism of [ADR-043](adr/043-quick-routing-tier-m4.md); **refines** [ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md).
+**5 tasks** open in [08 §M4 follow-up 3](08-implementation-plan.md) (server core · migration · server API ·
+web · live Accept). **Paused before implementation** per [09](09-session-protocol.md) — **no code this session.**
+Next: build task 1 (server core), or **M5 (MCP server)** planning (`/grilling` first).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

@@ -384,6 +384,40 @@ read-only on device; independent review clean on both tasks.
 - [x] 1 server (2026-07-15) — `ProviderStatusTracker` collaborator (in-memory, sticky `last_error` + `last_success_at` + `consecutive_failures`, injectable clock) wired at all 3 registry call sites (chat/STT/**embedding** — the previously-unrecorded no-fallback leg, ADR-044's key blind spot; recorded then re-raised, nothing swallowed) + session-gated `GET /admin/providers` (live concurrent `health()` probe via `asyncio.gather`, defensive against a raising probe) + `capabilities` from configuration (`can_chat`/`can_transcribe`/`can_embed`, not the class hierarchy) + response models. `/health` untouched, no migration. 476 tests green (+16), ruff clean; **independent review APPROVE-WITH-MINORS — no must-fix** (added the one worthwhile minor: an HTTP-level endpoint test covering the `last_error` present/null mapping + session gating). Commit `9dad941`, **not pushed**.
 - [x] 2 web + live Accept — **DONE → M4 follow-up 2 (provider observability) COMPLETE** (2026-07-15). Read-only Settings **Providers** card: a thin TanStack read (`useProviders`, 15s poll) over `GET /admin/providers` with per-provider status dot (green `consecutive_failures == 0` / amber `> 0`), sticky `last_error` line (muted once recovered), capability chips, an "unreachable" tag, and last-success time; wire types (`ProviderStatusItem` etc.) exact-match the server Pydantic models; `relativeTime` extracted to a shared `ui/` helper (dedup, rule 10). No server code (ADR-006). tsc/eslint/build green; a **real-browser walkthrough vs a throwaway mock API** drove every render state **and a forced-failure→recovery transition through the endpoint shape** (amber→green, `consecutive_failures` cleared, `last_error` stays sticky+muted — console clean on the Settings surface). **Independent review APPROVE-WITH-MINORS — no must-fix** (3 minors all fixed: shared `relativeTime`, exhaustive `Record<ProviderCapability,…>`, muted recovered-error line). Commit `a82500b`. **DEPLOYED to prod (2026-07-15):** pushed the two M4-follow-up commits (`9dad941` + `a82500b`) → CI green (server/web/secrets/deploy all ✓, no migration) → `braindan.cc` live, `/api/v1/health` all-true. `GET /admin/providers` confirmed **deployed + correctly session-gated** (`401 Not authenticated` unauth); PWA serves 200. **Live prod Accept VERIFIED (2026-07-15)** in the browser pane against the real endpoint (existing prod session — agent never handled the login secret): Settings → **Providers** enumerates **all 6 registered providers** (claude-max/claude-max-sonnet=Chat, nebius=Chat, openai/groq=Speech, ollama=Embedding) with correct labels + config-derived capabilities + green dots, and the panel has **zero interactive controls** (read-only confirmed). All show "No successful call yet" — the correct post-redeploy zero-state (in-memory status resets on boot; `last_success_at`/`last_error` populate as providers get exercised). The *local* forced-failure→recovery through the real endpoint was already covered by task 1's HTTP-level test + the task-2 mock walkthrough.
 
+### M4 follow-up 3 — provider/model/effort separation (GRILLED TO BUILD-READY 2026-07-15 — [ADR-045](adr/045-provider-model-effort-separation.md))
+
+The system conflated **provider** with **model**: to route Opus for `chat`/`conspect` and Sonnet for
+`quick`, the registry ran **two fake `ClaudeMaxProvider` ids** (`claude-max`/`claude-max-sonnet`) over
+the *one* `claude` CLI — so the ADR-044 Providers card shows two `claude` rows for one credential, and
+the raw `claude-max` id leaks into the UI. Grilled decision-by-decision (2026-07-15, per
+[09](09-session-protocol.md)) to make **provider / model / effort** first-class:
+the **routable unit becomes a model id** (provider is an attribute of the model — Option A); a **model id
+is the raw vendor string** (`claude-opus-4-8`, …); `claude` collapses to **one provider serving Opus +
+Sonnet** via the CLI's per-call `--model`; the concept is fixed across **all** providers internally while
+the editable picker stays **chat-only**; config declares Claude's models as **named scalars**
+(`CLAUDE_OPUS_MODEL`/`CLAUDE_SONNET_MODEL`/`CLAUDE_EFFORT`); saved routing is **migrated** (idempotent
+Alembic, old id→vendor string) while historical `chat_messages.model` is **left as-is** with
+legacy-tolerant labels (vision P10 — migrate config, don't rewrite audit); the API/web field
+**`effort_by_provider`→`effort_by_model`**; the Providers card renders **one row per provider** (friendly
+name, no raw id). **Supersedes** the routing-unit of [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)
++ the `claude-max-sonnet` mechanism of [ADR-043](adr/043-quick-routing-tier-m4.md); **refines**
+[ADR-004](adr/004-provider-registry-claude-primary-nebius-fallback.md). Doc reconciliations recorded
+(this note + 02/03/04/06 + README). **Paused before implementation** per [09](09-session-protocol.md).
+**No code this session.**
+
+**Accept:** the registry exposes **5 providers** (`claude` serving Opus+Sonnet, `nebius`, `groq`, `openai`,
+`ollama`); Settings → Models picks **model ids** (Opus / Sonnet / Llama 3.3, provider derived) with
+`effort_by_model`; a group's saved routing survives the rename via the migration (a pre-seeded
+`claude-max` override resolves to `claude-opus-4-8`, not a silent reset); the Providers card shows **one
+"Claude" row**; chat stays grounded + cited on Opus/Sonnet/Llama; no `claude-max`/`claude_max` string
+remains in code, config, or UI; independent review clean on every task.
+
+- [ ] 1 server core — `ClaudeProvider` (serves N models); registry chat-model **catalog** (`{id, provider, label, supports_effort, effort_levels}`) + model→provider index; `ModelRoutingService` keyed by model id; config named scalars (`CLAUDE_OPUS_MODEL`/`CLAUDE_SONNET_MODEL`/`CLAUDE_EFFORT`); `*_chain` seeds → model strings; `effort_by_provider`→`effort_by_model`. Update all tests.
+- [ ] 2 migration — idempotent Alembic revision rewriting saved `app_settings.model_routing` (`claude-max`→`claude-opus-4-8`, `claude-max-sonnet`→`claude-sonnet-4-6`, `nebius`→`meta-llama/Llama-3.3-70B-Instruct`; no-op when empty) + legacy-tolerant `chat_messages.model` label mapping (history untouched).
+- [ ] 3 server API — `/settings`, `/chat/models`, `/admin/providers` response shapes (model-id semantics, `effort_by_model`, provider-name label, provider-only rows).
+- [ ] 4 web — types (`effort_by_model`, provider label), ModelsPanel (model-id picks), chat composer picker, ProvidersPanel (provider-only, drop id).
+- [ ] 5 live Accept — deploy → migration applies → saved routing preserved → card shows the 5 provider rows (one "Claude") → chat still grounded → independent review → pause.
+
 ## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))
 
 **Scope.** Token-authenticated MCP server on the VPS exposing the service layer: `search`
