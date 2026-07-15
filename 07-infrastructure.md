@@ -32,6 +32,12 @@ Obsidian references removed — renames land with M3. 1.2 = M2 Accept `ollama-in
   `/api` = API) — Vercel/Cloudflare Pages/Netlify were evaluated and rejected (no cost
   benefit for a single-user static PWA + they force cross-origin cookie rework of ADR-007).
   See [ADR-013](adr/013-web-stays-on-vps-single-origin.md).
+- **MCP + OAuth (M5, [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)):** the remote MCP
+  server and its OAuth 2.1 endpoints live on the **same origin**, but at **root-level** paths
+  (OAuth discovery is spec-fixed at the origin root) — Caddy proxies `/mcp`,
+  `/.well-known/oauth-*`, `/authorize`, `/token`, `/register` → `api:8000` alongside `/api`. No
+  subdomain, no new container. **Cloudflare must pass these paths through un-cached** (proxied
+  DNS is fine; just no caching on `/mcp` + the OAuth paths).
 - **DNS/TLS edge:** Cloudflare, proxied DNS (origin IP hidden). Caddy terminates TLS on
   origin with a **Cloudflare Origin CA** certificate (Cloudflare "Full (strict)") — explicit
   `tls` directive, no ACME; cert+key delivered by CI ([ADR-017](adr/017-tls-cloudflare-origin-ca.md)).
@@ -146,9 +152,11 @@ repo with any editor — any external client must be **merge-only, never force-p
   `GROQ_STT_MODEL` (default `whisper-large-v3`) — all [ADR-020](adr/020-stt-fallback-chain-groq-primary.md)/replan —
   `SCHEDULER_TZ`, `GRAPH_STORE_PATH` + `GRAPH_STORE_REPO` (ex-`VAULT_PATH`, renamed/added at M3 —
   [ADR-031](adr/031-m3-organizer-and-contract-extensions.md)), `NODE_TYPES`, `EDGE_RELS`,
-  `ENTITY_MATCH_MIN_CONF`, `SESSION_COOKIE_SECURE`, `ENVIRONMENT`, `R2_BUCKET`; **M5 adds the
-  MCP bearer-token secret** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) to the
-  Actions secrets set.
+  `ENTITY_MATCH_MIN_CONF`, `SESSION_COOKIE_SECURE`, `ENVIRONMENT`, `R2_BUCKET`; **M5 adds
+  `MCP_TOKEN_HMAC_SECRET`** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — MCP OAuth
+  access/refresh tokens are opaque and HMAC-hashed at rest, like sessions; **replaces** the
+  static "MCP bearer-token secret" once sketched under ADR-028; the agent never handles the
+  value) to the Actions secrets set.
 - **Deploy renders** `.env = defaults.env + secrets`, `scp`s it to the VPS mode 600, then
   `compose up`. It **also renders the origin TLS files** `deploy/origin.crt` / `origin.key`
   from `ORIGIN_CERT_PEM` / `ORIGIN_KEY_PEM` and `scp`s them mode 600 for Caddy to mount

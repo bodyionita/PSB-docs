@@ -198,6 +198,9 @@ canonical-edge expansion of retrieved nodes), then agentic traversal.
 
 - Heavy agent work runs **03:00–05:00 Europe/Bucharest**, staggered: connectors → reindex →
   distillers → reflection; store backup sweep 04:55 + debounced after every write batch.
+  **`identity-capsule-refresh` joins the roster at M5** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)/[ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)
+  #1 — runs after profile-refresh so it distills over fresh hubs; `conspect` tier, on-demand
+  triggerable like every job; `build_context` serves the last-generated blob, never inline).
 - **Day/night effort split ([ADR-032](adr/032-prior-art-adoptions.md), via ADR-025 routing):**
   the sync capture-organize defaults to lower effort; nightly consolidation/profile/reflection
   jobs default to higher effort — cheap by day, strong by night.

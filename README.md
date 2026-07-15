@@ -339,7 +339,23 @@ PWA surfaces user-confirmed against the existing prod session (agent never handl
 review APPROVE — no must-fix** (a fresh agent re-derived all 8 criteria from ADR-045 + 03-api and checked the
 `a82500b..fc193c0` diff). Provider is now first-class and distinct from model; grounded chat + provider observability
 live at `braindan.cc` — [08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 5". **Code pushed through `fc193c0`.**
-Next: **M5 (MCP server)** — planning session (`/grilling` first).
+**M5 (MCP server) GRILLED TO BUILD-READY (2026-07-15 — [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md), decision-by-decision).**
+The "smallest milestone" grew a real spine: the connection surfaces the user wants — **mobile Claude app + claude.ai web
+(custom connectors)** — require an **OAuth 2.1 flow**, not a static bearer, so M5 stands up a **self-hosted OAuth 2.1
+authorization server** (`authlib`: `.well-known` discovery, open DCR, `/authorize` password+consent gate w/ PKCE, opaque
+HMAC-hashed DB tokens ~1h + long-lived sliding refresh, **revoke-all**, single scope) — the same build unlocks Claude
+Desktop + ChatGPT (Claude Code CLI deferred). Remote **`mcp` SDK Streamable HTTP under `/mcp`** on the existing `api`
+container, single origin (Caddy root routes, Cloudflare un-cached). Tools are **thin over the service layer, markdown-rendered**
+(IDs verbatim, cross-model; hub edge cap + `traverse` pointer): `search`/`get_node`/`traverse` (new `GraphService.neighbors`
+one-hop primitive, cursor-paginated — M7 reuses it)/`build_context` (depth ≤ 2, **identity capsule L0**)/`list_planes|types`/
+`capture` (`source: mcp`, burst-queued, fast ack). Plus an `initialize` **`instructions`** usage capsule + tool descriptions
++ annotations + a **research-via-MCP Prompt** (ADR-033 #6). The **identity capsule** (ADR-033 #1, refined — insights barely
+exist at M5): broadened source (hubs + recent memories + insights), **300-token** nightly distill → `app_settings` blob,
+served as `build_context` L0 + `identity://me` **and wired into the M4 chat system prompt in M5**. **Resolves the old "MCP
+token distribution" open question** (it's the add-connector OAuth flow). Accept gate = a **real Claude connector** live
+(revoke-all locks it out); **ChatGPT fast-follow before M6**. **6 tasks** open in [08 §M5](08-implementation-plan.md).
+**Paused before implementation** per [09](09-session-protocol.md) — **no code this session.** Next: build **M5 task 1**
+(traverse primitive + `build_context` core), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
@@ -398,8 +414,9 @@ If you are an AI (or human) picking this up with no prior context:
    starting at the first milestone whose acceptance criteria don't pass yet. Do not skip ahead.
 4. Anything ambiguous or contradictory: fix the docs first (new ADR if architectural),
    then implement. Never silently diverge from these documents.
-5. Things intentionally NOT decided yet (ask the user when reached): Slack app creation (M9),
-   MCP token distribution (M5). Decided at the M3 grilling: graph-store repo = **`PSB-graph`**
+5. Things intentionally NOT decided yet (ask the user when reached): Slack app creation (M9).
+   (**MCP token distribution — RESOLVED** at the M5 grilling: OAuth 2.1 connector flow, no manual
+   token — [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md).) Decided at the M3 grilling: graph-store repo = **`PSB-graph`**
    (`PSB-vault` archived after the Accept — zero manual VPS steps, ADR-031). Already provisioned:
    domain (`braindan.cc`), Cloudflare, Supabase, code repo, and **`PSB-graph` created + VPS deploy
    key added with write access (2026-07-14)** — the task-9 cutover's GitHub-side prep is complete.

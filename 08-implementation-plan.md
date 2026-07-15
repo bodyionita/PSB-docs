@@ -418,26 +418,52 @@ remains in code, config, or UI; independent review clean on every task.
 - [x] 4 web — types (`effort_by_model`, provider label), ModelsPanel (model-id picks), chat composer picker, ProvidersPanel (provider-only, drop id). **DONE 2026-07-15** ([08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 4"), commit `fc193c0`, **not pushed**; wire types renamed `effort_by_provider`→`effort_by_model` (`GroupRoutingModel`/`ModelRoutingUpdate`) + `provider` added to `RoutingModelItem`; `ModelsPanel` reads/seeds/dirty-tracks/PUTs `effort_by_model` (picks were already model-id-valued with server-friendly labels); `ProvidersPanel` drops the rendered raw provider id (friendly name only, one row per provider — ADR-045 §6; `id` kept as React key); chat composer picker unchanged under `{id,label,effort}` (comment refreshed). tsc/eslint/vite green; **real-browser walkthrough vs a throwaway mock API** drove all three surfaces (Models seeds `effort_by_model` + a save round-trips it, Providers renders the 5 friendly rows with no id, the composer shows model-id options with friendly labels and its default follows the saved Chat routing forward-live — console clean); **independent review APPROVE — no must-fix**.
 - [x] 5 live Accept — **DONE 2026-07-15** ([08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 5"). Pushed the 5 commits `7c69449`→`fc193c0`; CI run `29397900778` all green; **migration 009 applied** on prod (`alembic upgrade head` under `set -e`); `/api/v1/health` all-true. Accept criteria met — **5 providers / one "Claude" row**, model-id picks + `effort_by_model`, saved `model_routing` migrated in place (not reset; prefix hazard handled), chat grounded on Opus/Sonnet/Llama, **no `claude-max`/`claude_max` residual** (grep clean except the deliberate legacy-fold map + migration test input), CLAUDE.md rules intact. Live PWA surfaces user-confirmed against the existing prod session (agent never handled the login secret). **Independent review APPROVE — no must-fix** (fresh agent re-derived all 8 criteria from ADR-045 + 03-api and checked the `a82500b..fc193c0` diff). **M4 follow-up 3 COMPLETE.**
 
-## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))
+## M5 — MCP server ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md) · **GRILLED TO BUILD-READY 2026-07-15, [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)**)
 
-**Scope.** Token-authenticated MCP server on the VPS exposing the service layer: `search`
-(+temporal filters), `get_node`, `traverse` (center+depth+rel, **cursor-paginated**),
-`build_context` (get_node+traverse in one round-trip — [ADR-032](adr/032-prior-art-adoptions.md)),
-`list_planes`/`list_types`, `capture` (full organizer pipeline, `source: mcp`, burst-queued).
-`build_context` level-0 serves the **identity capsule** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md))
-— **building the capsule itself (the derived ~200-token "who I am" preamble + its sleep-cycle refresh)
-is deferred here from M4** (M4 kickoff grill); M4 chat consumes it once M5 lands it, and it also feeds
-the M4 chat system prompt at that point. No logic of its own; smallest milestone, biggest compounding effect (external LLMs start
-feeding the brain early). **Canonical usage pattern documented at M5 (ADR-033 #6):
-research-via-MCP** — the calling LLM queries the graph for what's known, finds gaps, does
-external research on its own plan, submits the distillate via `capture` with source refs
-(zero marginal cost; a server-side research connector is backlog only if this proves
-insufficient).
-**Accept (draft):** from a Claude conversation on any device: a `capture` lands as organized
-nodes; `search`+`get_node`+`traverse` answer a question about known graph content; token
-revocation locks it out; MCP-driven runs visible in activity.
+**Scope.** A remote MCP server exposing the service layer, reachable from external LLMs. The
+M5 grill (decision-by-decision, [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)) turned
+"smallest milestone" into a real multi-task build, because the connection surfaces the user
+wants — the **mobile Claude app + claude.ai web (custom connectors)** — require an **OAuth 2.1
+flow**, not a static bearer. The same OAuth build unlocks Claude Desktop + ChatGPT; Claude Code
+CLI is deferred.
+- **Transport/deploy:** official `mcp` SDK, **Streamable HTTP** under `/mcp` on the existing
+  `api` app, single origin `braindan.cc` (Caddy root routes; Cloudflare un-cached); one
+  container (ADR-003).
+- **Auth:** self-hosted **OAuth 2.1 AS** (`authlib`) — `.well-known` discovery, open DCR
+  (inert alone), `/authorize` **password + explicit-consent gate** (reuses Argon2id login,
+  CSRF + rate-limited, PKCE), **opaque HMAC-hashed DB tokens** (~1h access + long-lived sliding
+  refresh → no daily re-approve), **revoke-all** switch, single full scope. Resolves the old
+  "MCP token distribution" open question (it's the add-connector flow).
+- **Tools** (thin over the service layer, **markdown-rendered** at the boundary, IDs verbatim,
+  cross-model): `search`, `get_node`, `traverse` (new `GraphService.neighbors` one-hop
+  primitive — rel filter, both dirs, **cursor-paginated**; M7's map endpoint reuses it),
+  `build_context` (get_node + neighbors, **depth ≤ 2**, fanout caps; **identity capsule as L0**),
+  `list_planes`/`list_types`, `capture` (`source: mcp`, **burst-queued**, fast ack). Hub edge
+  cap + `traverse` pointer. MCP `initialize` **`instructions`** usage capsule + rich tool
+  descriptions + read/write annotations + a **research-via-MCP Prompt** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)
+  #6: query known → find gaps → research → `capture` distillate w/ source refs).
+- **Identity capsule** (ADR-033 #1, refined — insights barely exist at M5): **broadened source**
+  (top entity-profile hubs + recent memories + insights when present), **300-token** distill on
+  `conspect` → `app_settings` blob, **nightly refresh** + on-demand trigger; served as
+  `build_context` L0 **and** `identity://me` resource; **wired into the M4 chat system prompt in
+  M5** (in-app chat finally consumes it).
+- **Observability:** MCP captures → `agent_runs` (source-tagged, visible in activity); reads
+  unlogged.
 
-- [ ] M5 grilled to build-ready detail · tasks defined there
+**Accept:** the **Accept gate is a real Claude connector** (mobile app / claude.ai web) live
+against `braindan.cc/mcp`: OAuth approve → a `capture` lands as organized nodes; `search`+
+`get_node`+`traverse`+`build_context` (capsule L0) answer a question about known graph content;
+**revoke-all locks it out**; MCP capture visible in activity. Verification: fakes for logic +
+an **MCP-SDK-client protocol + scripted-OAuth integration harness** (pre-push gate) + an
+**OAuth-focused independent security review**. **ChatGPT is a fast-follow verification before
+M6** (may need thin `search`/`fetch` aliases; its quirks must not block M5's close).
+
+- [ ] **Task 1** — traverse primitive (`GraphService.neighbors`) + `build_context` core (service layer; M7-reused; fakes + real-PG edge-SQL smoke)
+- [ ] **Task 2** — identity capsule (broadened-source 300-token distiller → `app_settings` blob + nightly refresh + on-demand trigger) **+ wire into the M4 chat system prompt**
+- [ ] **Task 3** — OAuth 2.1 AS (`authlib`: `.well-known`, DCR, `/authorize` gate, `/token`+PKCE+refresh, opaque HMAC DB tokens, revoke-all) + migration (client/token tables)
+- [ ] **Task 4** — MCP server + tools (SDK Streamable HTTP under `/mcp`; six tools; markdown renderers; `instructions`+descriptions+annotations+research Prompt; `capture` source-tag + burst queue; capsule L0 + `identity://me`; resource-server token validation) + protocol integration harness
+- [ ] **Task 5** — deploy + infra (Caddy root routes, Cloudflare passthrough, `MCP_TOKEN_HMAC_SECRET` provisioning, compose/env; push → migration applies)
+- [ ] **Task 6** — live M5 Accept (Claude connector) + OAuth-focused independent security review → **ChatGPT fast-follow (before M6)**
 
 ## M6 — Chat-distiller + review queue ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
 

@@ -190,7 +190,10 @@ the store: a plain reindex preserves them, a full DB wipe leaves profile-search 
 
 **`captures`** — unchanged except `note_paths → node_paths`; follow-up columns
 ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)) and interaction logging
-([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over.
+([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over. **M5 adds a
+`source` column** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — `web` default \|
+`mcp` \| later `telegram`/`slack`; distinct from `kind` = text/voice), threaded to the node
+frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible.
 
 **`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). The
 chat-distiller registers here like any connector ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)).
@@ -214,11 +217,23 @@ the reflection agent (M10). (Table kept until M10 replaces it; no new writers.)
 `chat_messages.model` records the resolved **model id** (the vendor string; [ADR-045](adr/045-provider-model-effort-separation.md) — legacy provider-id rows like `claude-max`/`nebius` are **left untouched** and stay label-tolerated, not rewritten); `sources` = cited **nodes** (renumbered).
 Chat-distiller cursor tracks session activity for nightly distillation.
 
-**`auth_sessions`** — unchanged. **MCP bearer token**: stored as a hash in env/settings
-(single-user), revocable independently ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)).
+**`auth_sessions`** — unchanged.
+
+**MCP OAuth (M5, [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — supersedes the
+static-bearer sketch of ADR-028 §5):** two new tables. **`mcp_oauth_clients`** — dynamically
+registered clients (RFC 7591): `client_id` pk · metadata jsonb (redirect_uris, name) ·
+`created_at`. **`mcp_tokens`** — `id` pk · `client_id` fk · `token_hash` (HMAC-SHA256, like
+`auth_sessions`; plaintext only ever to the connector) · `kind` (`access`\|`refresh`) ·
+`expires_at` (~1h access; long-lived sliding refresh) · `revoked_at` null · `created_at`. Auth
+codes may be a third short-lived table or in-memory (PKCE-bound, single-use — impl detail at
+build). **Revoke-all** = flag all rows. Single full-access scope in M5.
 
 **`app_settings`** — unchanged shape; keys grow (`model_routing` — jsonb, **3 groups** `chat`/`conspect`/`quick` each `{active, fallback, effort_by_model}` where `active`/`fallback` + the `effort_by_model` keys are **model ids** (vendor strings; [ADR-045](adr/045-provider-model-effort-separation.md) — was `effort_by_provider`/provider ids, **migrated in place** by an idempotent Alembic revision, vision P10), [ADR-025] + [ADR-043](adr/043-quick-routing-tier-m4.md); config seeds the default when unset), vocabulary,
-connector lookback overrides — default **6 months** per connector, UI-overridable).
+connector lookback overrides — default **6 months** per connector, UI-overridable; **`identity_capsule`**
+— M5 [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)/[ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)
+#1, a derived blob `{text (~300 tok), generated_at, source_refs}` distilled nightly from entity-profile
+hubs + recent memories + insights, served as `build_context` L0 + the `identity://me` resource + the M4
+chat system prompt; rebuildable, regenerated never hand-kept).
 
 ## 4. Chunking policy
 

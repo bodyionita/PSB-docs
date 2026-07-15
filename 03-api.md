@@ -19,7 +19,7 @@ layer** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) — MCP tool 
 - Base path: `/api/v1` (Caddy serves the PWA at `/`, proxies `/api`).
 - Auth: session cookie (httpOnly, Secure, SameSite=Lax) via `/auth/login`
   ([ADR-007](adr/007-auth-password-session-cloudflare.md)); all endpoints require it except
-  `/auth/login` and `/health`. **MCP: bearer token**, separate and independently revocable.
+  `/auth/login` and `/health`. **MCP (M5): OAuth 2.1** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)) at root-level routes (`/mcp` + `/.well-known/oauth-*`, `/authorize`, `/token`, `/register`), separate from the web session and independently revocable — see the MCP section below.
 - Errors: `{"detail": "..."}` + proper status. 401 on missing/expired session.
 
 ## Auth
@@ -107,15 +107,44 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 | `GET /admin/providers` | **(M4 follow-up, [ADR-044](adr/044-provider-observability-surface.md); [ADR-045](adr/045-provider-model-effort-separation.md))** provider observability — **one row per PROVIDER** (5: `claude`, `nebius`, `groq`, `openai`, `ollama`): `{ id, label, capabilities:[chat\|stt\|embedding], reachable, last_error:{message,at}\|null, last_success_at, consecutive_failures }`. `label` is the **friendly provider name** ("Claude", "Nebius", …), **not** a model — ADR-045 (`claude` serves Opus+Sonnet as *models*, one health signal for one CLI/credential; no per-model breakdown, no raw id in the UI). `reachable` is a **live `Provider.health()` probe** (config-reachability, **not** a success guarantee); `last_error` is **sticky** (a later success does not clear it) with `last_success_at`/`consecutive_failures` beside it — state is **in-memory** on the registry (resets on redeploy, no persistence). Session-gated; **no LLM call**. `/health` stays public + untouched |
 | `GET /health` | no auth: `{ status, db, store, git_remote, backups }`, `503` when degraded ([ADR-014](adr/014-vault-history-durability.md) §6) |
 
-## MCP tools (M5, [ADR-028](adr/028-one-service-layer-mcp-peer-surface.md))
+## MCP server (M5, [ADR-028](adr/028-one-service-layer-mcp-peer-surface.md) + [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md))
 
-Bearer-token-authenticated MCP server exposing the same services — no logic of its own:
+Remote MCP server (`mcp` SDK, **Streamable HTTP**) at **`https://braindan.cc/mcp`**, mounted on
+the `api` app (single origin, single container). Exposes the same services — **no logic of its
+own**. Tool results are **LLM-optimized Markdown** (not JSON — token-efficient, cross-model
+Claude+GPT; **IDs rendered verbatim + labeled** so the model chains calls). Hub edge lists are
+capped inline at a config N with a `traverse` overflow pointer. The MCP `initialize`
+**`instructions`** field carries an authored usage capsule (what the brain is · the six tools +
+when to use each · the `search`→`build_context`→`capture` loop · temporal filters · the
+research-via-MCP pattern); each tool carries a rich `description` + annotations (`readOnlyHint`
+on reads, a write marker on `capture`). An invokable **research-via-MCP Prompt** encodes
+[ADR-033](adr/033-external-inspirations-obsidian-second-brain.md) #6. A read-only resource
+**`identity://me`** serves the identity capsule ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)
+#1) up-front without a node.
 
 | tool | maps to |
 |---|---|
 | `search(query, top_k?, planes?, types?, as_of?, since?/until?)` | SearchService (as `POST /search`, incl. RRF hybrid + temporal filters — [ADR-032](adr/032-prior-art-adoptions.md)) |
 | `get_node(id)` | as `GET /nodes/{id}` |
-| `traverse(id, rel?, depth?=1, cursor?)` | GraphService (as `GET /nodes/{id}/neighbors`) — center+depth+rel filter, **cursor-paginated** (LLM context is finite) |
-| `build_context(id, depth?)` | convenience: get_node + traverse bundled in one round-trip ([ADR-032](adr/032-prior-art-adoptions.md), Basic-Memory pattern) |
+| `traverse(id, rel?, depth?=1, cursor?)` | new **`GraphService.neighbors`** one-hop primitive (also serves `GET /nodes/{id}/neighbors`, M7) — center+rel filter, both directions, **cursor-paginated** (LLM context is finite) |
+| `build_context(id, depth?)` | convenience: get_node + neighbors bundled in one round-trip, **depth ≤ 2** with fanout caps ([ADR-032](adr/032-prior-art-adoptions.md), Basic-Memory pattern); **level-0 = the identity capsule** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md) #1) |
 | `list_planes()` / `list_types()` | vocabulary listings |
-| `capture(text)` | the **full organizer pipeline**, identical to `POST /capture/text` (`source: mcp`, burst-queued) — external LLMs never write nodes/edges directly |
+| `capture(text)` | the **full organizer pipeline**, identical to `POST /capture/text` (`source: mcp`, **burst-queued**, **fast ack** — returns id+status, LLM verifies via `search`) — external LLMs never write nodes/edges directly |
+
+**Auth — OAuth 2.1** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md), refines ADR-028 §5;
+`authlib`). The `api` app is authorization + resource server, root-level routes (Caddy-proxied,
+Cloudflare un-cached):
+
+| endpoint | purpose |
+|---|---|
+| `GET /.well-known/oauth-protected-resource` | RFC 9728 — points to the AS; resource id `https://braindan.cc/mcp` (RFC 8707) |
+| `GET /.well-known/oauth-authorization-server` | RFC 8414 — AS metadata |
+| `POST /register` | RFC 7591 open **Dynamic Client Registration** (inert alone) |
+| `GET/POST /authorize` | the choke point — **Argon2id password + explicit consent** (valid PWA session short-circuits to consent), **CSRF + rate-limited**, **PKCE** |
+| `POST /token` | code→token + refresh; **opaque HMAC-hashed DB tokens** (~1h access, long-lived sliding refresh) |
+
+Tokens are **independently revocable** (ADR-028 §5) — a **"revoke all MCP access"** control is
+the M5 mechanism (single-user; per-connector management → M8). Single full-access scope in M5.
+Token distribution is the add-connector OAuth flow (no manual token). **Accept gate = a real
+Claude connector** (mobile app / claude.ai web) live; **ChatGPT is a fast-follow before M6**
+(may add thin `search`/`fetch` aliases for its deep-research connector).
