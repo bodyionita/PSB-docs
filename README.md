@@ -246,6 +246,16 @@ configuration (`can_chat`/`can_transcribe`/`can_embed`), not the class hierarchy
 migration. 476 tests green (+16), ruff clean, **independent review APPROVE-WITH-MINORS — no must-fix** (the
 one worthwhile minor, an HTTP-level endpoint test, was added) — [08-logs/m4.md](08-logs/m4.md). **Code
 committed locally (`9dad941`), not pushed.** Next: **Task 2** (web Providers card + live Accept), or **M5** planning.
+**M4 follow-up 2 · Task 2 (web) DONE + mock-verified; live prod Accept pending a prod push (2026-07-15):**
+read-only Settings **Providers** card — a thin TanStack read (`useProviders`, 15s poll) over `GET /admin/providers`
+with a status dot (green `consecutive_failures == 0` / amber `> 0`), the sticky `last_error` line (muted once
+recovered), capability chips, an "unreachable" tag, and last-success time; wire types exact-match the server
+Pydantic models; `relativeTime` hoisted to a shared `ui/` helper. No server code (ADR-006). tsc/eslint/build
+green; a **real-browser walkthrough vs a throwaway mock API** drove every render state **and a forced-failure→
+recovery transition** (amber→green, failures cleared, `last_error` stays sticky+muted). **Independent review
+APPROVE-WITH-MINORS — no must-fix** (3 minors all fixed). Commit `a82500b`, **not pushed**. **Remaining
+(deploy-gated, user's call):** push `9dad941` + `a82500b` → prod enumerates all providers + card renders on
+device — [08-logs/m4.md](08-logs/m4.md). Next: **push for the live Accept**, or **M5** planning.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
