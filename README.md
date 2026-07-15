@@ -427,10 +427,18 @@ downgrade / SQLi / XSS; gate PASSES); its **hardening batch #1–#5** (CF-Connec
 secret boot-guard, clickjacking headers, loopback-only plaintext redirect, constant-time CSRF) is **built,
 reviewed, and now DEPLOYED + live-verified** (`1ed5a68`+`2dc8f92`, CI `29445868984` green; `/health` all-true
 confirms the boot guard passed → both prod secrets real; `X-Frame-Options`/CSP live on `/mcp`+`/authorize`).
-**Remaining to close M5 (user-driven live Accept — needs the real Claude connector, agent can't act as the
-external client):** `capture`→node · `get_node`/`traverse`/`build_context` · activity-visible MCP capture ·
-**revoke-all lockout** (run last, destructive) → then the **ChatGPT fast-follow** before M6. Code pushed through
-`2dc8f92`. — [08-logs/m5.md](08-logs/m5.md) task 6.
+The Claude connector Accept was user-accepted (`search` grounded + capture-side spot-checked; `revoke-all`
+lockout not live-demonstrated, user moved on).
+**M5 task 6 DONE → M5 (MCP server) CLOSED (2026-07-16):** the **ChatGPT fast-follow PASSED**. Confirmed the
+current connector contract first (ChatGPT **Developer Mode** — Pro/Team/Enterprise/Edu — lets ChatGPT call
+**all** tools incl. `capture`, so the **ingest** path works as-is; **Deep Research** would instead need read-only
+`search`/`fetch` aliases and can't write), re-verified server readiness (protected-resource metadata + open DCR
+accepting ChatGPT's `redirect_uri`), and the **user added the custom connector at `braindan.cc/mcp` in Developer
+Mode → OAuth approve → connected, 7 tools listed — with no code change** (the known issuer trailing-slash nit
+didn't trip ChatGPT). Read-only Deep-Research `search`/`fetch` aliases stay a pre-approved on-demand add (ADR-046)
+only if the user later wants research-over-the-brain. Code pushed through `2dc8f92`. **The MCP + OAuth surface is
+live and connector-verified on both Claude and ChatGPT.** — [08-logs/m5.md](08-logs/m5.md) task 6.
+Next: **M6 (chat-distiller + review queue, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))** — a **planning session** (`/grilling` first per [09](09-session-protocol.md)).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
