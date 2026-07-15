@@ -315,6 +315,19 @@ is qualified as *in the UI*, so dropping the card's id is task 4). 481 tests + r
 APPROVE — no must-fix** (reviewer re-derived scope from 03-api+ADR-045, confirmed the two no-change endpoints) —
 [08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 3"; commit `a28ab04`, **not pushed**. Next: **Task 4** (web —
 types, ModelsPanel model-id picks, chat composer picker, ProvidersPanel provider-only/drop id).
+**M4 follow-up 3 · Task 4 DONE (2026-07-15):** the web half of ADR-045 (4 PWA files, no server code) — wire types
+renamed `effort_by_provider`→**`effort_by_model`** (`GroupRoutingModel`/`ModelRoutingUpdate`) + **`provider` added to
+`RoutingModelItem`** (03-api §Settings), exact-matching the task-1/3 server Pydantic; **`ModelsPanel`** reads/seeds/
+dirty-tracks/PUTs `effort_by_model` (the dropdowns were already model-id-valued with server-friendly labels, so no raw
+id shows); **`ProvidersPanel`** **drops the rendered raw provider id** (friendly name only, one row per provider —
+ADR-045 §6 "no raw id in the UI"; `id` kept as the React key); the **chat composer picker** is unchanged under the
+label-only `{id,label,effort}` contract (only a stale comment refreshed). tsc/eslint/vite green; a **real-browser
+walkthrough vs a throwaway mock API** drove all three surfaces — Models seeds `effort_by_model` + a save round-trips it,
+Providers renders the **5 friendly rows** (one "Claude") with **no id**, the composer shows model-id options with
+friendly labels and its default follows the saved Chat routing **forward-live** (console clean); **independent review
+APPROVE — no must-fix**. Commit `fc193c0`, **not pushed**. Next: **Task 5** (live M4 follow-up 3 Accept — deploy the
+5 commits `7c69449`→`fc193c0`; migration 009 applies; saved routing preserved; card shows 5 rows / one "Claude"; chat
+still grounded → independent review → pause).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
