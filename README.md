@@ -304,6 +304,17 @@ review APPROVE — no must-fix** (2 minors applied) — [08-logs/m4.md](08-logs/
 `6133296`/`74de20d`, **not pushed**. The task-1 deploy-ordering guard is now satisfiable (deploy is still **task 5**,
 after task 3 API + task 4 web). Next: **Task 3** (server API response shapes — `/settings`, `/chat/models`,
 `/admin/providers`: model-id semantics, `effort_by_model`, provider-name label, provider-only rows).
+**M4 follow-up 3 · Task 3 DONE (2026-07-15):** server API response shapes — comparing all three endpoints' wire
+against the binding [03-api](03-api.md) contract, tasks 1/2 had already landed model-id semantics, `effort_by_model`,
+the friendly `provider_label`, and the 5-provider collapse, leaving **one genuine gap**: `GET /settings` model
+options didn't carry the contract-required `provider` (03-api §Settings). Added **`provider` to `RoutingModelItem`**,
+sourced from the registry catalog (the *serving* provider id, derived — [ADR-045](adr/045-provider-model-effort-separation.md)
+§1; both Claude models → one `claude`). `/chat/models` (`{id,label,effort}`, line 52) and `/admin/providers` (one
+provider-labelled row, line 107) were **verified against the contract as already-correct — no change** ("no raw id"
+is qualified as *in the UI*, so dropping the card's id is task 4). 481 tests + ruff green; **independent review
+APPROVE — no must-fix** (reviewer re-derived scope from 03-api+ADR-045, confirmed the two no-change endpoints) —
+[08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 3"; commit `a28ab04`, **not pushed**. Next: **Task 4** (web —
+types, ModelsPanel model-id picks, chat composer picker, ProvidersPanel provider-only/drop id).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
