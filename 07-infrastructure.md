@@ -130,8 +130,17 @@ repo with any editor — any external client must be **merge-only, never force-p
   TLS files → `scp` them to the VPS → **`scp` the built `web/dist`** (uploaded as an artifact by
   the `web` job; `web/dist` is gitignored, so the box's clone never has it — CI is its sole
   delivery path, mirroring the `.env`/cert flow) → SSH to VPS → `git pull --ff-only && docker
-  compose up -d --build && alembic upgrade head`. Caddy then serves `/srv/app/web/dist` at `/`.
-  Rollback = revert commit and push.
+  compose up -d --build` → **`docker compose up -d --force-recreate --no-deps caddy`** → `alembic
+  upgrade head`. Caddy then serves `/srv/app/web/dist` at `/`. Rollback = revert commit and push.
+  - **Why the explicit caddy force-recreate** (M5 live-deploy finding): the caddy service
+    bind-mounts a **single file** (`deploy/Caddyfile`), which pins that file's **inode** into the
+    container. `git pull` replaces the Caddyfile via **atomic rename** (a new inode), so a plain
+    `up -d` / `restart` / even `caddy reload` keeps serving the **old** config — the container still
+    references the deleted inode. Force-recreating **only** caddy (`--no-deps`, so api/ollama are
+    untouched) re-resolves the mount to the current file so Caddyfile edits actually load. This
+    surfaced at the M5 deploy: the new `/mcp` + OAuth root routes returned the SPA fallback until the
+    caddy container was recreated (confirmed origin-side, not a Cloudflare cache — `cf-cache-status:
+    DYNAMIC`). Brief caddy-only blip on :443; api/embeddings keep running.
 - Docs repo has no pipeline (it's the contract, not a deployable).
 
 ## Secrets & config ([ADR-016](adr/016-secrets-via-github-actions-ci-renders-env.md))
