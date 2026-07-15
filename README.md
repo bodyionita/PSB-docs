@@ -402,6 +402,22 @@ pre-existing (XFF rate-limit key → task-5 deploy decision; sync Argon2 nit). *
 `MCP_TOKEN_HMAC_SECRET`/`PUBLIC_BASE_URL` provisioning + Caddy root routes are **task 5**. Next: **M5 task 4** (MCP server: SDK
 Streamable HTTP under `/mcp`, six tools + markdown renderers + `instructions`/prompt, `capture` source+burst,
 capsule L0 + `identity://me`, resource-server token validation).
+**M5 task 4 DONE (2026-07-15):** the remote **MCP server** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) §1/§3/§4)
+— new **`app/mcp/`** package (`render` markdown serializers · `text` instructions/descriptions/research prompt ·
+`tokens` OAuth `TokenVerifier` bridge · `server` FastMCP factory), the official `mcp` SDK **Streamable HTTP**
+mounted at the ROOT so `/mcp` resolves exactly (no trailing-slash redirect), **gated by the task-3 OAuth resource
+server** (`validate_access_token`→`AccessToken`; unauth→401 + `WWW-Authenticate`→protected-resource metadata).
+**7 tools** thin over the service layer, **markdown-rendered** (IDs verbatim, hub edge cap + `traverse` pointer,
+`readOnlyHint` on reads / write marker on `capture`), `initialize` **instructions** capsule + rich descriptions +
+`identity://me` resource + **research** prompt (ADR-033 #6). `capture` → **migration 011** `captures.source`
+column stamped to node frontmatter `source: mcp` (web falls back to kind) + `create_mcp_capture` **burst
+semaphore** (fast ack). Session manager run in the app lifespan. **599 tests green** (+23: render + an in-memory
+MCP-protocol harness + capture-source) + a **real Streamable-HTTP MCP-client HTTP E2E** (uvicorn + real app + local
+pgvector: unauth `/mcp`→401, OAuth→token, `initialize`→instructions, list 7 tools, call tools over the wire, read
+`identity://me`, list research prompt — all PASS); migration 011 up/down verified; smoke 73/73; ruff clean. `mcp>=1.28`
+added. **Commit(s) pending, not pushed;** independent review pending. Deploy (Caddy `/mcp` route + provisioning) is
+**task 5**. Next: **M5 task 5** (deploy + infra: Caddy root routes, Cloudflare passthrough, secret provisioning,
+compose/env; push → migrations 010/011 apply).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
