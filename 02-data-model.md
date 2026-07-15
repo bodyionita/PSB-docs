@@ -132,6 +132,14 @@ New config: `GRAPH_STORE_PATH`, `GRAPH_STORE_REPO`, `NODE_TYPES` (9), `EDGE_RELS
 `node_profiles.tsv` over the profile text (mirrors the ADR-037 vector union so RRF fuses the same
 node universe), each with a **GIN** index. Generated + store-derived, so `POST /admin/reindex`
 restores them for free (Rule 1 clean); the `'english'` config matches the asserted English corpus.
+**Migration 009** (M4 follow-up 3, [ADR-045](adr/045-provider-model-effort-separation.md) §4): a one-row
+**data** migration of the saved `app_settings.model_routing` jsonb — remaps the old provider ids to model-id
+vendor strings (`claude-max`→`claude-opus-4-8`, `claude-max-sonnet`→`claude-sonnet-4-6`,
+`nebius`→`meta-llama/Llama-3.3-70B-Instruct`) in `active`/`fallback` + the effort object's keys, and renames the
+key `effort_by_provider`→`effort_by_model`. Idempotent ordered text-substitution (plain SQL, ADR-011); a
+`WHERE … ~ '<old-tokens>'` guard makes it a **no-op** on an absent/empty/already-migrated row. Preserves a
+deliberate routing choice across the rename (vision P10); historical `chat_messages.model` audit rows are **left
+untouched** (label resolution tolerates the retired ids instead).
 
 ### Derived graph index (rebuildable from the graph store)
 

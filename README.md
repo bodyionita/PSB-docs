@@ -290,6 +290,20 @@ Claude Code shell's colliding `CLAUDE_EFFORT`; no prod risk), ruff clean, **inde
 must-fix** ([08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 1"); commit `7c69449`, **not pushed**. **⚠ Do not
 deploy before task 2 (migration)** — pre-existing saved `model_routing` would degrade to seed until it lands.
 Next: **Task 2** (idempotent Alembic migration of saved routing + legacy-tolerant `chat_messages.model` labels).
+**M4 follow-up 3 · Task 2 DONE (2026-07-15):** the P10-load-bearing migration — **Alembic revision 009**, an
+idempotent plain-SQL data migration ([ADR-045](adr/045-provider-model-effort-separation.md) §4) that rewrites the
+saved `app_settings.model_routing` row from old provider ids to model-id vendor strings (`claude-max`→
+`claude-opus-4-8`, `claude-max-sonnet`→`claude-sonnet-4-6`, `nebius`→`meta-llama/Llama-3.3-70B-Instruct`) in
+active/fallback + the effort object's keys **plus the `effort_by_provider`→`effort_by_model` key rename** — an
+ordered text-substitution over a closed token set (the `-sonnet` prefix hazard handled), no-op on absent/empty/
+already-migrated rows, downgrade reverses it. Legacy-tolerant `friendly_model_label` folds the retired ids to their
+vendor string so historical `chat_messages.model` rows (**left untouched** — rewriting audit would falsify it) still
+render a friendly name. 481 tests + ruff green; the un-fakeable migration SQL **verified against a throwaway
+Postgres 16** (remap, key rename, idempotency, downgrade round-trip, empty/absent no-op, key-scoping); **independent
+review APPROVE — no must-fix** (2 minors applied) — [08-logs/m4.md](08-logs/m4.md) "follow-up 3 · Task 2"; commits
+`6133296`/`74de20d`, **not pushed**. The task-1 deploy-ordering guard is now satisfiable (deploy is still **task 5**,
+after task 3 API + task 4 web). Next: **Task 3** (server API response shapes — `/settings`, `/chat/models`,
+`/admin/providers`: model-id semantics, `effort_by_model`, provider-name label, provider-only rows).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
