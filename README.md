@@ -722,6 +722,29 @@ dual-origin regression the gap had lacked. **737 unit + 129 real-PG smoke green,
 independent review APPROVE-WITH-MINORS** (Finding 1 resolved; sole minor — a stale docstring —
 fixed) — [08-logs/m7.md](08-logs/m7.md). Commits `1cef778`/`98b9ce3`/`4a0d810`/`8e25e38`, **not
 pushed.** Next: **M7 task 2** (web canvas map).
+**M7 task 2 DONE (2026-07-16):** the web **canvas map** — a `react-force-graph-2d` (2D-only, ADR-032
+#12) neighborhood explorer over the task-1 `GET /nodes/{id}/neighbors` (client-only, ADR-006 / rule
+4 — no server code). New **`features/map/`**: a zoned force canvas (pinned focal, a custom per-zone
+directional force settling "people one side, topics another"), **emoji=type** marks + **plane-
+coloured halo / hub ring** (hub-vs-content from the governed `entity_like_types`; a new **theme-
+independent** `ui/planeColors` palette — the theme accent is reserved for the focal node), edges
+**canonical solid+arrow / derived faint / superseded (`until`) dashed+dimmed**, **single-click
+re-center** with breadcrumbs (forward-history truncation), **hover peek**, **center-click →** the
+shared **`NodePreview` drawer** (rule 10; its edges re-center), per-zone **"+N" show-more** (appends
+without refetching the neighborhood), and an **empty state** (embedded search + restore-last-centered
+from `localStorage`). Shell gains the **8th "Map" tab** with a per-tab **`wide`** breakout of the
+640px column + a lifted one-shot `mapSeed`; entry from **"Explore in map"** on Search cards +
+**navigable `NodePreview` edge rows** (Search + Chat, via an optional `onOpenNode` that keeps the
+`ui/` primitive feature-agnostic). tsc/eslint/vite build green; a **real-browser walkthrough vs a
+throwaway mock API** drove the empty-state search → pick → **center (grouped `neighbors` fires; canvas
+mounts, caption + breadcrumbs correct; zero console errors)** — the one live defect (a size-0 host
+race) found + fixed (callback-ref ResizeObserver). **Independent review APPROVE after fixes** — 2
+must-fix (re-center canvas teardown → `keepPreviousData` plex swap; first-view force/fit unwired →
+fg-readiness gate), both resolved + re-verified; minors applied (show-more in-flight guard, dimmed
+arrowheads). Commits `93ac37f`/`624a644`, **not pushed** — [08-logs/m7.md](08-logs/m7.md) task 2.
+**Interactive canvas hops (node-click re-center, "+N", drawer) + the mobile viewport were not driven
+in-browser** (react-force-graph hit-testing ignores synthetic events; the pane's input degraded) —
+they're **task 3's** walkthrough scope. Next: **M7 task 3** (list fallback + reduced-motion + phone).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
