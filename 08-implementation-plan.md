@@ -613,10 +613,20 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       665 tests (+19) + smoke 94/94 (+3 `session_state`), ruff clean, **independent review
       APPROVE-WITH-MINORS — no must-fix** (batch cap + smoke-branch minors applied). Details in
       [08-logs/m6.md](08-logs/m6.md) task 3. **Committed locally, not pushed.**
-- [ ] **Task 4** — **one-tap remove** for chat-distilled nodes: `captures.removed_at` migration +
-      remove op (git-rm node file(s) + DB-delete `nodes`/`chunks`/`edges` + capture tombstone,
-      replay/reprocess-excluded) + endpoint; the distiller run records capture-id + node-path(s) per
-      auto-endorsed candidate for the audit list.
+- [x] **Task 4 DONE (2026-07-16)** — **one-tap remove** for chat-distilled nodes: **migration 014**
+      (`captures.removed_at` tombstone + the **`chat_auto_recorded`** audit registry) + the remove op
+      (`AutoRecordedService.remove`: keep-hubs `remove_nodes` → `delete_nodes` the content paths →
+      `captures.removed_at` tombstone → commit; **replay-excluded** in `capture_ids_chronological`/
+      `counts` **and** the reorganize/follow-up/§10-drainer path) + **`GET /chat/auto-recorded`** +
+      **`POST /chat/auto-recorded/{id}/remove`** (204; 404 unknown/removed/not-auto-endorsed; 422
+      malformed); the distiller's **endorsed** branch records `capture_id`+`salience` in the registry
+      (agree-from-review does **not** → the list is auto-endorsed only, ADR-048 §11). 681 tests (+16)
+      + real-PG smoke 103/103 (+10), migration 014 up/down round-trip verified, ruff clean.
+      **Independent review APPROVE-WITH-MINORS** — 1 must-fix (a tombstoned capture could be
+      resurrected via `reorganize_capture`/the §10 drainer — **fixed**: `_replace_notes_via_reorganize`
+      skips a removed capture) + 1 correctness minor (DB-delete decoupled from the unlink result so a
+      crash-retry self-heals — **fixed**) + 1 type nit (**fixed**). Details in
+      [08-logs/m6.md](08-logs/m6.md) task 4. **Committed locally, not pushed.**
 - [ ] **Task 5** — **dedup sweep** job (nightly, all-source, post-reindex): high-cosine + shared-entity
       + occurred-overlap → `dedup-proposal`; **extract the merge-core** out of `MergeService`
       (retarget→tombstone→reindex→commit), content-merge = core-only; keep/link actions;

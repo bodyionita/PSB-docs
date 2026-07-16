@@ -570,6 +570,21 @@ in the app's OpenAPI. **Independent review APPROVE-WITH-MINORS — no must-fix**
 watermark-vs-swallowed-review-hiccup observation logged) — [08-logs/m6.md](08-logs/m6.md) task 3. **Code
 committed locally, not pushed.** Next: **M6 task 4** (one-tap remove for chat-distilled nodes —
 `captures.removed_at` migration + git-rm/DB-delete/capture-tombstone remove op + endpoint).
+**M6 task 4 DONE (2026-07-16):** one-tap remove for chat-distilled nodes — **migration 014**
+(`captures.removed_at` tombstone + the **`chat_auto_recorded`** audit registry) + **`AutoRecordedService`**
+(new `app/chat/auto_recorded.py`): the chat-scoped **audit list** (`GET /chat/auto-recorded` — the
+`chat_auto_recorded ⋈ captures ⋈ nodes` JOIN, content-node title with hubs skipped, `removed_at IS NULL`)
+and the **remove op** (`POST …/remove` → **204**): git-rm the content nodes (**shared entity hubs
+preserved**, ADR-038) → DB-delete the same content paths (`chunks`/`edges` cascade) → **tombstone** the
+capture → commit; **replay-excluded** so `reprocess-all` can't resurrect it (`capture_ids_chronological`/
+`counts` skip `removed_at`, **and** `_replace_notes_via_reorganize` skips a tombstoned capture — closing
+the reorganize/§10-drainer vector). The distiller's **endorsed** branch records `capture_id`+`salience`
+in the registry (best-effort, rule 7); **agree-from-review does not** → the list is auto-endorsed only
+([ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §11/§12). **681 tests** (+16), ruff clean,
+**real-PG smoke 103/103** (+10), migration 014 up/down verified; **independent review APPROVE-WITH-MINORS**
+— 1 must-fix (reorganize-resurrection) + 2 minors (self-healing DB delete; type nit), **all resolved +
+regression-tested** — [08-logs/m6.md](08-logs/m6.md) task 4. **Code committed locally, not pushed.** Next:
+**M6 task 5** (dedup sweep — extract the merge-core, `dedup-proposal` review kind).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

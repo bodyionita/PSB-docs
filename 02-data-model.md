@@ -207,6 +207,19 @@ Slack/other connectors (M9). **The chat-distiller does NOT use it** — it needs
 watermarks, so it uses the dedicated **`chat_distill_state`** table (above,
 [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)), not a single connector cursor.
 
+**`chat_auto_recorded`** (**M6 task 4**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)
+§11/§12) — the registry behind the chat-scoped **"recently auto-recorded"** audit list
+(`GET /chat/auto-recorded`). One row per **auto-endorsed** distiller candidate: `capture_id` (pk,
+fk → `captures` `ON DELETE CASCADE`) + the coarse `salience` tag + `recorded_at`. **Its existence is
+what marks a memory as auto-recorded** — the distinction the ADR draws for one-tap remove: the audit
+list and the remove affordance are **auto-endorsed only**; an *agree-from-review* memory materializes
+the same `source=chat` capture but writes **no** row here, so it stays off this surface (user-vetted;
+general node removal is backlog). Provenance, **not** derived index — a `reprocess-all` replays
+captures through the organizer, not chat sessions, so it never re-mints these rows (they survive,
+like the preserved `stance-candidate` items). The audit list joins `captures` (for `node_paths` +
+`source_ref` + `raw_text` snippet, filtered `removed_at IS NULL`) and `nodes` (for the primary
+content node's title, entity hubs skipped). M8's general Activity feed absorbs this later.
+
 **`agent_runs`** — unchanged shape except **M5.5 adds `parent_run_id`** (nullable self-fk,
 [ADR-047](adr/047-pipeline-scheduling-primitive.md)): a pipeline run is a parent row, each step a
 child linked by `parent_run_id`. Agent names grow with the roadmap (`chat-distiller`, `dedup-sweep`,
