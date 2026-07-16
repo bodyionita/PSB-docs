@@ -616,6 +616,21 @@ shared-hub/occurred/undated gates, re-file guard, degree), ruff clean; a CLI end
 **independent review APPROVE — no must-fix** (5 minors logged; the "undated never excludes" smoke gap closed).
 Commit `fd18c7b`, **not pushed** — [08-logs/m6.md](08-logs/m6.md) task 5. Next: **M6 task 6** (inbox drainer),
 or respawn.
+**M6 task 6 DONE (2026-07-16):** the nightly **inbox drainer** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §10).
+Re-runs the **existing** `reorganize_capture` **inline** (new `CapturePipeline.reorganize_capture_now`) over captures
+still materialized as an `inbox/` fallback, so a now-richer entity registry can resolve a previously unorganizable
+capture into real typed nodes — **replaced only on success**; a still-failing capture keeps its `inbox/` node and
+re-qualifies next run. `InboxDrainService` mirrors the dedup-sweep template (own `inbox-drain` `agent_runs` row,
+bounded by `inbox_drain_max_per_run` oldest-first, best-effort per capture, never raises); tallies resolved vs
+still-inbox by re-fetch. New **`PgCaptureStore.list_inbox_materialized`** (`unnest(node_paths) LIKE inbox/%` ⋀
+**`removed_at IS NULL`** — the **§11 double guard** with the core's `removed_at` skip, so a one-tap-removed capture
+can't resurrect through the drainer) is **status-agnostic** (a `failed` still-inbox capture stays eligible). No new
+review kind (residual ambiguity → normal `entity-ambiguity`). `inbox-drain` CLI verb (`backup_now` flush); pipeline
+wiring = task 8. **715 tests** (+8) + **real-PG smoke 117/117** (+3), ruff clean; **independent review
+APPROVE-WITH-MINORS — no must-fix** (3 minors logged: boundary `truncated` over-report; latent `inbox_folder` vs
+hardcoded writer-folder coupling; a core partial-write counts as reorganized-not-errored). Commit `af14de5`,
+**not pushed** — [08-logs/m6.md](08-logs/m6.md) task 6. Next: **M6 task 7** (web Review extensions + Chat "Remember
+now" + auto-recorded list), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

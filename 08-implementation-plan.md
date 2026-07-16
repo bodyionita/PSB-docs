@@ -642,8 +642,19 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       ruff clean; a CLI end-to-end on dev data + **independent review APPROVE — no must-fix** (5 minors logged;
       the "undated never excludes" smoke gap closed). Commit `fd18c7b`, **not pushed**. **augment deferred.**
       Details in [08-logs/m6.md](08-logs/m6.md) task 5.
-- [ ] **Task 6** — **inbox drainer** job (nightly, bounded, own step): find `inbox/`-materialized
-      captures (`node_paths` in `inbox/`) → `reorganize_capture` with the richer registry.
+- [x] **Task 6 DONE (2026-07-16)** — **inbox drainer** job (nightly, bounded, own step): find
+      `inbox/`-materialized captures (`node_paths` under `inbox/`, `removed_at IS NULL`, oldest-first,
+      capped by `inbox_drain_max_per_run`) → drive the **existing** `reorganize_capture` **inline**
+      (`CapturePipeline.reorganize_capture_now`) through the single writer — replaced only on success,
+      still-failing kept in `inbox/` and re-qualified next run (status-agnostic query). Own
+      `inbox-drain` `agent_runs` row (found/reorganized/resolved/still_inbox/errored/truncated),
+      best-effort per capture, never raises. `PgCaptureStore.list_inbox_materialized` (`unnest … LIKE
+      inbox/%` ⋀ `removed_at IS NULL` — the §11 double guard with the core's `removed_at` skip, so a
+      one-tap-removed capture can't resurrect). No new review kind (residual ambiguity → normal
+      `entity-ambiguity`). `inbox-drain` CLI verb (`backup_now` flush); pipeline wiring = task 8. **715
+      tests** (+8) + real-PG smoke **117/117** (+3, the un-fakeable `list_inbox_materialized` SQL), ruff
+      clean; **independent review APPROVE-WITH-MINORS — no must-fix** (3 minors logged). Commit
+      `af14de5`, **not pushed**. Details in [08-logs/m6.md](08-logs/m6.md) task 6.
 - [ ] **Task 7** — web: **Review** extensions (`stance-candidate` + `dedup-proposal` render, salience
       order, multi-select batch, maybe aging + count badge), Chat **"Remember now"**, chat-scoped
       **"recently auto-recorded"** list with one-tap remove.
