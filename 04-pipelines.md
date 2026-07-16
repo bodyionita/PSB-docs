@@ -94,23 +94,53 @@ agreements/decisions are the anchor; stance-unclear candidates go to the **revie
 instead of being guessed ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)).
 Default lookback: **6 months**, per-connector UI override.
 
-## 3. Chat-distillation pipeline (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
+## 3. Chat-distillation pipeline (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md) · build decisions [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
 
 ```
-nightly (agent window) — cursor over ended/idle chat sessions   agent="chat-distill"
-   │  (manual per-session trigger: POST /chat/sessions/{id}/remember)
+nightly `chat-distiller` step — sessions idle since chat_distill_idle_hours
+   │  (eligible: max(chat_messages.created_at) < now − idle; watermark in chat_distill_state)
+   │  (manual per-session trigger: POST /chat/sessions/{id}/remember — sync distill, async organize)
    ▼
-SALIENCE GATE — new info / decision / reflection / intention?  no → skip (logged)
+SINGLE-PASS MULTI-CANDIDATE DISTILL (conspect, night effort; input FENCED)
+   over the session's NEW turns (after the watermark) → a LIST of candidates, each
+   {candidate_text, stance, salience(high|med|low), evidence_excerpt, referenced_entity_names}.
+   Segmentation is emergent (list-of-candidates, not a session summary); pure-retrieval → 0 candidates.
    ▼
-STANCE-FIRST DISTILL — anchor on the user's messages
-   │ endorsed  → organizer ingests (conversation/insight nodes, edges to the
-   │             nodes discussed; source=chat, source_ref=session id)
-   │             → flagged in the feed with one-tap remove
-   │ rejected  → dropped, kept in run log
-   │ unclear   → review_queue (agree/disagree/maybe; agree → organizer)
+SALIENCE GATE — zero candidates? → session skipped (logged)
    ▼
-finish agent_runs ("3 sessions read, 1 insight recorded, 2 skipped")
+STANCE (anchored on the USER's messages; hedge/sarcasm/affect → unclear, never guessed)
+   │ endorsed  → materialize a `captures` row (raw=candidate_text, source=chat,
+   │             source_ref=session-id, created_at=anchoring-msg time) → ORGANIZER
+   │             (types/links normally; conversation/insight + about/involves/led_to)
+   │             → recorded in the "recently auto-recorded" list, one-tap remove
+   │             → REPLAYED BY reprocess-all ⇒ P10 holds (survives bugfixes)
+   │ unclear   → review_queue kind=stance-candidate (agree/disagree/maybe;
+   │             agree = the SAME captures→organizer path; maybe re-openable)
+   │ rejected  → run-log detail only (never a node, never a review item)
+   ▼
+advance watermark past materialized work (delta-only, idempotent re-distill)
+finish agent_runs ("3 sessions read, 1 recorded, 1 to review, 1 skipped")
 ```
+
+**Durability (P10).** An endorsed chat memory is a `captures` row, so it is indistinguishable
+downstream and `reprocess-all` rebuilds it for free; `reprocess-all` is **kind-aware** — it
+preserves `stance-candidate` review items (chat sessions aren't replayed by capture-replay) and
+truncates the capture/graph-derived kinds (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal`,
+re-derivable). **Remove** = git-rm node file(s) + DB-delete + **tombstone the capture**
+(`removed_at`) so replay/reprocess can't resurrect it.
+
+## 3b. Dedup sweep + inbox drainer (M6 sleep-cycle jobs, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
+
+- **`dedup-sweep`** (nightly, all-source, after reindex so embeddings exist): recently-ingested
+  nodes with **high cosine (`nodes.embedding`) + shared entity edges + overlapping `occurred`** →
+  a `dedup-proposal` review item. Actions: **keep** / **link** (explicit typed edge) / **merge**
+  (fold — an **extracted merge-core** shared with entity-merge: retarget inbound edges → tombstone
+  loser `merged_into: survivor` → reindex → force-commit; content-merge = core only, no alias
+  union). `augment` ("same event, new fact") deferred.
+- **`inbox-drainer`** (nightly, before reindex, bounded): captures materialized as an `inbox/`
+  fallback (`captures.node_paths` in `inbox/`) → `reorganize_capture` with the now-richer entity
+  registry; replaced only on success, still-failing stays in `inbox/`. Residual ambiguity files
+  the normal `entity-ambiguity` items.
 
 ## 4. Indexing pipeline
 
@@ -194,10 +224,26 @@ canonical-edge expansion of retrieved nodes), then agentic traversal.
 - **Life-manager agent (M11):** schedule/tasks/goals across planes — full grilling session
   before build (node types? calendar integration? advisor vs state-manager?).
 
-## Scheduling policy ([ADR-010](adr/010-agent-window-3-5am.md) + the jobs-observability contract)
+## Scheduling policy ([ADR-047](adr/047-pipeline-scheduling-primitive.md) pipelines + [ADR-010](adr/010-agent-window-3-5am.md) window + the jobs-observability contract)
 
-- Heavy agent work runs **03:00–05:00 Europe/Bucharest**, staggered: connectors → reindex →
-  distillers → reflection; store backup sweep 04:55 + debounced after every write batch.
+**The pipeline is the only schedulable unit (M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md)).**
+A **pipeline** = a name + one cron + an ordered list of **steps**, each with an `on_fail` policy
+(`continue`|`halt`). The runner runs steps **sequentially, each starting only when the previous
+completes** — one start time, dependency order guaranteed regardless of step duration, one step's
+RAM at a time. A bare job is **never** cron-scheduled; even single-step work is wrapped in a
+pipeline. Cadence maps to a pipeline:
+- **`nightly`** (one start, e.g. 03:00): chat-distiller → data-sync → db-backup → inbox-drain →
+  reindex → profile-refresh → backfill → identity-capsule → dedup-sweep → store-sweep → bundle.
+- **`weekly`** (Sunday): integrity-drill; maybe-digest (M6).
+A pipeline run opens a **parent `agent_runs`** row; each step keeps its **own child run**
+(`agent_runs.parent_run_id`). Jobs stay independently invokable (CLI + `POST /agents/{name}/run`,
+invariant 4); the scheduler registers **one cron per pipeline**. Ordering rationale: the distiller
+writes nodes before reindex; inbox-drain enriches entities before the entity jobs; dedup needs
+post-reindex embeddings. Richer visualization → M8.
+
+- Heavy agent work runs inside the **03:00–05:00 Europe/Bucharest** window (ADR-010), now enforced
+  by *sequencing from one start*, not by hand-tuned stagger; store backup sweep near the end +
+  debounced after every write batch.
   **`identity-capsule-refresh` joins the roster at M5** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)/[ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)
   #1 — runs after profile-refresh so it distills over fresh hubs; `conspect` tier, on-demand
   triggerable like every job; `build_context` serves the last-generated blob, never inline).

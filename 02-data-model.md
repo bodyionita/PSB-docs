@@ -193,29 +193,51 @@ the store: a plain reindex preserves them, a full DB wipe leaves profile-search 
 ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over. **M5 adds a
 `source` column** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — `web` default \|
 `mcp` \| later `telegram`/`slack`; distinct from `kind` = text/voice), threaded to the node
-frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible.
+frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible. **M6 adds a
+`removed_at` column** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)): one-tap remove of
+a chat-distilled node tombstones its capture so `reprocess-all`/replay skips it (the node file is
+git-rm'd — history kept — and DB rows deleted); a non-null `removed_at` is replay-excluded.
 
-**`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). The
-chat-distiller registers here like any connector ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)).
+**`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). Used by the
+Slack/other connectors (M9). **The chat-distiller does NOT use it** — it needs *per-session*
+watermarks, so it uses the dedicated **`chat_distill_state`** table (above,
+[ADR-048](adr/048-m6-chat-distiller-build-decisions.md)), not a single connector cursor.
 
-**`agent_runs`** — unchanged shape; agent names grow with the roadmap (`chat-distill`,
-`consolidate`, `reflection`, …). Plus (M8 ops console) a **schedule registry** surface: each
-registered job's cadence + next-run time is queryable (implementation detail at M8 grilling).
+**`agent_runs`** — unchanged shape except **M5.5 adds `parent_run_id`** (nullable self-fk,
+[ADR-047](adr/047-pipeline-scheduling-primitive.md)): a pipeline run is a parent row, each step a
+child linked by `parent_run_id`. Agent names grow with the roadmap (`chat-distiller`, `dedup-sweep`,
+`inbox-drainer`, `maybe-digest`, `reflection`, …). Plus (M8 ops console) a **schedule registry**
+surface: each pipeline's cadence + next-run time is queryable (implementation detail at M8 grilling).
 
 **`review_queue`** (**M3**, [ADR-030](adr/030-entity-substrate-and-lifecycle.md) — pulled forward
 from M6 and made **kind-generic**): every human-decision item the system files, one lifecycle.
-| id uuid pk · kind (`entity-ambiguity` M3 \| `vocab-proposal` M3 \| `stance-candidate` M6 \| `dedup-proposal` M6+) · payload jsonb (candidates / proposed content) · excerpt · source · source_ref · status (`pending`\|`resolved`\|`discarded`\|`maybe`, no expiry) · resolution jsonb null · created_at · resolved_at |
+| id uuid pk · kind (`entity-ambiguity` M3 \| `vocab-proposal` M3 \| `stance-candidate` M6 \| `dedup-proposal` M6) · payload jsonb (candidates / proposed content) · excerpt · source · source_ref · status (`pending`\|`resolved`\|`discarded`\|`maybe`, no expiry) · resolution jsonb null · created_at · resolved_at |
 
 Items are decidable in place (mention in capture excerpt, candidates with name/disambig/aliases +
 node-preview link). **Vocabulary proposals ([ADR-027](adr/027-typed-vocabulary-governance.md)) are
 a queue kind** — no separate table; approved vocabulary lives in config + `app_settings`.
+**M6 kinds ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)):** `stance-candidate` payload =
+`{candidate_text, referenced_entity_names[], salience(high|med|low), why_unclear}` with
+`source=chat`, `source_ref=session-id` — **names + text, never node ids** (survives a reprocess that
+rebuilds the graph); **agree** materializes a `captures` row = the auto-endorse path. `dedup-proposal`
+payload = the two node ids + signals (may reference node ids — it is truncate-on-reprocess).
+**`maybe` is re-openable** (M6 fixes the `resolve` guard: `pending`+`maybe` are still-decidable,
+`resolved`/`discarded` terminal). **Kind-aware reprocess** (see below): `reprocess-all` preserves
+`stance-candidate`, truncates the other kinds.
+
+**`chat_distill_state`** (**M6**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)): the
+chat-distiller watermark — one row per distilled session. | session_id uuid pk (fk `chat_sessions`)
+· last_message_at timestamptz (watermark — the distiller processes only messages after it) ·
+distilled_at timestamptz · run_id uuid null | Idle-eligibility is derived from
+`max(chat_messages.created_at)`; delta-after-watermark makes re-distillation idempotent.
 
 **`summaries`** — retired at the pivot; daily/weekly output becomes `insight` nodes produced by
 the reflection agent (M10). (Table kept until M10 replaces it; no new writers.)
 
 **`chat_sessions` / `chat_messages`** — unchanged ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):
 `chat_messages.model` records the resolved **model id** (the vendor string; [ADR-045](adr/045-provider-model-effort-separation.md) — legacy provider-id rows like `claude-max`/`nebius` are **left untouched** and stay label-tolerated, not rewritten); `sources` = cited **nodes** (renumbered).
-Chat-distiller cursor tracks session activity for nightly distillation.
+Chat-distiller session state (idle-eligibility + delta watermark) lives in `chat_distill_state`
+([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)), not on `chat_sessions`.
 
 **`auth_sessions`** — unchanged.
 
@@ -256,7 +278,7 @@ independent copy and may restore-to-last-nightly. Every capture ends as a node (
 | Loss | Recovery | Tier |
 |---|---|---|
 | Derived tables (`nodes`,`chunks`,`edges`) | `POST /admin/reindex` from the store | rebuildable |
-| A format/organizer-quality change left old nodes stale | `POST /admin/reprocess` ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reset derived state (node files + `nodes`/`chunks`/`edges`/`node_profiles`/`review_queue`, `captures.node_paths`), replay every capture's raw chronologically through the fixed pipeline; **raw + approved vocabulary preserved**, standing merges reported | derived (from raw) |
+| A format/organizer-quality change left old nodes stale | `POST /admin/reprocess` ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reset derived state (node files + `nodes`/`chunks`/`edges`/`node_profiles`, `captures.node_paths`) and the **capture-derived `review_queue` kinds only** (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal` — **kind-aware**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §7; `stance-candidate` items are **preserved**), replay every capture's raw chronologically (incl. chat-endorsed captures → **P10**); **raw + approved vocabulary + `removed_at`-tombstoned captures' exclusion preserved**, standing merges reported | derived (from raw) |
 | Operational state (`agent_runs`, `chat_*`, `captures`, `review_queue`, cursors, settings) | Supabase backup, or nightly `pg_dump` in R2 → restore-to-last-nightly | operational |
 | Whole database | as above; worst case reindex restores search/traverse/chat, losing at most the day's operational log + pending review items (re-derivable from persisted sessions) | operational |
 | Graph store on VPS | `git clone` from GitHub **or** the latest R2 WORM bundle | **never-lose** |

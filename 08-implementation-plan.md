@@ -465,20 +465,114 @@ M6** (may need thin `search`/`fetch` aliases; its quirks must not block M5's clo
 - [x] **Task 5** — deploy + infra (Caddy root routes, Cloudflare passthrough, `MCP_TOKEN_HMAC_SECRET` provisioning, compose/env; push → migration applies). **CONFIG DONE 2026-07-15** — Caddy `@mcp_oauth` handle proxies `/mcp`·`/mcp/*`·`/.well-known/oauth-*`·`/authorize`·`/token`·`/register` → `api:8000` (`/mcp` matched trailing-slash-free; after `/api/*`, before the PWA catch-all); `PUBLIC_BASE_URL=https://braindan.cc` in defaults.env; `MCP_TOKEN_HMAC_SECRET` CI-injected (env+printf, mirrors `SESSION_SECRET`); both documented in `.env.example`; provision.sh/compose unchanged. **Independent review APPROVE — no must-fix** (env-name→Pydantic bindings, matcher coverage, handle ordering, secret classification all verified end-to-end; 2 cosmetic/pre-existing minors) — [08-logs/m5.md](08-logs/m5.md) task 5. Commit `ffd71f4`, **not pushed**. **⚠ Deploy is gated on two human steps** (agent cannot do either): (1) add `MCP_TOKEN_HMAC_SECRET` to GitHub `production` secrets — **if unset, CI writes an empty value that overrides the code default → empty-key HMAC on an internet-facing surface**; (2) add a Cloudflare Cache Rule bypassing cache on `/mcp*` + `/.well-known/oauth-*`. **DEPLOYED + live-verified 2026-07-15** (through `e0507e5`): both preconditions set by the user, 9 commits pushed, CI green, migrations 010/011 applied. `/.well-known/oauth-authorization-server` serves real AS metadata (PKCE S256), `/mcp` unauth → **401 + `WWW-Authenticate`**, protected-resource metadata JSON live, health all-green, PWA intact. **Two deploy bugs found + fixed live** (Caddy not reloaded on `up`; then the root cause — single-file bind-mount inode staleness across `git pull` rename → **`up -d --force-recreate --no-deps caddy`** now in the deploy step, recorded in 07-infra §CI/CD). **MCP + OAuth surface live at `braindan.cc`.**
 - [x] **Task 6** — live M5 Accept (Claude connector) + OAuth-focused independent security review → **ChatGPT fast-follow (before M6)**. **DONE → M5 CLOSED (2026-07-16):** ChatGPT fast-follow PASSED — verified the current connector contract (Developer Mode lets ChatGPT call all tools incl. `capture`; Deep Research would need read-only `search`/`fetch` aliases, not the ingest path), re-checked server readiness (protected-resource metadata + open DCR accepting ChatGPT's `redirect_uri`), and the **user connected the custom connector at `braindan.cc/mcp` in Developer Mode → OAuth approve → 7 tools listed** with **no code change** (the issuer trailing-slash nit didn't trip ChatGPT). M5 Accept user-accepted (Claude connector `search` grounded + capture-side spot-checked; `revoke-all` lockout not live-demonstrated, user moved on); OAuth security review APPROVE + hardening deployed. Read-only Deep-Research `search`/`fetch` aliases remain a pre-approved on-demand add (ADR-046) if wanted later. — [08-logs/m5.md](08-logs/m5.md) task 6. **Original in-progress note (2026-07-15):** real Claude connector live at `braindan.cc/mcp` — OAuth approve → connect works, **`search` verified grounded over the graph**. Diagnosed+fixed a live connect bug: FastMCP DNS-rebinding protection allowed only localhost → authenticated `POST /mcp` got **421** behind the edge; fix passes `TransportSecuritySettings` from `public_base_url` (`1ed0ee0`, deployed, +regression test, 600 tests green) — [08-logs/m5.md](08-logs/m5.md) task 6. **OAuth security review DONE — APPROVE-WITH-MINORS, no must-fix** (gate PASSES); **hardening batch #1–#5 DEPLOYED + live-verified 2026-07-15** (`1ed5a68`+`2dc8f92`, CI `29445868984` green; boot guard passed → `/health` all-true proves both prod secrets real; `X-Frame-Options`/CSP `frame-ancestors` live on `/mcp`+`/authorize`; unauth `/mcp`→401 intact). **Remaining (user-driven live Accept — needs the real Claude connector):** `capture`→node + `get_node`/`traverse`/`build_context` + activity-visible capture + **revoke-all** lockout (run last, destructive); then **ChatGPT fast-follow** before M6. Follow-up: external "who am I" needs a manual `identity://me` resource-attach + a populated capsule (nightly 04:35 / on-demand refresh) — backlog design item.
 
-## M6 — Chat-distiller + review queue ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
+## M5.5 — Scheduling (pipeline orchestrator, [ADR-047](adr/047-pipeline-scheduling-primitive.md))
 
-**Scope.** The nightly stance-gated chat-distiller (connector pattern, salience gate,
-endorsed/rejected/unclear), `review_queue` table + endpoints, the web **Review** surface
-(agree/disagree/maybe), feed flags + one-tap remove for auto-ingested items,
-`POST /chat/sessions/{id}/remember`.
-**Accept (draft):** a substantive chat session yields an `insight`/`conversation` node overnight
-(feed-flagged, removable); a pure-retrieval session is skipped and logged; a stance-unclear
-candidate waits in Review and ingests only on agree.
+**GRILLED TO BUILD-READY 2026-07-16** (M6 kickoff grill — a scheduling architecture change
+surfaced and was carved out ahead of M6's features so a scheduling regression can't masquerade
+as a chat-distiller bug). **Orchestration only — no job changes what it does.**
 
-**M6 addendum — RATIFIED 2026-07-13 (M3 grilling), extended by [ADR-032](adr/032-prior-art-adoptions.md)
-(dedup verbs gain **augment** — same event, new fact; nightly **re-split proposals** for bloated
-nodes; salience = **graph degree + user pins + edge conf**, no LLM scoring); re-check at M6
-kickoff before build:**
+**Scope.** Replace the per-job staggered nightly crons ([ADR-010](adr/010-agent-window-3-5am.md))
+with **pipelines as the sole schedulable unit** (ADR-047): a config-defined pipeline = a name +
+one cron + an ordered list of **steps**, each with an `on_fail` policy (`continue`|`halt`); the
+runner executes steps **sequentially, each starting only when the previous completes** (one start
+time, no minute-tuning, one step's RAM at a time). Migrate every existing nightly job off its own
+cron into a **`nightly`** pipeline (daily steps in dependency order) and a **`weekly`** pipeline
+(Sunday integrity-drill). A pipeline run opens a **parent `agent_runs`** row; each step keeps its
+**own child run** (new `agent_runs.parent_run_id`). Jobs stay independently invokable
+(CLI + `POST /agents/{name}/run`, invariant 4); the scheduler registers **one cron per pipeline**.
+Richer visualization deferred to **M8**.
+
+**Accept.** Every existing nightly job runs as a **step in a scheduled pipeline**, not its own
+cron; `nightly` + `weekly` each have exactly **one start time** and run steps **sequentially on
+completion regardless of duration**; a `continue` step's failure doesn't stop the pipeline and a
+`halt` step's does; each step still opens its own `agent_runs` under a parent pipeline run; any
+step is still runnable standalone (CLI + API) and a manual run mid-pipeline is serialized safely
+by the existing single-flight locks; **no behavior change** to any job — the DB-wipe → `reindex`
+durability drill still passes.
+
+- [ ] **Task 1** — pipeline runner + config model (`nightly`/`weekly` pipeline defs: name, cron,
+      ordered steps, per-step `on_fail`; rule 9) + `agent_runs.parent_run_id` migration + parent/
+      child run linkage. Sequential-on-completion; per-step `on_fail` honored; single-flight
+      preserved. Unit-tested (fake steps: ordering, `continue`-vs-`halt`, parent/child runs).
+- [ ] **Task 2** — migrate the existing roster off individual crons into the two pipelines
+      (scheduler registers one cron per pipeline; CLI/`run-now` entrypoints unchanged); retire
+      the per-job cron settings. Verify the durability drill + a manual `run-now` mid-pipeline.
+- [ ] **Task 3** — live M5.5 Accept (deploy; confirm one nightly start drives the whole roster in
+      order, per-step runs visible, durability drill green) → independent review → pause.
+
+## M6 — Chat-distiller + review queue ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md) · build decisions [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
+
+**GRILLED TO BUILD-READY 2026-07-16** (decision-by-decision; [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)).
+Scope = **core + addendum (a)–(d)**; **contradiction sweep (e) deferred**. Runs inside the
+[ADR-047](adr/047-pipeline-scheduling-primitive.md) pipelines (M5.5).
+
+**Scope.** The stance-gated **chat-distiller** (single-pass multi-candidate distill on `conspect`,
+salience gate, `endorsed`/`unclear`/`rejected`, hedge/affect→review) whose **endorsement
+materializes a `captures` row** (`source=chat`, replayed by reprocess → **P10 holds**) through the
+organizer; a **`chat_distill_state`** watermark (idle-eligibility + idempotent delta re-distill);
+`stance-candidate` + `dedup-proposal` **review_queue** kinds (payloads + **maybe re-openable** +
+**kind-aware reprocess** preservation); **batch** review actions + coarse-LLM **salience** ordering
++ weekly **maybe digest**; a nightly all-source **dedup sweep** (merge via an **extracted
+merge-core** shared with entity-merge / keep / link; augment deferred); a nightly **inbox drainer**
+(`reorganize_capture` with the richer registry); **one-tap remove** (git-rm + DB-delete + capture
+**tombstone** `removed_at`); `POST /chat/sessions/{id}/remember` (sync distill / async organize);
+web **Review** extensions + Chat **"Remember now"** + a chat-scoped **"recently auto-recorded"**
+list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
+
+**Accept.**
+- A substantive chat session yields an `insight`/`conversation` node **overnight** via the pipeline,
+  backed by a `captures` row (`source=chat`), auto-endorsed, shown in the "recently auto-recorded"
+  list and **removable in one tap** (git-rm + DB-delete + capture-tombstone); a subsequent
+  `reprocess-all` does **not** resurrect it.
+- A **pure-retrieval** session is skipped-and-logged; a **stance-unclear** candidate waits in Review
+  and ingests **only on agree**; a **maybe** parks and stays **re-openable**.
+- **`POST …/remember`** distills on demand (sync `{recorded,to-review}` summary, async organize),
+  idempotent with the nightly run via the watermark, same gate.
+- **Dedup**: a near-duplicate files a `dedup-proposal`; **merge** collapses two content nodes via the
+  shared merge-core (loser tombstoned `merged_into` survivor); **keep**/**link** also available.
+- **Inbox drainer** re-organizes an `inbox/` capture that now resolves, removing it from `inbox/`.
+- **`reprocess-all`** preserves `stance-candidate` items + rebuilds endorsed chat nodes from their
+  captures (**P10 end-to-end**); `dedup-proposal`/`entity-ambiguity`/`vocab-proposal` are truncated
+  (re-derivable).
+
+**Task list ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)):**
+- [ ] **Task 1** — `chat_distill_state` migration + the **chat-distiller job**: idle-eligibility
+      (`max(chat_messages.created_at)` + `chat_distill_idle_hours`), single-pass multi-candidate
+      `conspect` distill (fenced input, structured output, hedge/affect→unclear), **endorsement →
+      `captures` row** (source=chat, one row/candidate, `created_at`=anchoring-message time) →
+      organizer; unclear → `stance-candidate` review item; rejected → run log; watermark advance
+      (delta-only re-distill, idempotent) + `agent_runs`. **Not yet scheduled** (added as a pipeline
+      step in Task 8).
+- [ ] **Task 2** — review_queue M6 kinds: `PgReviewQueue.resolve` **maybe-reopen** fix
+      (`pending`+`maybe` decidable; `resolved`/`discarded` terminal), `stance-candidate` payload
+      (names-not-ids) + **agree = the auto-endorse captures path**, disagree/maybe; **kind-aware
+      reprocess reset** (preserve `stance-candidate`, truncate the rest) — refines ADR-042 §2.
+- [ ] **Task 3** — `POST /chat/sessions/{id}/remember` (sync distill on delta-after-watermark →
+      `{endorsed,review}` summary; async organize; advances the same watermark) + `POST /review/batch`.
+- [ ] **Task 4** — **one-tap remove** for chat-distilled nodes: `captures.removed_at` migration +
+      remove op (git-rm node file(s) + DB-delete `nodes`/`chunks`/`edges` + capture tombstone,
+      replay/reprocess-excluded) + endpoint; the distiller run records capture-id + node-path(s) per
+      auto-endorsed candidate for the audit list.
+- [ ] **Task 5** — **dedup sweep** job (nightly, all-source, post-reindex): high-cosine + shared-entity
+      + occurred-overlap → `dedup-proposal`; **extract the merge-core** out of `MergeService`
+      (retarget→tombstone→reindex→commit), content-merge = core-only; keep/link actions;
+      `dedup-proposal` truncate-on-reprocess. **augment deferred.**
+- [ ] **Task 6** — **inbox drainer** job (nightly, bounded, own step): find `inbox/`-materialized
+      captures (`node_paths` in `inbox/`) → `reorganize_capture` with the richer registry.
+- [ ] **Task 7** — web: **Review** extensions (`stance-candidate` + `dedup-proposal` render, salience
+      order, multi-select batch, maybe aging + count badge), Chat **"Remember now"**, chat-scoped
+      **"recently auto-recorded"** list with one-tap remove.
+- [ ] **Task 8** — **maybe-digest** weekly job (feed-visible `agent_run`) + wire the M6 jobs into the
+      pipelines (distiller front / inbox-drain pre-reindex / dedup late in `nightly`; maybe-digest in
+      `weekly`) + **live M6 Accept** → independent review → pause.
+
+**M6 addendum — RATIFIED 2026-07-13, then RESOLVED at the M6 kickoff grill (2026-07-16 →
+[ADR-048](adr/048-m6-chat-distiller-build-decisions.md)).** The kickoff took **(a)–(d) into scope
+and deferred (e)**; it also **overrode two of the ADR-032 extensions** for the M6 context:
+**`augment` is deferred** (plain merge/keep/link ship first), and **salience for review triage is a
+coarse LLM tag**, not the graph-degree/pins/edge-conf formula (which was written for *node*
+re-split and doesn't fit a not-yet-a-node candidate; **no pin feature exists**). Original text kept
+for provenance:**
 (a) **segment sessions before the salience gate** (a real session = 90% retrieval + one buried
 decision across planes; per-session granularity skips the gem or distills the noise); bias
 sarcasm/hedged/affect-laden statements toward review rather than auto-endorse; idempotent

@@ -1,6 +1,9 @@
 # ADR-010: All scheduled agent work runs 03:00–05:00 Europe/Bucharest
 
-**Status:** Accepted · 2026-07-12
+**Status:** Accepted · 2026-07-12 · **Mechanism superseded by
+[ADR-047](047-pipeline-scheduling-primitive.md) (2026-07-16):** the 03:00–05:00 window stands, but
+the per-job *staggered crons* are replaced by one **pipeline** (single start, sequential steps). The
+stagger example below is historical.
 **Scope/terminology note ([ADR-026](026-graph-native-storage-obsidian-removed.md)–[029](029-conversational-ingestion-stance-gate-review-queue.md), 2026-07-13):**
 the window stands; the stagger example is illustrative — Slack ingest is now **M9**, daily-summary/
 weekly-review become the **M10** reflection agent's `insight` runs, "vault-backup" → store backup;

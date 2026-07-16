@@ -71,23 +71,35 @@ login header; kept as a single config constant so it's changeable at zero cost.
 - **Session titles** are **LLM-generated** on the `quick`/Sonnet tier ([ADR-043](adr/043-quick-routing-tier-m4.md)),
   best-effort + non-blocking after the first exchange; the list shows the title (or the first
   message until the title lands).
-- **"Remember this" (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)):**
-  per-session action triggering immediate distillation (`POST /chat/sessions/{id}/remember`).
+- **"Remember now" (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)/[048](adr/048-m6-chat-distiller-build-decisions.md) §6):**
+  per-session action → `POST /chat/sessions/{id}/remember`, showing the returned
+  `{ endorsed, to_review }` (or "nothing new to record") summary; the organize runs in the background.
+- **"Recently auto-recorded" list (M6, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §12):**
+  a **chat-scoped** audit list (`GET /chat/auto-recorded`) of memories the nightly distiller
+  auto-endorsed — node preview + salience + **one-tap "that's wrong — remove"**
+  (`POST /chat/auto-recorded/{capture_id}/remove`, soft-delete). This is M6's home for ADR-029 §6's
+  reversal loop; M8's general Activity feed absorbs it later (Activity stays the M8 placeholder in M6).
 
 ### 3. Activity (categorized tabs — full restructure at M8)
 - "What did my brain do", as **multiple categorized tabs** (agents/jobs · conversations ·
   manual actions), recording automatic **and** manual events; staggered entrance animations;
   tap to expand run details (`GET /activity/runs/{id}`). Fallback events visibly badged.
-- **Auto-ingested stance items** ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
-  carry a flag + one-tap "that's wrong — remove".
-- **Ops console (M8):** every job listed by category with schedule + next run (`GET /agents`),
-  a manual **Run** button (no cron-only ghosts), and — while running — **live status + log
-  tail** (`GET /activity/runs/{id}/logs`).
+- **Pipeline runs (M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md)):** a pipeline run
+  is a parent entry expandable to its per-step child runs; **auto-ingested stance items** carry a
+  flag + one-tap remove (surfaced in M6 via the chat "recently auto-recorded" list above; folded
+  into this feed at M8).
+- **Ops console (M8):** every **pipeline** listed with schedule + next run + its ordered steps
+  (`GET /agents`), a manual **Run** button per step (no cron-only ghosts), and — while running —
+  **live status + log tail** (`GET /activity/runs/{id}/logs`).
 
-### 3b. Review (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))
-- Badge-counted queue of stance-unclear candidates from all conversational sources, grouped by
-  conversation: proposed memory + short excerpt + **agree / disagree / maybe**. Agree ingests
-  through the organizer; disagree discards (logged); maybe stays (no expiry).
+### 3b. Review (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)/[048](adr/048-m6-chat-distiller-build-decisions.md) §8)
+- Badge-counted queue, **salience-ordered** (high first), of items from all conversational sources:
+  - **stance-candidate** — proposed memory + short excerpt + **agree / disagree / maybe**. Agree
+    ingests through the organizer (the auto-endorse path); disagree discards (logged); **maybe stays
+    and is re-openable** (no expiry) with an **aging** indicator.
+  - **dedup-proposal** — two node previews + **merge / keep / link** (survivor pick on merge).
+- **Batch actions:** multi-select → agree/disagree/maybe (or keep/dismiss) in one call
+  (`POST /review/batch`). A weekly **maybe digest** keeps the parked pile from stalling silently.
 
 ### 3c. The Map (M7 — desktop-first)
 - **Neighborhood explorer** over `GET /nodes/{id}/neighbors` (the same service as MCP

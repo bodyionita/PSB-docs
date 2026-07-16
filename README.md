@@ -438,7 +438,32 @@ Mode → OAuth approve → connected, 7 tools listed — with no code change** (
 didn't trip ChatGPT). Read-only Deep-Research `search`/`fetch` aliases stay a pre-approved on-demand add (ADR-046)
 only if the user later wants research-over-the-brain. Code pushed through `2dc8f92`. **The MCP + OAuth surface is
 live and connector-verified on both Claude and ChatGPT.** — [08-logs/m5.md](08-logs/m5.md) task 6.
-Next: **M6 (chat-distiller + review queue, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md))** — a **planning session** (`/grilling` first per [09](09-session-protocol.md)).
+**M6 GRILLED TO BUILD-READY + a scheduling milestone carved out (2026-07-16 — planning session,
+decision-by-decision).** Scope resolved to **core + addendum (a)–(d); (e) contradiction sweep
+deferred**. The grill surfaced a scheduling-architecture change and an important durability seam,
+both recorded:
+**(1) [ADR-047](adr/047-pipeline-scheduling-primitive.md) — the pipeline is the scheduling
+primitive.** Per-job staggered nightly crons (fragile when a step overruns; the reason for
+RAM-stagger) are replaced by **pipelines** = one cron + an ordered list of steps run
+**sequentially on completion**, per-step `on_fail` (`continue`|`halt`), parent+child `agent_runs`
+(`parent_run_id`). Cadence → its own pipeline (`nightly`/`weekly`); a bare job is never scheduled,
+even single-step work is a pipeline. Built as a small **M5.5** milestone (orchestration-only, all
+existing jobs migrated) **before** M6's features, so a scheduling regression can't look like a
+distiller bug. Supersedes ADR-010's stagger (the window stands).
+**(2) [ADR-048](adr/048-m6-chat-distiller-build-decisions.md) — M6 build decisions.** The load-bearing
+call: an **endorsed chat memory materializes a `captures` row** (`source=chat`) → organizer, so it's
+**replayed by `reprocess-all` ⇒ vision P10 holds** with zero chat-specific reprocess machinery.
+Plus: single-pass multi-candidate distill on `conspect` (segmentation emergent, hedge/affect→review);
+a per-session `chat_distill_state` **watermark** (idle-eligibility + idempotent delta re-distill);
+**kind-aware reprocess** (preserve `stance-candidate`, truncate the rest); `maybe` **re-openable**;
+coarse-LLM **salience** triage + **batch** actions + weekly **maybe digest**; a nightly all-source
+**dedup sweep** (merge via an **extracted merge-core** shared with entity-merge; keep/link; augment
+deferred); a nightly **inbox drainer**; **one-tap remove** = git-rm + DB-delete + **capture
+tombstone** (`removed_at`, no resurrection); `remember` = sync distill / async organize; web Review
+extensions + Chat "Remember now" + a chat-scoped "recently auto-recorded" list. Docs updated
+(02/03/04/06/08 + ADR-047/048; the ratified M6 addendum marked resolved — `augment` + graph-degree
+salience overridden for the M6 context). **Paused before implementation** per [09](09-session-protocol.md)
+— **no code this session.** Next: build **M5.5 task 1** (pipeline runner), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
