@@ -692,8 +692,21 @@ user re-ran `pipeline nightly` on prod → parent `1f5099ef`, **11 steps, 10 suc
 succeeded`, only `store-sweep` skipped (by design). The user exercised part of the PWA behavioral loop +
 confirmed the remaining surfaces and **accepted M6 as closed**. The M6 sleep-cycle (chat-distill →
 inbox-drain → dedup-sweep; weekly maybe-digest) runs clean from one nightly start under a parent run with
-per-step children, live at `braindan.cc` — [08-logs/m6.md](08-logs/m6.md) "M6 follow-up". **Next: M7 (the
-map) — planning session (`/grilling` first), or respawn.**
+per-step children, live at `braindan.cc` — [08-logs/m6.md](08-logs/m6.md) "M6 follow-up".
+**M7 (the map) GRILLED TO BUILD-READY (2026-07-16 — [ADR-051](adr/051-m7-map-build-decisions.md); planning
+session, decision-by-decision).** The map is a **re-center neighborhood explorer** (one focal node at a time,
+breadcrumbs, never a whole-graph client layout — settled the "expand" vs "re-center" doc tension) over a new
+**grouped-by-`(origin,rel)`-zone** `GET /nodes/{id}/neighbors` (per-zone caps `map_zone_fanout` + `total`/
+`next_cursor`; reuses the M5 `GraphService.neighbors` primitive for "show more"; one new endpoint, no migration).
+Render: **`react-force-graph-2d`** (2D only) with per-zone directional forces; **emoji=type / ring+size=hub-vs-
+content / theme-independent plane color**; single-click re-center (plex fade) / hover peek / center-click →
+`NodePreview` drawer; canonical solid+arrowhead / derived faint / **superseded (`until`) dashed+dimmed**. New
+full-width **Map tab**; **canvas on phone too** (supersedes the "phone=list, no canvas" wording — list kept as
+reduced-motion fallback + toggle); entry from Search cards + `NodePreview` edges; empty state = embedded search +
+restore-last-centered. **4 tasks** in [08 §M7](08-implementation-plan.md) (server endpoint · web canvas · web list
+fallback+phone · live Accept). Backlog (ADR-051): **auto-center on top hubs** (new endpoint, user wants it *later*),
+in-app reduced-motion override, multi-plane ring. Docs recorded (ADR-051 + 03/06/08). **Paused before
+implementation** per [09](09-session-protocol.md) — **no code this session. Next:** build M7 task 1, or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

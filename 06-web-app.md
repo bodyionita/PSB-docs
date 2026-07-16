@@ -101,15 +101,35 @@ login header; kept as a single config constant so it's changeable at zero cost.
 - **Batch actions:** multi-select → agree/disagree/maybe (or keep/dismiss) in one call
   (`POST /review/batch`). A weekly **maybe digest** keeps the parked pile from stalling silently.
 
-### 3c. The Map (M7 — desktop-first)
-- **Neighborhood explorer** over `GET /nodes/{id}/neighbors` (the same service as MCP
-  `traverse`): enter from a search hit or node list; the node renders centered with edges one
-  hop out; **click to expand**. Node shape/icon = type, color = plane; solid edges = canonical
-  (labeled by `rel`), faint edges = derived similarity. Breadcrumb trail back.
-- Phone: degrades to the same node-with-edges as a tappable list (no canvas).
-- Growth path (post-M7): curated overviews — a custom-designed "world/continents" view (to be
-  designed together) — then an aerial whole-graph mode only if a performant, genuinely pleasant
-  rendering is found.
+### 3c. The Map (M7 — [ADR-051](adr/051-m7-map-build-decisions.md); desktop-first, canvas on phone too)
+- **Neighborhood explorer** over `GET /nodes/{id}/neighbors` (the same `GraphService.neighbors`
+  as MCP `traverse`), a new **full-width top-level tab** (opts out of the shell's 640px column).
+  Built on **`react-force-graph-2d`** (2D canvas only — ADR-032 #12).
+- **Re-center navigation (not accumulate).** Exactly **one focal node at a time**: it renders
+  pinned at center with its 1-hop neighbors fanned around it in **rel-based zones** (per-zone
+  directional forces over a live d3-force sim — "people one side, topics another"). **Single-click
+  a neighbor = re-center** on it (plex-style animated re-center: reheat, old fades out, new fans
+  in). A **breadcrumb strip** records the path; a crumb re-centers back + truncates forward. The
+  client only ever holds one node's neighborhood — **never a whole-graph client layout**.
+- **Node encoding:** **emoji glyph = type** (reuses `ui/nodeTypes`), **ring + larger size = entity
+  hub** vs plain disc = content, **halo color = primary plane** (a new theme-independent plane
+  palette; the theme accent is reserved for the focal node). **Edges:** canonical = solid +
+  subtle **arrowhead** + `rel` label on hover/zoom; derived `similar` = faint (no arrowhead);
+  **superseded (`until`-closed) = dashed + dimmed**, `until` on hover.
+- **Read vs move:** **hover** peeks (label/tooltip, no movement); a compact caption chip on the
+  focal node (title · type · plane · tags); **clicking the focal node** opens the shared
+  `ui/NodePreview` drawer (full body + edges, rule 10). Per-zone **"show more"** pages a hub's
+  overflow (`?rel=` cursor) without refetching the neighborhood.
+- **Entry:** from a **Search card** or a **`NodePreview` edge row** (sets a `mapSeed` + switches
+  tab). **Empty state** (no seed): an embedded search to start + **restore the last-centered node**
+  (`localStorage`).
+- **Phone:** the **canvas is primary on phone too** (tap = re-center, tap center = drawer) — 2D
+  canvas is phone-safe and node count is capped by the re-center model. This **supersedes** the
+  earlier "phone = list, no canvas" plan. A **tappable-list renderer** (same `(origin, rel)` zones)
+  is retained as the **`prefers-reduced-motion` fallback** + a manual view toggle.
+- Growth path (post-M7): **auto-center on your top hubs** as the entry (needs a new top-degree
+  endpoint — [ADR-051](adr/051-m7-map-build-decisions.md) backlog) · curated "world/continents"
+  overviews · aerial whole-graph mode only if a performant, genuinely pleasant rendering is found.
 
 ### 4. Settings
 - **Vocabulary (M3, [ADR-027](adr/027-typed-vocabulary-governance.md)):** node + edge type

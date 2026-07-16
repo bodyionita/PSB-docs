@@ -768,11 +768,47 @@ per-hop fanout cap with "show more" — never a whole-graph client layout. **Gro
 (post-M7, own planning):** curated "world/continents" overviews = **nightly server-side layout
 (UMAP/community detection) served as static tiles, clusters LLM-named once/night** — never live
 client GPU layout → aerial whole-graph only if performant and genuinely pleasant.
-**Accept (draft):** starting from a search hit, reach a `person` node in one click and see their
-constellation; expand three hops without jank; edge styling distinguishes typed relations from
-similarity.
+**GRILLED TO BUILD-READY (2026-07-16 — [ADR-051](adr/051-m7-map-build-decisions.md)).** Resolved
+decision-by-decision: **re-center navigation** (one focal node at a time, breadcrumbs, never a
+whole-graph client layout — the "expand" vs "re-center" doc tension settled to re-center);
+**grouped-by-`(origin,rel)`-zone endpoint** with per-zone caps (`map_zone_fanout` seed 8) + per-zone
+`total`/`next_cursor` (a flat global cap starves zones on hubs); **force engine + per-zone
+directional forces** (`react-force-graph-2d`, 2D only); **emoji=type / ring+size=hub-vs-content /
+theme-independent plane color**; **single-click re-center, hover peek, center-click→`NodePreview`
+drawer**; canonical solid+arrowhead+gated-label / derived faint / **superseded (`until`) dashed+
+dimmed**; **canvas on phone too** (supersedes the "phone=list, no canvas" wording — list retained as
+reduced-motion fallback + toggle); entry from Search cards + `NodePreview` edges; empty state =
+embedded search + restore-last-centered. Backlog (ADR-051): auto-center on top hubs (new endpoint),
+in-app reduced-motion override, multi-plane ring.
 
-- [ ] M7 grilled to build-ready detail · tasks defined there
+**Tasks:**
+1. **Server — `GET /nodes/{id}/neighbors`.** One route, two modes (grouped first page / single-zone
+   `?rel=` "show more" over the M5 primitive); config `map_zone_fanout`; zone Pydantic models.
+   Real-PG tests: grouped caps/totals/cursors, single-zone paging, `direction`, unknown node →
+   empty, tombstone exclusion, superseded (`until`) edges present. No migration.
+2. **Web — the canvas map.** Install `react-force-graph-2d`; `features/map/` — zoned force canvas
+   (pinned focal, per-zone forces), emoji marks + plane halos + hub ring, canonical/derived/
+   superseded edge styling + arrowheads + hover/zoom labels, single-click re-center (plex fade +
+   breadcrumbs), hover peek, center-click→`NodePreview` drawer, per-zone "show more"; shell `map`
+   tab + `wide` breakout + lifted `mapSeed`; empty state (embedded search + restore-last-centered);
+   "explore in map" on Search cards + `NodePreview` edges.
+3. **Web — list fallback + reduced-motion + phone.** Grouped tappable-list renderer (same zones)
+   behind the toggle + reduced-motion path; real-browser walkthrough on **desktop and a mobile
+   viewport** (phone tap-to-recenter, list toggle, reduced-motion → list).
+4. **Live Accept + docs close-out.** Deploy, live-accept at `braindan.cc`, record.
+
+**Accept:** from a search hit, reach a `person` node in **one click** and see their **constellation**
+(zones populated — emoji + plane color + hub ring); **re-center three hops** with no jank,
+breadcrumbs tracking; edge styling distinguishes **canonical vs derived vs superseded**; a hub's
+overflow pages via **per-zone "show more"** without refetching the neighborhood; **phone canvas**
+works with tap-to-recenter (list toggle present; reduced-motion → list); empty state = search-to-start
++ restore-last-centered.
+
+- [x] M7 grilled to build-ready detail · tasks defined above (ADR-051, 2026-07-16)
+- [ ] Task 1 · server neighbors endpoint
+- [ ] Task 2 · web canvas map
+- [ ] Task 3 · web list fallback + reduced-motion + phone
+- [ ] Task 4 · live Accept + docs close-out
 
 ## M8 — Ops console & activity restructure
 
@@ -865,9 +901,13 @@ counterpart to the M6 auto-record/remove trust loop.
 **Sources:** LLM-chat exports connector (promoted by the pivot — stance-gated like the
 chat-distiller) · WhatsApp · Instagram spike ([ADR-009](adr/009-instagram-connector-deferred.md)) ·
 email · calendar.
-**Map:** curated "world/continents" overviews (custom design session; architecture fixed by
-[ADR-032](adr/032-prior-art-adoptions.md): nightly server-side UMAP/community layout → static
-tiles, LLM-named clusters) → aerial whole-graph mode · **InfraNodus-style structural-gap
+**Map:** **auto-center map entry** ([ADR-051](adr/051-m7-map-build-decisions.md) backlog — user
+wants it *after* M7): open the map on your highest-degree hubs (or recent captures) instead of the
+search box; needs a **new top-degree / entry-nodes endpoint** · **in-app reduced-motion override**
+(06 §4 lists it, never built — the app follows the OS setting only) · **multi-plane ring/pie** on
+the node mark (M7 colors by primary plane only) · curated "world/continents" overviews (custom
+design session; architecture fixed by [ADR-032](adr/032-prior-art-adoptions.md): nightly server-side
+UMAP/community layout → static tiles, LLM-named clusters) → aerial whole-graph mode · **InfraNodus-style structural-gap
 prompts** for the reflection agent ("much about X and Y, nothing linking them") ·
 **serendipity resurfacing** (M10-adjacent: "On This Day" on the `occurred` range + weighted
 random-walk digest with a "why this" path; tune the similarity floor first) · per-type
