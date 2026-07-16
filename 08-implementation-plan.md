@@ -716,12 +716,19 @@ child → step failed) marked the step failed even though the distiller's/draine
 `agent == step.name`); nested spawned runs stay parented + feed-visible but don't gate the step; the
 inbox-fallback run keeps `status=failed` (fix is step-rollup only); `raised → failed` and `halt` on the
 step's own failure unchanged; `store-sweep` (no own run) still `skipped`. Server-only, **no migration**.
-- [ ] **Task 1** — `pipeline._step_status` keys on `agent == step.name` (own-run status; nested
-      `capture` runs non-gating but visible; own `child_run_id` reported); regression test (nested
-      `capture` failed → step succeeded; own failed/raised → step failed + halt aborts; nested run stays
-      parented). Then: independent review → deploy (server-only) → **re-run `pipeline nightly` live** to
-      confirm chat-distiller + inbox-drain go **succeeded** with the nested `capture` runs still
-      visible-as-failed → the PWA behavioral loop → **M6 CLOSED**.
+- [~] **Task 1 BUILT + REVIEWED + PUSHED (2026-07-16); live re-run pending user** —
+      `pipeline._step_status` keys on `agent == step.name` (own-run status; nested `capture` runs
+      non-gating but visible; own `child_run_id` reported). **721 tests** (+2 ADR-050 regression: nested
+      `capture` failed → step succeeded + no halt; own failed/raised → step failed + halt aborts; nested
+      run stays parented/visible), whole-repo ruff + format clean. **Independent review APPROVE — no
+      must-fix** (own-run gate can't mask a genuine failure nor be fooled by nested/own ordering; all 8
+      ADR-047 behavior tests hold; `step.name == agent` invariant verified across every wired step; 2
+      non-blocking minors logged). Commit `1c36e06` (on the `8e1c376` ruff-format sweep); **pushed**
+      (`16eb2bd..1c36e06`, CI deploying — server-only, **no migration**); prod `/health` all-true through
+      the deploy window. Details in [08-logs/m6.md](08-logs/m6.md) "M6 follow-up". **Remaining to CLOSE
+      M6 (user-driven):** confirm CI green → re-run `pipeline nightly` live (expect `inbox-drain` +
+      `chat-distiller` **succeeded**, the 2 still-unresolved captures' nested `capture` runs still
+      visible-as-failed, **0 failed** steps bar `store-sweep`-skipped) → the PWA behavioral loop → **M6 CLOSED**.
 - **Out of scope (logged, separate):** the organizer's inbox-fallback rate on chat-distilled
   claim-text (2/4 this run — the drainer retries); the `claude` Max CLI 300s hang before Nebius
   fallback ([ADR-044](adr/044-provider-observability-surface.md) Providers card).

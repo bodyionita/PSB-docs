@@ -677,11 +677,19 @@ nested run into the enclosing step so `_step_status` (any non-`{succeeded,skippe
 the step even though the distiller's/drainer's **own** runs succeeded. Fix (ADR-050): **a step's status =
 its own job run** (`agent == step.name`); nested spawned runs stay feed-visible but non-gating; inbox-fallback
 keeps `status=failed` (step-rollup layer only); `raised → failed` + `halt`-on-own-failure unchanged; server-only,
-**no migration**. Docs recorded (ADR-050 + 04/08). One task open in [08 §M6 follow-up](08-implementation-plan.md):
-build → independent review → deploy → **re-run `pipeline nightly` live** (confirm both steps go `succeeded`,
-nested `capture` runs still visible-as-failed) → PWA behavioral loop → **M6 CLOSED**. Out of scope (logged): the
-organizer's inbox-fallback rate on distilled claim-text (2/4 this run; the drainer retries); the `claude` Max
-CLI 300s hang before Nebius fallback (Providers card). Next: **build the ADR-050 fix → drive to M6 CLOSED**.
+**no migration**. Docs recorded (ADR-050 + 04/08). Out of scope (logged): the organizer's inbox-fallback rate on distilled
+claim-text (2/4 this run; the drainer retries); the `claude` Max CLI 300s hang before Nebius fallback
+(Providers card).
+**M6 follow-up (ADR-050) BUILT + REVIEWED + PUSHED (2026-07-16); live re-run pending user.**
+`pipeline._step_status` now keys on the step's own run (`agent == step.name`); nested `capture` runs stay
+feed-visible but non-gating; `raised → failed`, `halt`-on-own-failure, `store-sweep → skipped` preserved;
+inbox-fallback run keeps `status=failed`. **721 tests** (+2 regression), ruff+format clean, **independent
+review APPROVE — no must-fix** (invariant verified across every wired step). Commit `1c36e06` (on the
+`8e1c376` ruff-format sweep); **pushed** (`16eb2bd..1c36e06`, CI deploying — server-only, **no migration**);
+prod `/health` all-true through the deploy window. **Remaining to CLOSE M6 (user-driven):** confirm CI green
+→ re-run `pipeline nightly` live (expect `inbox-drain` + `chat-distiller` **succeeded**, the 2 unresolved
+captures' nested `capture` runs still visible-as-failed, **0 failed** bar `store-sweep`-skipped) → the PWA
+behavioral loop → **M6 CLOSED**. Next: **user re-runs the nightly + PWA loop → confirm → M6 CLOSED**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
