@@ -786,6 +786,13 @@ in-app reduced-motion override, multi-plane ring.
    `?rel=` "show more" over the M5 primitive); config `map_zone_fanout`; zone Pydantic models.
    Real-PG tests: grouped caps/totals/cursors, single-zone paging, `direction`, unknown node →
    empty, tombstone exclusion, superseded (`until`) edges present. No migration.
+   **Replanned mid-implementation ([ADR-052](adr/052-map-zones-keyed-by-rel.md), 2026-07-16):** an
+   independent review caught that ADR-051 §2's `(origin, rel)` zone key vs "show more reuses the
+   rel-only cursor" diverge for the sole dual-origin rel, `similar` (canonical `link` + derived
+   recompute) — "show more" on a canonical-`similar` zone would bleed derived rows in. Resolved by
+   keying zones by **`rel`** (dual-origin `similar` collapses to one zone; per-neighbor `origin`
+   styles solid/faint; zone-level `origin` dropped), shipping with a dual-origin `similar`
+   regression test.
 2. **Web — the canvas map.** Install `react-force-graph-2d`; `features/map/` — zoned force canvas
    (pinned focal, per-zone forces), emoji marks + plane halos + hub ring, canonical/derived/
    superseded edge styling + arrowheads + hover/zoom labels, single-click re-center (plex fade +
