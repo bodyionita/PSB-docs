@@ -590,10 +590,15 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       time) → organizer; unclear → `stance-candidate` review item; rejected → run log; watermark
       advance (delta-only re-distill, idempotent) + `agent_runs`. **Not yet scheduled** (added as a
       pipeline step in Task 8). Details in [08-logs/m6.md](08-logs/m6.md) task 1.
-- [ ] **Task 2** — review_queue M6 kinds: `PgReviewQueue.resolve` **maybe-reopen** fix
-      (`pending`+`maybe` decidable; `resolved`/`discarded` terminal), `stance-candidate` payload
-      (names-not-ids) + **agree = the auto-endorse captures path**, disagree/maybe; **kind-aware
-      reprocess reset** (preserve `stance-candidate`, truncate the rest) — refines ADR-042 §2.
+- [x] **Task 2 DONE (2026-07-16)** — review_queue M6 kinds: `PgReviewQueue.resolve` **maybe-reopen**
+      fix (`DECIDABLE_STATUSES = pending ∪ maybe`; `resolved`/`discarded` terminal), `stance-candidate`
+      resolution (`verdict` agree/disagree/maybe) — **agree = the exact auto-endorse `create_chat_capture`
+      path** (one ingest, rule 2b/10), disagree→discarded, maybe→parked+re-openable; conversation-time
+      `anchor_at` recorded in the payload at file time so agree stamps the capture with the anchoring
+      message time (ADR-048 §1); **kind-aware reprocess reset** (`DELETE … WHERE kind <> 'stance-candidate'`
+      — preserve stance, truncate the rest; refines ADR-042 §2). 646 tests + smoke 91/91 & 12/12 green,
+      ruff clean, **independent review APPROVE-WITH-MINORS — no must-fix** (2 minors fixed). Web Review
+      surface for these kinds is task 7. Details in [08-logs/m6.md](08-logs/m6.md) task 2.
 - [ ] **Task 3** — `POST /chat/sessions/{id}/remember` (sync distill on delta-after-watermark →
       `{endorsed,review}` summary; async organize; advances the same watermark) + `POST /review/batch`.
 - [ ] **Task 4** — **one-tap remove** for chat-distilled nodes: `captures.removed_at` migration +

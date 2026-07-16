@@ -221,9 +221,11 @@ Items are decidable in place (mention in capture excerpt, candidates with name/d
 node-preview link). **Vocabulary proposals ([ADR-027](adr/027-typed-vocabulary-governance.md)) are
 a queue kind** — no separate table; approved vocabulary lives in config + `app_settings`.
 **M6 kinds ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)):** `stance-candidate` payload =
-`{candidate_text, referenced_entity_names[], salience(high|med|low), why_unclear}` with
+`{candidate_text, referenced_entity_names[], salience(high|med|low), why_unclear, anchor_at}` with
 `source=chat`, `source_ref=session-id` — **names + text, never node ids** (survives a reprocess that
-rebuilds the graph); **agree** materializes a `captures` row = the auto-endorse path. `dedup-proposal`
+rebuilds the graph); `anchor_at` is the anchoring-message timestamp (ISO-8601, a *time* not a node
+id) the distiller records so **agree** stamps the capture with conversation time, matching
+auto-endorse. **agree** materializes a `captures` row = the auto-endorse path. `dedup-proposal`
 payload = the two node ids + signals (may reference node ids — it is truncate-on-reprocess).
 **`maybe` is re-openable** (M6 fixes the `resolve` guard: `pending`+`maybe` are still-decidable,
 `resolved`/`discarded` terminal). **Kind-aware reprocess** (see below): `reprocess-all` preserves

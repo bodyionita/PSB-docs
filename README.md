@@ -532,8 +532,26 @@ end-to-end on real dev data + LLM** distilled 6 idle sessions → 1 endorsed →
 conversation day, not run time) → memory+event nodes → indexed, a **second run = 0/0** (idempotent).
 **Independent review APPROVE after fixes** — 2 must-fix (cross-run duplicate materialization; silent delta
 truncation), **both resolved + regression-tested**; 3 minors logged — [08-logs/m6.md](08-logs/m6.md) task 1.
-**Code committed locally, not pushed.** Next: **M6 task 2** (review_queue M6 kinds — `maybe`-reopen fix +
-`stance-candidate` agree=auto-endorse path + kind-aware reprocess reset).
+**Code committed locally, not pushed.**
+**M6 task 2 DONE (2026-07-16):** review_queue M6 kinds ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)
+§7) — the **maybe-reopen** guard fix (`PgReviewQueue.resolve` now decidable = `pending` ∪ `maybe` via a
+`DECIDABLE_STATUSES`/`status = ANY($)` guard, mirrored in the service + fake; `resolved`/`discarded` terminal),
+**`stance-candidate` resolution** (`verdict` agree/disagree/maybe): **agree = the exact auto-endorse path** —
+the same `CapturePipeline.create_chat_capture` the distiller's endorsed branch uses (one ingest, not two —
+rule 2b/10; clean prose raw → organizer re-resolves, ADR-048 §2; deterministic-id idempotent), **disagree →
+discarded** (logged, no node), **maybe → parked + re-openable**; **conversation-time anchoring** — the distiller
+now records `anchor_at` (the anchoring-message time, same `_anchor_time` as endorsed) in the `stance-candidate`
+payload so agree stamps the capture with conversation time not decision time (a timestamp, never a node id —
+ADR-048 §1; recorded in 02/03, the immutable ADR left as-is); and a **kind-aware reprocess reset**
+(`reset_derived_and_review`: `DELETE … WHERE kind <> 'stance-candidate'` — preserves parked human decisions,
+truncates the re-derivable kinds; refines ADR-042 §2). `ReviewService` now built after the pipeline (injected
+`chat_ingest`). Web Review surface for these kinds is task 7. **646 tests green** (+7), ruff clean, **real-PG
+smoke 91/91** (+5: a new `check_review_queue_reopen` drives the un-fakeable `ANY()` guard) **& 12/12**
+(+2: kind-aware DELETE preserves stance / clears the rest); **independent review APPROVE-WITH-MINORS — no
+must-fix** (2 minors fixed: `review.py` list docstring, `smoke_reprocess` uses `KIND_STANCE_CANDIDATE`) —
+[08-logs/m6.md](08-logs/m6.md) task 2. **Code committed locally, not pushed.** Next: **M6 task 3** (`POST
+/chat/sessions/{id}/remember` — sync distill on the delta-after-watermark → `{endorsed,review}`, async
+organize, same watermark + gate; + `POST /review/batch`).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
