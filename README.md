@@ -707,6 +707,21 @@ restore-last-centered. **4 tasks** in [08 §M7](08-implementation-plan.md) (serv
 fallback+phone · live Accept). Backlog (ADR-051): **auto-center on top hubs** (new endpoint, user wants it *later*),
 in-app reduced-motion override, multi-plane ring. Docs recorded (ADR-051 + 03/06/08). **Paused before
 implementation** per [09](09-session-protocol.md) — **no code this session. Next:** build M7 task 1, or respawn.
+**M7 task 1 DONE (2026-07-16):** the grouped map endpoint **`GET /nodes/{id}/neighbors`** — one route,
+two modes, thin over the M5 `GraphService.neighbors` primitive (no migration, no new store surface):
+**no `rel`** → the grouped first page (one zone per **`rel`**, each capped at `map_zone_fanout` seed 8
+with a per-zone `total` + `next_cursor`) via a new `PgNeighborStore.neighbor_zones` window query
+(`ROW_NUMBER`/`COUNT` `PARTITION BY rel`, direction-scoped before the window, tombstone-excluded,
+`until`-edges returned) + a light `center_header`; **`?rel=&cursor=`** → a single zone's flat "show
+more" reusing the M5 rel-filtered keyset untouched. **Replanned mid-implementation → [ADR-052](adr/052-map-zones-keyed-by-rel.md):**
+an independent review caught that ADR-051 §2's `(origin,rel)` zone key vs the rel-only "show more"
+cursor diverge for the sole dual-origin rel `similar` (canonical `link` + derived recompute) — a
+short `/grilling` pass resolved it to **zones keyed by `rel`** (`similar` collapses to one zone;
+per-neighbor `origin` carries solid/faint styling; zone-level `origin` dropped), shipping with the
+dual-origin regression the gap had lacked. **737 unit + 129 real-PG smoke green, ruff clean;
+independent review APPROVE-WITH-MINORS** (Finding 1 resolved; sole minor — a stale docstring —
+fixed) — [08-logs/m7.md](08-logs/m7.md). Commits `1cef778`/`98b9ce3`/`4a0d810`/`8e25e38`, **not
+pushed.** Next: **M7 task 2** (web canvas map).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

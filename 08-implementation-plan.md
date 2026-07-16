@@ -812,7 +812,8 @@ works with tap-to-recenter (list toggle present; reduced-motion → list); empty
 + restore-last-centered.
 
 - [x] M7 grilled to build-ready detail · tasks defined above (ADR-051, 2026-07-16)
-- [ ] Task 1 · server neighbors endpoint
+- [x] Task 1 · server neighbors endpoint (grouped `GET /nodes/{id}/neighbors`; replanned to
+  rel-keyed zones — [ADR-052](adr/052-map-zones-keyed-by-rel.md); [08-logs/m7.md](08-logs/m7.md))
 - [ ] Task 2 · web canvas map
 - [ ] Task 3 · web list fallback + reduced-motion + phone
 - [ ] Task 4 · live Accept + docs close-out
