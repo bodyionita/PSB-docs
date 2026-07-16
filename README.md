@@ -629,8 +629,31 @@ review kind (residual ambiguity → normal `entity-ambiguity`). `inbox-drain` CL
 wiring = task 8. **715 tests** (+8) + **real-PG smoke 117/117** (+3), ruff clean; **independent review
 APPROVE-WITH-MINORS — no must-fix** (3 minors logged: boundary `truncated` over-report; latent `inbox_folder` vs
 hardcoded writer-folder coupling; a core partial-write counts as reorganized-not-errored). Commit `af14de5`,
-**not pushed** — [08-logs/m6.md](08-logs/m6.md) task 6. Next: **M6 task 7** (web Review extensions + Chat "Remember
-now" + auto-recorded list), or respawn.
+**not pushed** — [08-logs/m6.md](08-logs/m6.md) task 6.
+**M6 task 7 DONE (2026-07-16):** web — **Review** extensions + Chat distiller surfaces (ADR-048 §12; thin PWA
+over the tasks 1–6 endpoints, no server change, rule 4): `stance-candidate` (agree/disagree/maybe) +
+`dedup-proposal` (survivor radio → merge/keep/link) cards, **salience ordering**, a **single-kind multi-select
+batch bar** over `POST /review/batch`, a **parked/maybe** section with per-card aging + a header/nav **count
+badge**; Chat **"Remember now"** → `POST …/remember` + a chat-scoped **"recently auto-recorded"** list with
+**optimistic one-tap remove**. tsc/eslint/vite green; cache-seeded browser smoke; **independent review
+APPROVE-WITH-MINORS — no must-fix** (1 fixed, 5 logged). Commit `c603cf5`, **not pushed** — [08-logs/m6.md](08-logs/m6.md) task 7.
+**M6 task 8 BUILT + REVIEWED (2026-07-16); live M6 Accept pending a prod push — the last M6 task.** The
+**maybe-digest** weekly job + the M6 jobs wired into the [ADR-047](adr/047-pipeline-scheduling-primitive.md)
+pipelines (ADR-048 §8/§consequences). **maybe-digest**: a new `MaybeDigestService` emits a **feed-visible
+`agent_run`** summarizing the parked `maybe` items (`{total, by_kind, oldest_age_days}`; **no push** — M10;
+the Review UI already carries the badge + aging) over a new `PgReviewQueue.maybe_kind_stats` aggregate
+(`GROUP BY status='maybe'`, rule 10); `maybe-digest` CLI verb. **Wiring**: the nightly roster now weaves the
+four M6 sleep-cycle jobs into their dependency slots (04-pipelines §Scheduling order) — **chat-distiller** →
+data-sync → db-backup → **inbox-drain** → reindex → profile-refresh → entity-backfill → identity-capsule →
+**dedup-sweep** → store-sweep → store-backup; **weekly** = integrity-drill → **maybe-digest**;
+`PipelineScheduler` gains the four optional steps (dropped-with-log if unwired, ADR-047 §5), wired in both
+`main.py` + the run-now CLI (distiller/inbox-drain share one capture pipeline; run-now drains + flushes only
+when a capture-touching step ran). **719 unit tests** (+4) + **real-PG smoke 121/121** (+4), ruff clean;
+`maybe-digest` CLI verb clean against local pg. **Independent review APPROVE-WITH-MINORS — no must-fix**
+(2 minors fixed, 3 logged). Commits `0bf5312`/`faf1afd`, **not pushed** — [08-logs/m6.md](08-logs/m6.md) task 8.
+**Live Accept (closes M6):** push → CI deploys (no migration) → verify the full M6 loop live at `braindan.cc`
+(overnight auto-endorse via the pipeline, dedup/inbox-drain nightly steps, the weekly maybe-digest feed row,
+`reprocess-all` P10) + a VPS `pipeline nightly|weekly` run-now. Next: **push for the live M6 Accept**, or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
