@@ -247,6 +247,16 @@ invariant 4); the scheduler registers **one cron per pipeline**. Ordering ration
 writes nodes before reindex; inbox-drain enriches entities before the entity jobs; dedup needs
 post-reindex embeddings. Richer visualization → M8.
 
+**A step's status is its own job's run, not the transitive scope
+([ADR-050](adr/050-pipeline-step-status-is-the-jobs-own-run.md)).** A step that funnels through the
+organizer (the chat-distiller's endorsed captures, the inbox-drainer's reorganize — rule 2b) spawns
+nested `agent="capture"` runs; a capture that degrades to the `inbox/` fallback closes its run
+`failed` (rule 7, ADR-021) even though the data is safe. Those nested runs stay parented to the
+pipeline parent and visible in the feed, but the step's pass/fail is read from **its own** run (the
+one whose `agent == step.name`) — so a benign inbox fallback of one capture never reads as a failed
+step and never trips an `on_fail=halt`. A step that raises still fails (halt still aborts on it); a
+step that opens no own run (`store-sweep`) still reads `skipped`.
+
 - Heavy agent work runs inside the **03:00–05:00 Europe/Bucharest** window (ADR-010), now enforced
   by *sequencing from one start*, not by hand-tuned stagger; store backup sweep near the end +
   debounced after every write batch.

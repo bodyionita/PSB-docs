@@ -669,6 +669,19 @@ VPS shell + the authenticated PWA):** a VPS `pipeline nightly|weekly` run-now (o
 roster incl. the M6 steps) + the PWA behavioral loop (auto-endorse → recently-recorded → one-tap remove;
 pure-retrieval skip; stance-unclear agree-only; maybe park + re-openable; optional P10 reprocess). Code pushed
 through `16eb2bd`; deploy live. Next: **user runs the VPS run-now + PWA checks → M6 CLOSED**, or respawn.
+**M6 follow-up (step-status fidelity) GRILLED TO BUILD-READY (2026-07-16 — [ADR-050](adr/050-pipeline-step-status-is-the-jobs-own-run.md)).**
+The live Accept `pipeline nightly` run-now surfaced `chat-distiller` + `inbox-drain` reported **failed** —
+grilled to a status-fidelity defect, **not** data loss (P10 held): a capture degrading to the `inbox/`
+fallback closes its `agent="capture"` organize run `failed` (rule 7), and `child_run_scope` flattens that
+nested run into the enclosing step so `_step_status` (any non-`{succeeded,skipped}` child → failed) failed
+the step even though the distiller's/drainer's **own** runs succeeded. Fix (ADR-050): **a step's status =
+its own job run** (`agent == step.name`); nested spawned runs stay feed-visible but non-gating; inbox-fallback
+keeps `status=failed` (step-rollup layer only); `raised → failed` + `halt`-on-own-failure unchanged; server-only,
+**no migration**. Docs recorded (ADR-050 + 04/08). One task open in [08 §M6 follow-up](08-implementation-plan.md):
+build → independent review → deploy → **re-run `pipeline nightly` live** (confirm both steps go `succeeded`,
+nested `capture` runs still visible-as-failed) → PWA behavioral loop → **M6 CLOSED**. Out of scope (logged): the
+organizer's inbox-fallback rate on distilled claim-text (2/4 this run; the drainer retries); the `claude` Max
+CLI 300s hang before Nebius fallback (Providers card). Next: **build the ADR-050 fix → drive to M6 CLOSED**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

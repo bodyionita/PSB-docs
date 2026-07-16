@@ -705,6 +705,27 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       nightly|weekly` run-now + the PWA behavioral loop (auto-endorse → recently-recorded → one-tap
       remove; pure-retrieval skip; stance-unclear agree-only; maybe park; P10 reprocess).
 
+**M6 follow-up (step-status fidelity) — GRILLED TO BUILD-READY (2026-07-16 →
+[ADR-050](adr/050-pipeline-step-status-is-the-jobs-own-run.md)).** The live M6 Accept `pipeline
+nightly` run-now surfaced **`chat-distiller`** and **`inbox-drain`** reported **failed** — traced (grilled
+decision-by-decision) to a status-fidelity defect, **not** data loss: a capture that degrades to the
+`inbox/` fallback closes its organize run `failed` (rule 7), and because `child_run_scope` flattens
+that nested `agent="capture"` run into the enclosing step, `_step_status` (any non-`{succeeded,skipped}`
+child → step failed) marked the step failed even though the distiller's/drainer's **own** runs closed
+`succeeded` and P10 held. Fix (ADR-050): **a step's status = its own job run** (the child whose
+`agent == step.name`); nested spawned runs stay parented + feed-visible but don't gate the step; the
+inbox-fallback run keeps `status=failed` (fix is step-rollup only); `raised → failed` and `halt` on the
+step's own failure unchanged; `store-sweep` (no own run) still `skipped`. Server-only, **no migration**.
+- [ ] **Task 1** — `pipeline._step_status` keys on `agent == step.name` (own-run status; nested
+      `capture` runs non-gating but visible; own `child_run_id` reported); regression test (nested
+      `capture` failed → step succeeded; own failed/raised → step failed + halt aborts; nested run stays
+      parented). Then: independent review → deploy (server-only) → **re-run `pipeline nightly` live** to
+      confirm chat-distiller + inbox-drain go **succeeded** with the nested `capture` runs still
+      visible-as-failed → the PWA behavioral loop → **M6 CLOSED**.
+- **Out of scope (logged, separate):** the organizer's inbox-fallback rate on chat-distilled
+  claim-text (2/4 this run — the drainer retries); the `claude` Max CLI 300s hang before Nebius
+  fallback ([ADR-044](adr/044-provider-observability-surface.md) Providers card).
+
 **M6 addendum — RATIFIED 2026-07-13, then RESOLVED at the M6 kickoff grill (2026-07-16 →
 [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)).** The kickoff took **(a)–(d) into scope
 and deferred (e)**; it also **overrode two of the ADR-032 extensions** for the M6 context:
