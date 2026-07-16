@@ -193,10 +193,14 @@ the store: a plain reindex preserves them, a full DB wipe leaves profile-search 
 ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over. **M5 adds a
 `source` column** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — `web` default \|
 `mcp` \| later `telegram`/`slack`; distinct from `kind` = text/voice), threaded to the node
-frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible. **M6 adds a
-`removed_at` column** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)): one-tap remove of
-a chat-distilled node tombstones its capture so `reprocess-all`/replay skips it (the node file is
-git-rm'd — history kept — and DB rows deleted); a non-null `removed_at` is replay-excluded.
+frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible. **M6 task 1 adds
+a nullable `source_ref` column** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §1, mirroring
+`nodes.source_ref`): an **endorsed** chat candidate materializes a `captures` row (`source=chat`) whose
+`source_ref` is the originating **chat-session id**, so the chat→capture→node chain is traceable for the
+M6 audit/remove surfaces without embedding node ids in chat state (NULL for the web/voice/MCP captures).
+**M6 task 4 adds a `removed_at` column** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)): one-tap
+remove of a chat-distilled node tombstones its capture so `reprocess-all`/replay skips it (the node file
+is git-rm'd — history kept — and DB rows deleted); a non-null `removed_at` is replay-excluded.
 
 **`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). Used by the
 Slack/other connectors (M9). **The chat-distiller does NOT use it** — it needs *per-session*

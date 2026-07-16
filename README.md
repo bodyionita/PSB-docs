@@ -514,6 +514,26 @@ live at `braindan.cc` — [08-logs/m5.5.md](08-logs/m5.5.md) task 3. **Follow-up
 gets its own run row (M8); deploy `2f6c8fb` on the next push; Sunday nightly/weekly RAM-overlap residual
 (§3). Next: **M6 task 1** (chat-distiller — [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)),
 whose four jobs are born as steps in these pipelines.
+**M6 task 1 DONE (2026-07-16):** the stance-gated **chat-distiller** —
+**migration 013** (`chat_distill_state` watermark table + nullable `captures.source_ref`; up/down/up
+verified) + `PgChatDistillStore` (idle-eligibility `GROUP BY`/`LEFT JOIN`, oldest-first delta-after-
+watermark, upsert) + **`ChatDistillerService`**: one `conspect` pass over a session's fenced delta →
+`{candidate_text, stance, salience, evidence_excerpt, referenced_entity_names, why_unclear}` candidates,
+stance-gated — **endorsed → a `captures` row** (`source=chat`, `source_ref=session-id`, `created_at`=
+anchoring-message time, via the capture pipeline = single writer → organizer → **P10 holds**),
+**unclear → a `stance-candidate` review item** (names+text, no node ids), **rejected → run-log only**;
+unknown stance → `unclear` (never guessed), a hedge post-check downgrades hedged endorsements, within-run
+content dedup, every run in `agent_runs`. Endorsement uses a **deterministic capture id** so a re-distill
+can't duplicate (rule 6); the delta is **oldest-first bounded batches** so an oversized session defers its
+remainder rather than silently skipping it. Extracted a shared **`build_capture_pipeline`** factory (rule
+10, reused by reprocess); `chat-distill` CLI verb. **Not yet scheduled** (a `nightly` pipeline step in task
+8). **639 tests** (+20), ruff clean, **real-PG smoke 86/86** (+7), migration round-trip verified; a **CLI
+end-to-end on real dev data + LLM** distilled 6 idle sessions → 1 endorsed → capture (node dated to the
+conversation day, not run time) → memory+event nodes → indexed, a **second run = 0/0** (idempotent).
+**Independent review APPROVE after fixes** — 2 must-fix (cross-run duplicate materialization; silent delta
+truncation), **both resolved + regression-tested**; 3 minors logged — [08-logs/m6.md](08-logs/m6.md) task 1.
+**Code committed locally, not pushed.** Next: **M6 task 2** (review_queue M6 kinds — `maybe`-reopen fix +
+`stance-candidate` agree=auto-endorse path + kind-aware reprocess reset).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

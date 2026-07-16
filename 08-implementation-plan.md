@@ -583,13 +583,13 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
   (re-derivable).
 
 **Task list ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)):**
-- [ ] **Task 1** — `chat_distill_state` migration + the **chat-distiller job**: idle-eligibility
-      (`max(chat_messages.created_at)` + `chat_distill_idle_hours`), single-pass multi-candidate
-      `conspect` distill (fenced input, structured output, hedge/affect→unclear), **endorsement →
-      `captures` row** (source=chat, one row/candidate, `created_at`=anchoring-message time) →
-      organizer; unclear → `stance-candidate` review item; rejected → run log; watermark advance
-      (delta-only re-distill, idempotent) + `agent_runs`. **Not yet scheduled** (added as a pipeline
-      step in Task 8).
+- [x] **Task 1 DONE (2026-07-16)** — `chat_distill_state` migration + the **chat-distiller job**:
+      idle-eligibility (`max(chat_messages.created_at)` + `chat_distill_idle_hours`), single-pass
+      multi-candidate `conspect` distill (fenced input, structured output, hedge/affect→unclear),
+      **endorsement → `captures` row** (source=chat, one row/candidate, `created_at`=anchoring-message
+      time) → organizer; unclear → `stance-candidate` review item; rejected → run log; watermark
+      advance (delta-only re-distill, idempotent) + `agent_runs`. **Not yet scheduled** (added as a
+      pipeline step in Task 8). Details in [08-logs/m6.md](08-logs/m6.md) task 1.
 - [ ] **Task 2** — review_queue M6 kinds: `PgReviewQueue.resolve` **maybe-reopen** fix
       (`pending`+`maybe` decidable; `resolved`/`discarded` terminal), `stance-candidate` payload
       (names-not-ids) + **agree = the auto-endorse captures path**, disagree/maybe; **kind-aware
