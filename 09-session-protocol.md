@@ -1,6 +1,9 @@
 # Session Protocol (working agreement)
 
-**Version:** 1.6 · **Status:** Approved 2026-07-12
+**Version:** 1.7 · **Status:** Approved 2026-07-16
+
+*(v1.7 — 2026-07-16: added **Parallel task batches**, a provisional, opt-in
+implementation-session mechanism for fanning independent tasks out to ≤3 side-agents.)*
 
 How every session is run. This is binding process, not a suggestion — it exists so any
 session (human or AI) can be started, paused, and **respawned fresh** without losing
@@ -28,11 +31,18 @@ than deciding silently while coding.
    question at a time; look up *facts* in the code, put *decisions* to the user.
 2. **Record after grilling.** Write every decision into the docs — a new **ADR** for
    architectural choices, updates to the relevant contract docs (00–08) for everything
-   else. Nothing agreed lives only in chat.
+   else. Nothing agreed lives only in chat. **When a milestone's task list is written,
+   annotate each task's parallel-eligibility** (`parallel-with:` / `depends-on:` / a batch
+   id) per *Parallel task batches* — the fan-out structure is decided here, at planning time,
+   and lives in the docs; the coordinator never re-derives it live.
 3. **Pause before implementation.** After recording, **stop**. The user decides whether to
    implement in this session or respawn a fresh one. Do not start coding until told to.
 
 ## Implementation-session loop
+
+Tasks run **sequentially by default** (the loop below). Where planning declared an eligible
+batch, independent tasks may instead fan out to side-agents — see *Parallel task batches*. The
+review, must-fix, and record-then-pause discipline is the same either way.
 
 1. **No grilling.** Read the approved docs/plan and implement against them.
 2. **Independent agent review before each pause.** When a task/feature is done, and *before*
@@ -55,6 +65,73 @@ than deciding silently while coding.
    Long single sessions are not the goal; clean handoffs are.
 4. **Hit an unrecorded decision? Stop and replan.** Don't resolve architecture or scope
    questions inline — grill them in a planning/replanning pass first, record, then resume.
+
+## Parallel task batches (v1.7 — provisional)
+
+Within an **implementation session only**, independent tasks may be run **concurrently** by
+side-agents instead of one-at-a-time. This is **opt-in and provisional** — the default is the
+strictly-sequential loop above, and reverting to it is a documented option (see *Reversal*
+below), not a failure. **Planning and grilling never fan out** (grilling is interactive; it
+stays in the foreground with the user).
+
+**Live coordinator.** The main session runs as a thin **coordinator**: it does **not** write
+code itself, it spawns **≤3 sibling side-agents at a time** (one level deep), and it keeps
+every interactive/destructive step — git, the quality gate, review, and **all doc writes** —
+in the foreground where permission prompts pass through. The coordinator stays
+**minimal-context**: it shuttles task numbers and file paths, never the diffs or specs (the
+side-agents hold that context and discard it on return). A longer-lived coordinator is
+accepted *only* under this minimal-context discipline.
+
+**Eligibility (decided at planning time, written into [08](08-implementation-plan.md)).** A
+set of tasks may form a fan-out batch only if **all three** hold for every task against its
+batch siblings:
+1. **Disjoint files** — no two tasks in the batch write the same file.
+2. **≤1 migration per batch** — at most one task creates an Alembic migration (migrations are
+   strictly serial; two in one batch would collide on numbering/order).
+3. **No intra-batch dependency** — no logical, data, or deploy ordering between batch members.
+
+Planning annotates each task accordingly; the coordinator never re-derives eligibility live.
+
+**Execution shape.**
+`≤3 parallel implementers (effort by difficulty) → ≤3 parallel fresh per-task reviewers (high
+effort) → coordinator foreground integration gate → resolve must-fix → record → pause.`
+
+- **Implementers** edit in the **shared working tree** (the disjoint-files guarantee makes
+  concurrent writes safe — no worktrees). Effort is chosen per task: **medium** for
+  straightforward tasks, **high** for genuinely hard ones.
+- **Review stays independent and per-task**, just *decoupled from the fan-out* — it runs
+  **after** tasks land, not interleaved. One **fresh, high-effort** reviewer per landed task
+  reads the approved plan + that task's diff; reviewers run in parallel. Because tasks are
+  disjoint, cross-task integration is covered by the coordinator's gate, not a reviewer.
+- **Integration gate (mandatory).** Once the batch has landed, the coordinator runs the full
+  quality gate on the **merged** tree in the foreground — lint, typecheck, the whole test
+  suite, migration apply — **once**, before recording.
+- **Must-fix stays a hard blocker**, batched not downgraded: the batch is not recorded done
+  and **nothing deploys** until every task's must-fix findings are resolved (scoped editor
+  side-agent or coordinator inline) and re-reviewed on a fresh diff.
+
+**Durability (a batch must survive a dead coordinator).**
+- **Commit per task**, the moment it lands and passes review — completed tasks are durable in
+  git immediately, so a mid-batch crash can only orphan tasks still in flight (which the docs
+  never ticked; a respawn discards their partial edits and re-dispatches).
+- **Coordinator is the sole doc writer** — side-agents never touch `README`/`08` (single
+  files; concurrent writes would clobber). It records **batch dispatched** *before* fan-out,
+  **ticks each task done** (sha + review outcome) as it lands, and records **batch complete**
+  once the gate passes.
+- **Pause at the batch boundary** (not per task); emit the handoff prompt there. A respawn
+  reads `08`, sees which batch members are ticked vs pending, reconciles against `git log`,
+  discards orphaned partial edits, and re-dispatches the rest.
+
+**Effort selection (both loops).** The coordinator picks effort per agent by task difficulty,
+not by role blanket: **medium** for straightforward implementation, **high** for genuinely
+hard implementation, **high** for every reviewer, and **high** for the coordinator itself and
+any grilling/planning pass.
+
+**Reversal (provisional-change clause).** This mode ships as a trial. Reverting to the
+strictly-sequential loop is a **human judgment call**, not an automated trigger — drop it with
+no ceremony if any warning sign shows: a collision/merge incident despite the disjoint-files
+guarantee, a defect a batched review let slip that an interleaved one would have caught, or a
+respawn that couldn't cleanly reconstruct an in-flight batch from the docs.
 
 ## Security & secrets discipline
 
@@ -135,3 +212,7 @@ won't know it happened.
 - [ ] Docs committed **and pushed** at each pause
 - [ ] **Short handoff/respawn prompt emitted** (mandatory at every pause — pointer + next action)
 - [ ] Any unrecorded decision → stopped and replanned, not decided inline
+- [ ] **If a parallel batch** (opt-in): ≤3 side-agents, disjoint files, ≤1 migration; live
+      minimal-context coordinator owns git/gate/review/doc-writes; per-task **fresh high-effort**
+      review; **integration gate on the merged tree**; **per-task commits**; pause at the batch
+      boundary; a respawn can reconstruct in-flight state from the docs + `git log`
