@@ -745,6 +745,29 @@ arrowheads). Commits `93ac37f`/`624a644`, **not pushed** — [08-logs/m7.md](08-
 **Interactive canvas hops (node-click re-center, "+N", drawer) + the mobile viewport were not driven
 in-browser** (react-force-graph hit-testing ignores synthetic events; the pane's input degraded) —
 they're **task 3's** walkthrough scope. Next: **M7 task 3** (list fallback + reduced-motion + phone).
+**M7 task 3 DONE (2026-07-16):** the web **map list fallback + reduced-motion + view toggle** — a
+`features/map/MapList.tsx` grouped tappable-list renderer over the **same rel-keyed `effectiveZones`**
+the canvas draws (extracted as one shared memo so the two views stay in lockstep), serving as both
+the **`prefers-reduced-motion` fallback** and a manual **Canvas/List toggle**
+([ADR-051](adr/051-m7-map-build-decisions.md) §7; client-only, ADR-006 / rule 4 — no server code).
+Focal header → the shared `NodePreview` drawer (rule 10); one `<section>` per rel zone with tappable
+**tap-to-recenter** rows + per-zone **"Show N more"** (reusing the M5 rel-cursor); **inline edge
+styling mirroring the canvas** (§6 — derived "similar" **no arrow**, superseded `until` dashed+dimmed,
+canonical direction arrow). `MapScreen` gains the `useReducedMotion`-driven default (`view =
+override ?? (reduced ? 'list' : 'canvas')`) + the header toggle + a `busyRels` render-state mirror of
+the show-more guard. tsc/eslint/vite green; a **real-browser walkthrough vs a throwaway mock API**
+drove the list end-to-end on **desktop and a 375px mobile viewport** (center, toggle, 3-hop
+tap-to-recenter, breadcrumb truncation, show-more paging, drawer + drawer-edge re-center; phone
+full-width, canvas mounts on phone, no horizontal overflow; console clean) — the interactive taps
+task 2 deferred. **Two documented preview-pane limits (not product defects, same class task 2 hit):**
+`requestAnimationFrame` is frozen in the pane (framer-motion enter/exit + the force sim don't visually
+animate, screenshots time out — handlers verified via DOM `.click()` + observed state changes), and
+reduced-motion can't be OS-emulated there (framer caches it at load) — the branch selects the same
+list view driven above. **Independent review APPROVE-WITH-MINORS** — 1 must-fix (derived rows carried
+a direction arrow; symmetric derived edges must carry none, §6 — gated canonical-only, matching the
+canvas) fixed + re-verified; 1 minor logged (`isHub` helper duplication). Commits `78ec92f`/`469d504`,
+**not pushed** — [08-logs/m7.md](08-logs/m7.md) task 3. Next: **M7 task 4** (live Accept + docs
+close-out — deploy the M7 range, live-accept at `braindan.cc`, record → M7 CLOSED).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

@@ -828,7 +828,9 @@ works with tap-to-recenter (list toggle present; reduced-motion → list); empty
 - [x] Task 2 · web canvas map (`react-force-graph-2d` neighborhood explorer; 8th wide Map tab,
   plane palette, plex re-center, drawer, per-zone show-more, entry points) — **DONE 2026-07-16**
   ([08-logs/m7.md](08-logs/m7.md) task 2; commits `93ac37f`/`624a644`, not pushed)
-- [ ] Task 3 · web list fallback + reduced-motion + phone · `depends-on: Task 2` · sequential
+- [x] Task 3 · web list fallback + reduced-motion + phone (grouped tappable-list renderer + Canvas/
+  List toggle + reduced-motion default; desktop + mobile-viewport walkthrough) — **DONE 2026-07-16**
+  ([08-logs/m7.md](08-logs/m7.md) task 3; commits `78ec92f`/`469d504`, not pushed)
 - [ ] Task 4 · live Accept + docs close-out · `depends-on: Task 2, Task 3` · sequential
 
 ## M8 — Ops console & activity restructure
