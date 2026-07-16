@@ -464,6 +464,23 @@ extensions + Chat "Remember now" + a chat-scoped "recently auto-recorded" list. 
 (02/03/04/06/08 + ADR-047/048; the ratified M6 addendum marked resolved — `augment` + graph-degree
 salience overridden for the M6 context). **Paused before implementation** per [09](09-session-protocol.md)
 — **no code this session.** Next: build **M5.5 task 1** (pipeline runner), or respawn.
+**M5.5 task 1 DONE (2026-07-16):** the pipeline scheduling primitive's **orchestration mechanism** —
+runner + config model + `agent_runs.parent_run_id` — built against [ADR-047](adr/047-pipeline-scheduling-primitive.md),
+**deliberately not wired into the scheduler and no job migrated** (task 2). **Migration 012**
+(`agent_runs.parent_run_id`, nullable self-ref FK `ON DELETE SET NULL` + index — a bare job run stays
+parentless, unchanged); **parent/child linkage via a task-local contextvar** (`child_run_scope`) so a
+step's `run_scheduled` links to the pipeline parent with **no change to what any job does** (ADR-047
+§5); `PipelineRunner` runs steps **sequentially-on-completion**, honours per-step `on_fail`
+(`continue`|`halt`, status **inferred from each step's child run** — a non-cleanly-done child reads as
+a failure so `halt` reliably aborts), closes an orphaned `running` child on a raising step (rule 7),
+records the per-step sequence, never crashes the scheduler. Config `pipeline_defs()` = the migrated
+ADR-010 roster in dependency order, **`continue`-dominant** (§4); step names map to the existing
+scheduler job ids (task-2 wiring = a lookup). **619 unit tests** (16 new, fake steps) **+ 79 real-PG
+smoke** (6 new) green, ruff clean, migration 012 up/down round-trip verified on local pg; **independent
+review APPROVE — no must-fix** (4 minors applied). Commit `c0a3bd6`, **not pushed** —
+[08-logs/m5.5.md](08-logs/m5.5.md) task 1. Next: **M5.5 task 2** (migrate the roster off individual
+crons into the two pipelines; scheduler registers one cron per pipeline; retire per-job cron settings;
+verify durability drill + a manual run-now mid-pipeline).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

@@ -490,10 +490,28 @@ step is still runnable standalone (CLI + API) and a manual run mid-pipeline is s
 by the existing single-flight locks; **no behavior change** to any job — the DB-wipe → `reindex`
 durability drill still passes.
 
-- [ ] **Task 1** — pipeline runner + config model (`nightly`/`weekly` pipeline defs: name, cron,
+- [x] **Task 1** — pipeline runner + config model (`nightly`/`weekly` pipeline defs: name, cron,
       ordered steps, per-step `on_fail`; rule 9) + `agent_runs.parent_run_id` migration + parent/
       child run linkage. Sequential-on-completion; per-step `on_fail` honored; single-flight
       preserved. Unit-tested (fake steps: ordering, `continue`-vs-`halt`, parent/child runs).
+      **DONE (2026-07-16):** orchestration **mechanism only** — the runner + config model + DB
+      linkage, deliberately **not wired into the scheduler and no job migrated** (task 2). Migration
+      012 (`agent_runs.parent_run_id`, nullable self-ref FK `ON DELETE SET NULL` + index — a bare
+      job run stays parentless, unchanged); **parent/child linkage via a task-local contextvar**
+      (`child_run_scope`) so a step's `run_scheduled` links to the pipeline parent with **no change
+      to what any job does** (ADR-047 §5/consequences); `app/services/pipeline.py` `PipelineRunner`
+      runs steps **sequentially-on-completion**, honours per-step `on_fail` (`continue`|`halt`,
+      status **inferred from each step's child run** — a non-cleanly-done child reads as a failure so
+      `halt` reliably aborts), closes an orphaned `running` child on a raising step (rule 7), records
+      the per-step sequence in the parent run, and never crashes the scheduler. Config
+      `pipeline_defs()` = the migrated ADR-010 roster in dependency order, **`continue`-dominant**
+      (§4); step names map to the existing scheduler job ids (task-2 wiring is a lookup). **619 unit
+      tests** (16 new, fake steps) **+ 79 real-PG smoke** (6 new: parent_run_id INSERT/FK/contextvar
+      reset) green, ruff clean, migration 012 up/down round-trip verified on local pg. **Independent
+      review APPROVE — no must-fix** (4 minors applied: robust `halt` inference, orphan-child close,
+      `SKIPPED` constant, skipped count). Commit `c0a3bd6`, **not pushed**. Task-2 notes: omit
+      disabled/optional jobs from the step-func map; register the pipeline cron with
+      `max_instances=1`/`coalesce`. — [08-logs/m5.5.md](08-logs/m5.5.md) task 1.
 - [ ] **Task 2** — migrate the existing roster off individual crons into the two pipelines
       (scheduler registers one cron per pipeline; CLI/`run-now` entrypoints unchanged); retire
       the per-job cron settings. Verify the durability drill + a manual `run-now` mid-pipeline.
