@@ -470,6 +470,9 @@ M6** (may need thin `search`/`fetch` aliases; its quirks must not block M5's clo
 **GRILLED TO BUILD-READY 2026-07-16** (M6 kickoff grill — a scheduling architecture change
 surfaced and was carved out ahead of M6's features so a scheduling regression can't masquerade
 as a chat-distiller bug). **Orchestration only — no job changes what it does.**
+**✅ M5.5 CLOSED (2026-07-16)** — all 3 tasks done, live Accept passed on `braindan.cc` (one nightly
+start drove the whole roster in order under a parent `agent_runs` run with per-step children). Details
+below + [08-logs/m5.5.md](08-logs/m5.5.md).
 
 **Scope.** Replace the per-job staggered nightly crons ([ADR-010](adr/010-agent-window-3-5am.md))
 with **pipelines as the sole schedulable unit** (ADR-047): a config-defined pipeline = a name +
@@ -530,8 +533,19 @@ durability drill still passes.
       nightly/weekly RAM overlap = deliberate ADR-047 §3 residual; `run_store_sweep` opens no row so
       shows as a `skipped` step — both out of orchestration-only scope). Commit `8a57611`, **not
       pushed**. — [08-logs/m5.5.md](08-logs/m5.5.md) task 2.
-- [ ] **Task 3** — live M5.5 Accept (deploy; confirm one nightly start drives the whole roster in
+- [x] **Task 3** — live M5.5 Accept (deploy; confirm one nightly start drives the whole roster in
       order, per-step runs visible, durability drill green) → independent review → pause.
+      **DONE → M5.5 CLOSED (2026-07-16):** pushed `c0a3bd6`/`8a57611`/`e77a694` (CI green, migration
+      012 applied on prod, `/health` all-true). Added a **`python -m app.cli pipeline {nightly|weekly}`
+      run-now verb** (ADR-047 §6 enabler) that prints parent run id + per-step status + child run id.
+      The user ran `pipeline nightly` on the VPS: **one start drove all 8 steps in dependency order**
+      under parent run `939306a4` — 7 succeeded / 0 failed / 1 skipped (`store-sweep` = the known
+      no-row job, it ran `pushed=True`), each row-opening step linking a child run; every job did its
+      normal work (**no behavior change**); the run **also confirms migration 012 on prod** (the
+      `parent_run_id` INSERT succeeded). All Accept criteria met. **Independent review APPROVE — no
+      must-fix**; one fidelity minor fixed (`2f6c8fb`, committed local: run-now now uses effective
+      vocabulary so it scans the same entities as the cron). Follow-ups logged (give `store-sweep` a
+      run row → M8; deploy `2f6c8fb` next push; Sunday RAM-overlap residual). — [08-logs/m5.5.md](08-logs/m5.5.md) task 3.
 
 ## M6 — Chat-distiller + review queue ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md) · build decisions [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
 

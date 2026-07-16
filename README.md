@@ -499,6 +499,21 @@ no must-fix** (2 follow-ups logged: Sunday nightly/weekly RAM overlap = delibera
 Commit `8a57611`, **not pushed** — [08-logs/m5.5.md](08-logs/m5.5.md) task 2. Next: **M5.5 task 3**
 (live M5.5 Accept — deploy; confirm one nightly start drives the whole roster in order, per-step runs
 visible under the parent, durability drill green → independent review → pause).
+**M5.5 task 3 DONE → M5.5 (scheduling / pipeline orchestrator) CLOSED (2026-07-16).** Pushed
+`c0a3bd6`/`8a57611`/`e77a694` to prod (CI green, **migration 012 applied**, `/health` all-true). Added
+a **`python -m app.cli pipeline {nightly|weekly}` run-now verb** ([ADR-047](adr/047-pipeline-scheduling-primitive.md)
+§6 enabler) printing parent run id + per-step status + child run id. The user ran `pipeline nightly` on
+the VPS: **one start drove all 8 steps in dependency order** under a single parent run `939306a4` — 7
+succeeded / 0 failed / 1 skipped (`store-sweep` = the known no-row job, ran `pushed=True`), each
+row-opening step linking a distinct child run; every job did its normal work (**no behavior change**);
+the run also **confirms migration 012 on prod** (the `parent_run_id` INSERT succeeded). **All Accept
+criteria met; independent review APPROVE — no must-fix** (one fidelity minor fixed `2f6c8fb`, committed
+local: run-now now uses effective vocabulary). The pipeline is the scheduling primitive — the whole
+nightly roster runs sequentially from one start under a parent `agent_runs` run with per-step children,
+live at `braindan.cc` — [08-logs/m5.5.md](08-logs/m5.5.md) task 3. **Follow-ups:** `run_store_sweep`
+gets its own run row (M8); deploy `2f6c8fb` on the next push; Sunday nightly/weekly RAM-overlap residual
+(§3). Next: **M6 task 1** (chat-distiller — [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)),
+whose four jobs are born as steps in these pipelines.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
