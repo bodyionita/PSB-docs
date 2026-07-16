@@ -599,6 +599,23 @@ self-excludes via its tombstone); `default_survivor` = higher canonical-degree /
 occurred-signal) under a broader **"enriching & correcting ingested data"** theme. Docs updated
 (02/03/04/08 + ADR-049). **Paused before implementation** per [09](09-session-protocol.md) — **no code
 this session.** Next: build **M6 task 5** against ADR-049, or respawn.
+**M6 task 5 DONE (2026-07-16):** dedup sweep + the extracted **merge-core**
+([ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)). **`MergeCore.fold`** (retarget inbound →
+tombstone loser → reindex → force-commit) is now shared: **entity-merge** = core + alias-union
+(behaviour-identical, `test_entity_merge` unchanged assertions), **content-merge** = core alone. The nightly
+**`DedupSweepService`** files `dedup-proposal` items for content-node near-dups clearing a **strict-AND SQL
+gate** (HNSW top-K cosine ⋀ shared canonical edge to a common entity hub ⋀ occurred-overlap — a null
+`occurred_start` on either side **never excludes**), driver-bounded by a last-success `agent_runs`
+**watermark** (**no migration**), pairs canonicalized+deduped, a **re-file guard** (`proposal_exists`, any
+status) for idempotent re-scans, `default_survivor` (higher canonical degree / older), capped per run.
+Resolution `{action: merge|keep|link, survivor?}` — **merge** folds via the core, **keep** discards, **link**
+writes a **canonical `similar`** edge (frontmatter, so it survives the derived recompute). Config knobs +
+`dedup-sweep` CLI verb (pipeline wiring = task 8); `dedup-proposal` truncate-on-reprocess (task-2 kind-aware
+reset). **707 tests** (+26) + **real-PG smoke 114/114** (+11: the un-fakeable candidate SQL — cosine/
+shared-hub/occurred/undated gates, re-file guard, degree), ruff clean; a CLI end-to-end on dev data +
+**independent review APPROVE — no must-fix** (5 minors logged; the "undated never excludes" smoke gap closed).
+Commit `fd18c7b`, **not pushed** — [08-logs/m6.md](08-logs/m6.md) task 5. Next: **M6 task 6** (inbox drainer),
+or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

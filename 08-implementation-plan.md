@@ -627,18 +627,21 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       skips a removed capture) + 1 correctness minor (DB-delete decoupled from the unlink result so a
       crash-retry self-heals — **fixed**) + 1 type nit (**fixed**). Details in
       [08-logs/m6.md](08-logs/m6.md) task 4. **Committed locally, not pushed.**
-- [ ] **Task 5** — **dedup sweep** job (nightly, all-source, post-reindex) —
-      **GRILLED/REPLANNED TO BUILD-READY 2026-07-16, [ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)**
-      (an implementation session hit the unrecorded `link`-rel decision → replanned per
-      [09](09-session-protocol.md)): **extract the merge-core** out of `MergeService`
-      (retarget→tombstone→reindex→commit; content-merge = core-only, entity-merge = core + alias-union);
-      strict-AND gate = high-cosine + shared-entity-hub edge + occurred-overlap (undated never excludes)
-      over **content nodes** via HNSW top-K, `indexed_at ≥` last-success watermark (no migration);
-      **re-file guard** (skip any pair with an existing `dedup-proposal`, any status); `default_survivor`
-      = higher canonical-degree / older; resolution `{action: merge|keep|link, survivor?}` — merge folds
-      via the core, **keep** dismisses, **link** writes a **canonical `similar`** edge; `dedup-proposal`
-      truncate-on-reprocess (already handled by the kind-aware reset). Config knobs (rule 9); CLI verb
-      `dedup-sweep` (pipeline wiring = task 8). **augment deferred.**
+- [x] **Task 5 DONE (2026-07-16)** — **dedup sweep + extracted merge-core**
+      ([ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)): **`MergeCore.fold`** extracted
+      (retarget→tombstone→reindex→force-commit) — entity-merge = core + alias-union (behaviour-identical),
+      content-merge = core alone; **`DedupSweepService`** files `dedup-proposal` items for content-node
+      near-dups passing a strict-AND SQL gate (HNSW top-K cosine ⋀ shared entity-hub edge ⋀ occurred-overlap,
+      undated never excludes), driver bounded by a last-success `agent_runs` watermark (**no migration**),
+      canonicalized+deduped pairs, **re-file guard** (`proposal_exists` any status), `default_survivor`
+      (degree/older), capped per run. Resolution `{action: merge|keep|link, survivor?}` — **merge** folds via
+      the core, **keep** discards, **link** writes a **canonical `similar`** edge (survives the derived
+      recompute). Config knobs + `dedup-sweep` CLI verb (pipeline wiring = task 8); `dedup-proposal`
+      truncate-on-reprocess (task-2 kind-aware reset). **707 tests** (+26) + **real-PG smoke 114/114** (+11:
+      the un-fakeable candidate SQL — cosine/shared-hub/occurred/undated gates + re-file guard + degree),
+      ruff clean; a CLI end-to-end on dev data + **independent review APPROVE — no must-fix** (5 minors logged;
+      the "undated never excludes" smoke gap closed). Commit `fd18c7b`, **not pushed**. **augment deferred.**
+      Details in [08-logs/m6.md](08-logs/m6.md) task 5.
 - [ ] **Task 6** — **inbox drainer** job (nightly, bounded, own step): find `inbox/`-materialized
       captures (`node_paths` in `inbox/`) → `reorganize_capture` with the richer registry.
 - [ ] **Task 7** — web: **Review** extensions (`stance-candidate` + `dedup-proposal` render, salience
