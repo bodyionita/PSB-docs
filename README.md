@@ -680,16 +680,20 @@ keeps `status=failed` (step-rollup layer only); `raised → failed` + `halt`-on-
 **no migration**. Docs recorded (ADR-050 + 04/08). Out of scope (logged): the organizer's inbox-fallback rate on distilled
 claim-text (2/4 this run; the drainer retries); the `claude` Max CLI 300s hang before Nebius fallback
 (Providers card).
-**M6 follow-up (ADR-050) BUILT + REVIEWED + PUSHED (2026-07-16); live re-run pending user.**
+**M6 follow-up (ADR-050) DONE → M6 (chat-distiller + review queue) CLOSED (2026-07-16).**
 `pipeline._step_status` now keys on the step's own run (`agent == step.name`); nested `capture` runs stay
 feed-visible but non-gating; `raised → failed`, `halt`-on-own-failure, `store-sweep → skipped` preserved;
 inbox-fallback run keeps `status=failed`. **721 tests** (+2 regression), ruff+format clean, **independent
-review APPROVE — no must-fix** (invariant verified across every wired step). Commit `1c36e06` (on the
-`8e1c376` ruff-format sweep); **pushed** (`16eb2bd..1c36e06`, CI deploying — server-only, **no migration**);
-prod `/health` all-true through the deploy window. **Remaining to CLOSE M6 (user-driven):** confirm CI green
-→ re-run `pipeline nightly` live (expect `inbox-drain` + `chat-distiller` **succeeded**, the 2 unresolved
-captures' nested `capture` runs still visible-as-failed, **0 failed** bar `store-sweep`-skipped) → the PWA
-behavioral loop → **M6 CLOSED**. Next: **user re-runs the nightly + PWA loop → confirm → M6 CLOSED**.
+review APPROVE — no must-fix** (invariant verified across every wired step); commit `1c36e06` (on the
+`8e1c376` ruff-format sweep), pushed + deployed (server-only, no migration). **Live Accept PASSED:** the
+user re-ran `pipeline nightly` on prod → parent `1f5099ef`, **11 steps, 10 succeeded, 0 failed, 1 skipped**
+— **`inbox-drain` → succeeded** while still reporting "0/2 resolved" (its 2 unresolved captures' nested
+`capture` runs stayed visible-as-failed, the exact case that read `failed` pre-fix), `chat-distiller →
+succeeded`, only `store-sweep` skipped (by design). The user exercised part of the PWA behavioral loop +
+confirmed the remaining surfaces and **accepted M6 as closed**. The M6 sleep-cycle (chat-distill →
+inbox-drain → dedup-sweep; weekly maybe-digest) runs clean from one nightly start under a parent run with
+per-step children, live at `braindan.cc` — [08-logs/m6.md](08-logs/m6.md) "M6 follow-up". **Next: M7 (the
+map) — planning session (`/grilling` first), or respawn.**
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

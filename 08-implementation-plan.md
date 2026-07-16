@@ -547,7 +547,7 @@ durability drill still passes.
       vocabulary so it scans the same entities as the cron). Follow-ups logged (give `store-sweep` a
       run row → M8; deploy `2f6c8fb` next push; Sunday RAM-overlap residual). — [08-logs/m5.5.md](08-logs/m5.5.md) task 3.
 
-## M6 — Chat-distiller + review queue ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md) · build decisions [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
+## M6 — Chat-distiller + review queue ✅ CLOSED (accepted 2026-07-16) ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md) · build decisions [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
 
 **GRILLED TO BUILD-READY 2026-07-16** (decision-by-decision; [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)).
 Scope = **core + addendum (a)–(d)**; **contradiction sweep (e) deferred**. Runs inside the
@@ -676,7 +676,7 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       the setState-inside-updater in `toggleSelect`; logged follow-ups: eager dedup node fetches,
       `SalienceBadge`/`SaliencePill` duplication, batch-maybe-on-parked no-op, `batchNote` no
       auto-clear). Commit `c603cf5`, **not pushed**. Details in [08-logs/m6.md](08-logs/m6.md) task 7.
-- [~] **Task 8 DEPLOYED + independent Accept review APPROVE (2026-07-16); live behavioral checks + VPS run-now pending user** — **maybe-digest**
+- [x] **Task 8 DONE → M6 (chat-distiller + review queue) ACCEPTED (2026-07-16)** — **maybe-digest**
       weekly job + the M6 jobs wired into the [ADR-047](adr/047-pipeline-scheduling-primitive.md)
       pipelines. **maybe-digest** (ADR-048 §8): a new `MaybeDigestService` emits a **feed-visible
       `agent_run`** summarizing the parked `maybe` items (`{total, by_kind, oldest_age_days}`; no push
@@ -716,7 +716,7 @@ child → step failed) marked the step failed even though the distiller's/draine
 `agent == step.name`); nested spawned runs stay parented + feed-visible but don't gate the step; the
 inbox-fallback run keeps `status=failed` (fix is step-rollup only); `raised → failed` and `halt` on the
 step's own failure unchanged; `store-sweep` (no own run) still `skipped`. Server-only, **no migration**.
-- [~] **Task 1 BUILT + REVIEWED + PUSHED (2026-07-16); live re-run pending user** —
+- [x] **Task 1 DONE → M6 CLOSED (2026-07-16)** —
       `pipeline._step_status` keys on `agent == step.name` (own-run status; nested `capture` runs
       non-gating but visible; own `child_run_id` reported). **721 tests** (+2 ADR-050 regression: nested
       `capture` failed → step succeeded + no halt; own failed/raised → step failed + halt aborts; nested
@@ -725,10 +725,13 @@ step's own failure unchanged; `store-sweep` (no own run) still `skipped`. Server
       ADR-047 behavior tests hold; `step.name == agent` invariant verified across every wired step; 2
       non-blocking minors logged). Commit `1c36e06` (on the `8e1c376` ruff-format sweep); **pushed**
       (`16eb2bd..1c36e06`, CI deploying — server-only, **no migration**); prod `/health` all-true through
-      the deploy window. Details in [08-logs/m6.md](08-logs/m6.md) "M6 follow-up". **Remaining to CLOSE
-      M6 (user-driven):** confirm CI green → re-run `pipeline nightly` live (expect `inbox-drain` +
-      `chat-distiller` **succeeded**, the 2 still-unresolved captures' nested `capture` runs still
-      visible-as-failed, **0 failed** steps bar `store-sweep`-skipped) → the PWA behavioral loop → **M6 CLOSED**.
+      the deploy window. Details in [08-logs/m6.md](08-logs/m6.md) "M6 follow-up". **Live Accept PASSED
+      (2026-07-16):** the user re-ran `pipeline nightly` on prod → parent `1f5099ef`, **11 steps, 10
+      succeeded, 0 failed, 1 skipped** — **`inbox-drain` → succeeded** while still reporting "0/2 resolved"
+      (its 2 unresolved captures' nested `capture` runs stayed visible-as-failed, the exact case that read
+      `failed` pre-fix), **`chat-distiller` → succeeded**, only `store-sweep` skipped (by design). The user
+      exercised part of the PWA behavioral loop and confirmed the remaining surfaces present, and
+      **accepted M6 as closed** → **M6 CLOSED**.
 - **Out of scope (logged, separate):** the organizer's inbox-fallback rate on chat-distilled
   claim-text (2/4 this run — the drainer retries); the `claude` Max CLI 300s hang before Nebius
   fallback ([ADR-044](adr/044-provider-observability-surface.md) Providers card).
