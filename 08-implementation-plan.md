@@ -676,7 +676,7 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       the setState-inside-updater in `toggleSelect`; logged follow-ups: eager dedup node fetches,
       `SalienceBadge`/`SaliencePill` duplication, batch-maybe-on-parked no-op, `batchNote` no
       auto-clear). Commit `c603cf5`, **not pushed**. Details in [08-logs/m6.md](08-logs/m6.md) task 7.
-- [~] **Task 8 BUILT + REVIEWED (2026-07-16); live M6 Accept pending a prod push** — **maybe-digest**
+- [~] **Task 8 DEPLOYED + independent Accept review APPROVE (2026-07-16); live behavioral checks + VPS run-now pending user** — **maybe-digest**
       weekly job + the M6 jobs wired into the [ADR-047](adr/047-pipeline-scheduling-primitive.md)
       pipelines. **maybe-digest** (ADR-048 §8): a new `MaybeDigestService` emits a **feed-visible
       `agent_run`** summarizing the parked `maybe` items (`{total, by_kind, oldest_age_days}`; no push
@@ -690,9 +690,20 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       capture-touching step ran). **719 unit tests** (+4) + **real-PG smoke 121/121** (+4), ruff clean;
       the `maybe-digest` CLI verb ran clean against local pg. **Independent review APPROVE-WITH-MINORS —
       no must-fix** (2 minors fixed: conditional run-now drain, import tidy; 3 logged: distiller
-      fast-ack intra-night lag, age-from-filed-time, unused `settings`). Commits `0bf5312`/`faf1afd`,
-      **not pushed**. Details in [08-logs/m6.md](08-logs/m6.md) task 8. **Live Accept** = push → CI
-      deploys (no migration) → verify the full M6 loop live + a VPS `pipeline nightly|weekly` run-now.
+      fast-ack intra-night lag, age-from-filed-time, unused `settings`). Commits `0bf5312`/`faf1afd`.
+      Details in [08-logs/m6.md](08-logs/m6.md) task 8.
+      **DEPLOYED + Accept review APPROVE (2026-07-16).** The M6 range was pushed; the first push
+      (`faf1afd`) **failed CI** on `ruff check` (E501 in migration 013's docstring), gating the
+      deploy. Fixed + **hardened `.githooks/pre-commit` into a lint/format gate** (ruff + eslint on
+      staged files, so a lint error can't reach `main` again) — commit `16eb2bd`; whole-repo ruff
+      clean + 719 tests green, re-pushed. CI green → deploy ran `alembic upgrade head` (the full range
+      carries **migrations 013/014** from tasks 1/4 — additive, up/down verified); `/api/v1/health`
+      all-true and the M6 route surface is **live** (`chat/auto-recorded` 404→401; all three M6 write
+      routes 401). **Independent M6 Accept review APPROVE — no must-fix** (all 6 Accept criteria +
+      task-8 wiring mapped to `file:line`; invariants 2b/2/6/7/5/9 hold; minors cosmetic/deferred).
+      **Remaining to CLOSE (user-driven — VPS shell + authenticated PWA):** a VPS `pipeline
+      nightly|weekly` run-now + the PWA behavioral loop (auto-endorse → recently-recorded → one-tap
+      remove; pure-retrieval skip; stance-unclear agree-only; maybe park; P10 reprocess).
 
 **M6 addendum — RATIFIED 2026-07-13, then RESOLVED at the M6 kickoff grill (2026-07-16 →
 [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)).** The kickoff took **(a)–(d) into scope

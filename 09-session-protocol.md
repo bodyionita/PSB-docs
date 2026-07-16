@@ -86,6 +86,11 @@ credential is the single worst outcome of any session, worse than any bug.
   context. Docs pushes are automatic at pauses.
 - **Code:** commit freely while implementing (small, coherent commits). **Pushing code is
   the user's call** — do not push the code repo without being asked.
+- **Lint gate (local, mandatory).** The code repo's `.githooks/pre-commit` runs the exact
+  linters CI runs, scoped to the staged files, so a lint/format error can never reach `main`
+  and gate the deploy: Python (`server/**.py`) `ruff check` + `ruff format --check`, web
+  (`web/**` source) `eslint --max-warnings 0`. It fails closed if `uv`/`pnpm` is absent for a
+  staged subtree. Don't `--no-verify` past it — fix the code (see `.githooks/README.md`).
 
 ## Recording state for respawn (the docs are the single source)
 

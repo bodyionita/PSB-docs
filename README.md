@@ -637,7 +637,7 @@ batch bar** over `POST /review/batch`, a **parked/maybe** section with per-card 
 badge**; Chat **"Remember now"** → `POST …/remember` + a chat-scoped **"recently auto-recorded"** list with
 **optimistic one-tap remove**. tsc/eslint/vite green; cache-seeded browser smoke; **independent review
 APPROVE-WITH-MINORS — no must-fix** (1 fixed, 5 logged). Commit `c603cf5`, **not pushed** — [08-logs/m6.md](08-logs/m6.md) task 7.
-**M6 task 8 BUILT + REVIEWED (2026-07-16); live M6 Accept pending a prod push — the last M6 task.** The
+**M6 task 8 DEPLOYED + independent Accept review APPROVE (2026-07-16); live behavioral checks + VPS run-now pending the user — the last M6 gate.** The
 **maybe-digest** weekly job + the M6 jobs wired into the [ADR-047](adr/047-pipeline-scheduling-primitive.md)
 pipelines (ADR-048 §8/§consequences). **maybe-digest**: a new `MaybeDigestService` emits a **feed-visible
 `agent_run`** summarizing the parked `maybe` items (`{total, by_kind, oldest_age_days}`; **no push** — M10;
@@ -651,9 +651,24 @@ data-sync → db-backup → **inbox-drain** → reindex → profile-refresh → 
 when a capture-touching step ran). **719 unit tests** (+4) + **real-PG smoke 121/121** (+4), ruff clean;
 `maybe-digest` CLI verb clean against local pg. **Independent review APPROVE-WITH-MINORS — no must-fix**
 (2 minors fixed, 3 logged). Commits `0bf5312`/`faf1afd`, **not pushed** — [08-logs/m6.md](08-logs/m6.md) task 8.
-**Live Accept (closes M6):** push → CI deploys (no migration) → verify the full M6 loop live at `braindan.cc`
+**Live Accept (closes M6):** push → CI deploys → verify the full M6 loop live at `braindan.cc`
 (overnight auto-endorse via the pipeline, dedup/inbox-drain nightly steps, the weekly maybe-digest feed row,
-`reprocess-all` P10) + a VPS `pipeline nightly|weekly` run-now. Next: **push for the live M6 Accept**, or respawn.
+`reprocess-all` P10) + a VPS `pipeline nightly|weekly` run-now.
+**Deployed + Accept review APPROVE (2026-07-16).** The M6 range (10 commits `2f6c8fb`→`faf1afd`, tasks 1–8 +
+the carried M5.5 follow-up) was pushed; the first push **failed CI** on `ruff check` (E501 in migration 013's
+docstring), gating the deploy. Fixed + **hardened `.githooks/pre-commit` from a secret-only guard into a
+secret + lint/format gate** (ruff `check`+`format --check` on staged `server/**.py`, `eslint --max-warnings 0`
+on staged web source — staged-scoped, fails closed if `uv`/`pnpm` missing; a lint error can't reach `main`
+again) — commit `16eb2bd`; whole-repo ruff clean + 719 tests green, re-pushed. CI green → deploy ran
+`alembic upgrade head` (the full range carries **migrations 013/014** from tasks 1/4 — additive, up/down
+verified; task 8's own diff added none, hence the earlier "no migration" note); `/api/v1/health` all-true and
+the M6 route surface is **live** (`chat/auto-recorded` 404→401; the three M6 write routes 401). **Independent
+M6 Accept review APPROVE — no must-fix** (all 6 Accept criteria + task-8 wiring mapped to `file:line`;
+invariants 2b/2(P10)/6/7/5/9 hold; minors cosmetic/deferred). **Remaining to CLOSE M6 (user-driven — needs the
+VPS shell + the authenticated PWA):** a VPS `pipeline nightly|weekly` run-now (one start drives the whole
+roster incl. the M6 steps) + the PWA behavioral loop (auto-endorse → recently-recorded → one-tap remove;
+pure-retrieval skip; stance-unclear agree-only; maybe park + re-openable; optional P10 reprocess). Code pushed
+through `16eb2bd`; deploy live. Next: **user runs the VPS run-now + PWA checks → M6 CLOSED**, or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
