@@ -804,6 +804,17 @@ in-app reduced-motion override, multi-plane ring.
    viewport** (phone tap-to-recenter, list toggle, reduced-motion → list).
 4. **Live Accept + docs close-out.** Deploy, live-accept at `braindan.cc`, record.
 
+**Parallelization ([09](09-session-protocol.md) v1.7).** M7's task list was written pre-v1.7;
+annotated retroactively (2026-07-16) — **no fan-out batch, tasks run strictly sequential**
+(the v1.7 default). The remaining tasks all fail batch-eligibility against each other:
+- **Task 2** (`depends-on: Task 1`) creates `web/src/features/map/` + edits `web/src/AppShell.tsx`
+  (map tab, wide breakout) and adds map entry points to `features/search/` + `ui/NodePreview`.
+- **Task 3** (`depends-on: Task 2`) — **not batch-eligible with Task 2**: its list renderer lives
+  *inside* `features/map/` **behind the canvas's toggle** (shared files → fails *disjoint-files*)
+  and its walkthrough exercises Task 2's canvas (phone tap-to-recenter → fails *no-intra-batch-
+  dependency*).
+- **Task 4** (`depends-on: Task 2, Task 3`) is the deploy + live Accept — strictly serial by nature.
+
 **Accept:** from a search hit, reach a `person` node in **one click** and see their **constellation**
 (zones populated — emoji + plane color + hub ring); **re-center three hops** with no jank,
 breadcrumbs tracking; edge styling distinguishes **canonical vs derived vs superseded**; a hub's
@@ -814,9 +825,9 @@ works with tap-to-recenter (list toggle present; reduced-motion → list); empty
 - [x] M7 grilled to build-ready detail · tasks defined above (ADR-051, 2026-07-16)
 - [x] Task 1 · server neighbors endpoint (grouped `GET /nodes/{id}/neighbors`; replanned to
   rel-keyed zones — [ADR-052](adr/052-map-zones-keyed-by-rel.md); [08-logs/m7.md](08-logs/m7.md))
-- [ ] Task 2 · web canvas map
-- [ ] Task 3 · web list fallback + reduced-motion + phone
-- [ ] Task 4 · live Accept + docs close-out
+- [ ] Task 2 · web canvas map · `depends-on: Task 1` · sequential (not batch-eligible)
+- [ ] Task 3 · web list fallback + reduced-motion + phone · `depends-on: Task 2` · sequential
+- [ ] Task 4 · live Accept + docs close-out · `depends-on: Task 2, Task 3` · sequential
 
 ## M8 — Ops console & activity restructure
 
