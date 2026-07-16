@@ -512,9 +512,24 @@ durability drill still passes.
       `SKIPPED` constant, skipped count). Commit `c0a3bd6`, **not pushed**. Task-2 notes: omit
       disabled/optional jobs from the step-func map; register the pipeline cron with
       `max_instances=1`/`coalesce`. — [08-logs/m5.5.md](08-logs/m5.5.md) task 1.
-- [ ] **Task 2** — migrate the existing roster off individual crons into the two pipelines
+- [x] **Task 2** — migrate the existing roster off individual crons into the two pipelines
       (scheduler registers one cron per pipeline; CLI/`run-now` entrypoints unchanged); retire
       the per-job cron settings. Verify the durability drill + a manual `run-now` mid-pipeline.
+      **DONE (2026-07-16):** `BackupScheduler` → **`PipelineScheduler`** — registers **one cron per
+      pipeline** (a step-name→job map + one `PipelineRunner` per `pipeline_defs()`; `max_instances=1`/
+      `coalesce`/misfire so a long night can't overlap the next, ADR-047 §3/§7). An **unwired optional
+      step is dropped with a log** (prod wires all four unconditionally, so all 8 nightly steps always
+      run); **CLI + `POST /admin/reindex` untouched** (invariant 4 / §6). **Retired the nine per-job
+      `*_cron` settings** (zero remaining refs); nightly roster maps **1:1** onto the old stagger in
+      order; weekly cron byte-identical to the retired `integrity_drill_cron` (no schedule
+      regression). **No job body changed** → the DB-wipe→reindex drill is preserved by construction
+      (diff = scheduler/config/main/tests only; live drill re-run = task 3). **619 unit tests + 79
+      real-PG smoke green**, ruff clean; a **real-PG integration** drove the full wiring (one parent
+      `nightly` run, row-opening steps linked children in order, `store-sweep` unchanged/no row,
+      pipeline completes). **Independent review APPROVE — no must-fix**; 2 follow-ups logged (Sunday
+      nightly/weekly RAM overlap = deliberate ADR-047 §3 residual; `run_store_sweep` opens no row so
+      shows as a `skipped` step — both out of orchestration-only scope). Commit `8a57611`, **not
+      pushed**. — [08-logs/m5.5.md](08-logs/m5.5.md) task 2.
 - [ ] **Task 3** — live M5.5 Accept (deploy; confirm one nightly start drives the whole roster in
       order, per-step runs visible, durability drill green) → independent review → pause.
 

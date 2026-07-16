@@ -481,6 +481,24 @@ review APPROVE — no must-fix** (4 minors applied). Commit `c0a3bd6`, **not pus
 [08-logs/m5.5.md](08-logs/m5.5.md) task 1. Next: **M5.5 task 2** (migrate the roster off individual
 crons into the two pipelines; scheduler registers one cron per pipeline; retire per-job cron settings;
 verify durability drill + a manual run-now mid-pipeline).
+**M5.5 task 2 DONE (2026-07-16):** the nightly roster is **migrated onto the pipelines** — the
+scheduler now registers **one cron per pipeline**, not one per job. `BackupScheduler` →
+**`PipelineScheduler`** (a step-name→job-coroutine map + one `PipelineRunner` per `pipeline_defs()`;
+`max_instances=1`/`coalesce`/misfire so a long night can't overlap the next, [ADR-047](adr/047-pipeline-scheduling-primitive.md)
+§3/§7); an **unwired optional step is dropped with a log** (prod wires all four agent-window jobs
+unconditionally → all 8 nightly steps always run). **Retired the nine per-job `*_cron` settings**
+(zero remaining refs); the nightly roster maps **1:1** onto the old stagger **in order**; the weekly
+cron is byte-identical to the retired `integrity_drill_cron` (no schedule regression). **CLI +
+`POST /admin/reindex` standalone paths untouched** (invariant 4 / §6). **No job body changed** → the
+DB-wipe→reindex durability drill is preserved by construction (diff = scheduler/config/main/tests
+only; live re-run = task 3). **619 unit tests + 79 real-PG smoke green**, ruff clean; a **real-PG
+integration** drove the full wiring end-to-end (one parent `nightly` run, row-opening steps linked
+children in order, `store-sweep` unchanged/no row, pipeline completes). **Independent review APPROVE —
+no must-fix** (2 follow-ups logged: Sunday nightly/weekly RAM overlap = deliberate ADR-047 §3 residual;
+`run_store_sweep` opens no row so shows as a `skipped` step — both out of orchestration-only scope).
+Commit `8a57611`, **not pushed** — [08-logs/m5.5.md](08-logs/m5.5.md) task 2. Next: **M5.5 task 3**
+(live M5.5 Accept — deploy; confirm one nightly start drives the whole roster in order, per-step runs
+visible under the parent, durability drill green → independent review → pause).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
