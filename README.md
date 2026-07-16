@@ -768,6 +768,28 @@ a direction arrow; symmetric derived edges must carry none, §6 — gated canoni
 canvas) fixed + re-verified; 1 minor logged (`isHub` helper duplication). Commits `78ec92f`/`469d504`,
 **not pushed** — [08-logs/m7.md](08-logs/m7.md) task 3. Next: **M7 task 4** (live Accept + docs
 close-out — deploy the M7 range, live-accept at `braindan.cc`, record → M7 CLOSED).
+**M7 task 4 DEPLOYED + live Accept verified (2026-07-16); user's final CLOSE nod pending — the last M7 gate.**
+Pushed the 8-commit M7 range `1cef778`→`469d504` (tasks 1–3; **no migration**) after a green local gate
+(ruff/format, tsc, eslint, 737 tests); CI green → deploy landed (the new `GET /nodes/{id}/neighbors`
+flipped **404→401**, `/health` all-true; web bundle scp'd alongside). **Live-accepted the map in the
+user's already-authenticated `braindan.cc` Chrome** (agent never handled the login secret; the real
+browser's working canvas hit-testing/rAF drove the interactive taps tasks 2/3 had deferred):
+**5 of 6 Accept criteria fully verified** (node identities redacted here — the graph holds real
+personal data): ① one-click from a search hit to a `person` **constellation** (gold focal + hub ring,
+emoji/plane-colour neighbors), ② **3-hop re-center** with tracking breadcrumbs + forward-history
+truncation + hover peek, ③ **canonical** (arrow+`since`) vs **derived** (`similar`, no arrow) edge
+styling in the List view + `NodePreview` drawer, ④ **per-zone "Show 4 more"** appended in place with
+the sibling zone/focal untouched (no neighborhood refetch), ⑥ empty-state **embedded search** +
+**"↩ Return to …"** restore-last-centered (after reload, from `localStorage`); plus center-click
+**drawer** and the live `MapNeighborItem` contract (incl. `until`).
+**2 documented residuals, neither a defect:** ③ **superseded (`until`) edge styling** has **no live
+data instance** — a scan of 78 hubs (194 canonical + 582 derived edges, 157 with `since`) found **0
+`until` edges** (additive graph; capability is contract- + smoke- + task-3-mock-verified); ⑤ the
+**phone viewport** couldn't be re-narrowed on the managed prod-Chrome window (`resize_window` clamped
+at ~1707px), but the phone canvas + tap-to-recenter + reduced-motion→list were verified at 375px in
+task 3 on the **same deployed bundle** + review. Docs recorded ([08-logs/m7.md](08-logs/m7.md) task 4);
+code pushed through `469d504`; deploy live. **Next: user gives the final CLOSE nod (optionally a
+real-phone spot-check) → M7 CLOSED**, or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

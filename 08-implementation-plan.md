@@ -831,7 +831,19 @@ works with tap-to-recenter (list toggle present; reduced-motion → list); empty
 - [x] Task 3 · web list fallback + reduced-motion + phone (grouped tappable-list renderer + Canvas/
   List toggle + reduced-motion default; desktop + mobile-viewport walkthrough) — **DONE 2026-07-16**
   ([08-logs/m7.md](08-logs/m7.md) task 3; commits `78ec92f`/`469d504`, not pushed)
-- [ ] Task 4 · live Accept + docs close-out · `depends-on: Task 2, Task 3` · sequential
+- [x] Task 4 · live Accept + docs close-out — **DONE 2026-07-16**: pushed the M7 range
+  `1cef778`→`469d504` (no migration), CI green, deploy landed (neighbors endpoint `404`→`401`,
+  `/health` all-true); live Accept in the real authenticated browser at `braindan.cc` — **5/6
+  criteria fully verified** (one-click constellation, 3-hop re-center + breadcrumbs, canonical+derived
+  edge styling, per-zone show-more without refetch, empty-state search + restore-last-centered, plus
+  NodePreview drawer + live contract). **2 residuals (not defects):** superseded (`until`) edge
+  styling has no live data instance (0 `until` edges across 78 hubs scanned; capability contract- +
+  smoke- + mock-verified) and the phone viewport couldn't be re-narrowed on the managed prod-Chrome
+  window (same bundle verified at 375px in task 3). ([08-logs/m7.md](08-logs/m7.md) task 4)
+
+**M7 Accept status:** live-verified, **2 documented residuals** — **user's final CLOSE nod pending**
+(milestone acceptance is the user's call per [09](09-session-protocol.md)). Optional: a real-phone
+spot-check of the map (canvas + tap-to-recenter + reduced-motion→list) to close residual (b) directly.
 
 ## M8 — Ops console & activity restructure
 
