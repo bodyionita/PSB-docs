@@ -655,9 +655,27 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       tests** (+8) + real-PG smoke **117/117** (+3, the un-fakeable `list_inbox_materialized` SQL), ruff
       clean; **independent review APPROVE-WITH-MINORS — no must-fix** (3 minors logged). Commit
       `af14de5`, **not pushed**. Details in [08-logs/m6.md](08-logs/m6.md) task 6.
-- [ ] **Task 7** — web: **Review** extensions (`stance-candidate` + `dedup-proposal` render, salience
-      order, multi-select batch, maybe aging + count badge), Chat **"Remember now"**, chat-scoped
-      **"recently auto-recorded"** list with one-tap remove.
+- [x] **Task 7 DONE (2026-07-16)** — web: **Review** extensions + Chat distiller surfaces (ADR-048
+      §12). **Review** (`ReviewScreen`): `stance-candidate` card (proposed memory + entity chips +
+      why-unclear + excerpt → agree/disagree/maybe) and `dedup-proposal` card (two lazy `useNode`
+      previews + **survivor radio** defaulting to `default_survivor` → merge/keep/link; merge sends
+      `{action,survivor}`, keep/link `{action}` only); **salience ordering** (high-first stable sort,
+      no-salience → med); **single-kind multi-select** batch bar (stance agree/disagree/maybe · dedup
+      keep; batch merge deliberately omitted — survivor is per-item) over `POST /review/batch` with a
+      per-item result summary; **parked/maybe** section (`GET /review?status=maybe`, collapsible,
+      per-card "parked Nd ago" aging); **count badge** in the header **and** on the AppShell nav tab
+      (shares the `['review','pending']` cache — no double fetch). **Chat** (`ChatScreen`): per-session
+      **"Remember now"** → `POST …/remember` with an inline `{endorsed,to_review}`/skip summary; a
+      chat-scoped **"recently auto-recorded"** panel (`AutoRecordedList`, `GET /chat/auto-recorded`)
+      with salience + relative time, an "still organizing…" state (empty `node_paths`), and
+      **optimistic one-tap remove** (`POST …/{capture_id}/remove` → 204, rollback on error). New
+      `api/client` methods + wire types; `useReview`/`useChat` hooks; resolve/batch invalidate both
+      review lists + `['types']`/`['node']`. `tsc --noEmit` + `eslint --max-warnings 0` + `vite build`
+      green; cache-seeded browser smoke verified all four card kinds render, salience order, and the
+      single-kind batch-bar switch. **Independent review APPROVE-WITH-MINORS — no must-fix** (fixed
+      the setState-inside-updater in `toggleSelect`; logged follow-ups: eager dedup node fetches,
+      `SalienceBadge`/`SaliencePill` duplication, batch-maybe-on-parked no-op, `batchNote` no
+      auto-clear). Commit `c603cf5`, **not pushed**. Details in [08-logs/m6.md](08-logs/m6.md) task 7.
 - [ ] **Task 8** — **maybe-digest** weekly job (feed-visible `agent_run`) + wire the M6 jobs into the
       pipelines (distiller front / inbox-drain pre-reindex / dedup late in `nightly`; maybe-digest in
       `weekly`) + **live M6 Accept** → independent review → pause.
