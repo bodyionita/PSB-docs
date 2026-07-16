@@ -549,9 +549,27 @@ truncates the re-derivable kinds; refines ADR-042 §2). `ReviewService` now buil
 smoke 91/91** (+5: a new `check_review_queue_reopen` drives the un-fakeable `ANY()` guard) **& 12/12**
 (+2: kind-aware DELETE preserves stance / clears the rest); **independent review APPROVE-WITH-MINORS — no
 must-fix** (2 minors fixed: `review.py` list docstring, `smoke_reprocess` uses `KIND_STANCE_CANDIDATE`) —
-[08-logs/m6.md](08-logs/m6.md) task 2. **Code committed locally, not pushed.** Next: **M6 task 3** (`POST
-/chat/sessions/{id}/remember` — sync distill on the delta-after-watermark → `{endorsed,review}`, async
-organize, same watermark + gate; + `POST /review/batch`).
+[08-logs/m6.md](08-logs/m6.md) task 2. **Code committed locally, not pushed.**
+**M6 task 3 DONE (2026-07-16):** the two on-demand seams — **`POST /chat/sessions/{id}/remember`** +
+**`POST /review/batch`** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §6/§8), both thin over
+existing services (no migration). **remember**: `ChatDistillerService.remember` runs the **same**
+`_distill_session` pass (same salience + stance gate, **no force-endorse** — timing changes, not judgment),
+advances the **same** `chat_distill_state` watermark (idempotent with the nightly + a double-remember via
+the deterministic capture id), opens a visible `agent_runs` row; endorsed captures organize **in the
+background** (fast ack). A new `PgChatDistillStore.session_state` (by-id, **no idle filter**, LEFT-JOIN)
+separates **unknown session → 404** from **nothing-new → `{skipped}`**; returns `200 {endorsed,to_review}`
+else `{skipped:reason}`, `422` on a malformed id. **batch**: `resolve_batch` applies one `action` to many
+items **best-effort per item** (`{results:[{id,ok,error?}]}`, one bad item never aborts), **reusing the
+single-item `resolve` unchanged** — the action is passed as both `choice`+`verdict` and each kind reads only
+its own field (rule 10); the route is declared **before `/{review_id}`** (so `/review/batch` isn't a
+malformed-uuid id) and **config-capped** (`review_batch_max`, rule 9 → `422`). `ChatDistillerService` is now
+wired into `main.py`/`app.state` after the capture pipeline (its single writer, §1). **665 tests green**
+(+19), ruff clean, **real-PG smoke 94/94** (+3 `session_state` LEFT-JOIN branches); both routes confirmed
+in the app's OpenAPI. **Independent review APPROVE-WITH-MINORS — no must-fix** (2 minors applied: the
+`review_batch_max` cap + a smoke check for the message-less `session_state` branch; a pre-existing task-1
+watermark-vs-swallowed-review-hiccup observation logged) — [08-logs/m6.md](08-logs/m6.md) task 3. **Code
+committed locally, not pushed.** Next: **M6 task 4** (one-tap remove for chat-distilled nodes —
+`captures.removed_at` migration + git-rm/DB-delete/capture-tombstone remove op + endpoint).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

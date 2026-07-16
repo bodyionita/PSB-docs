@@ -599,8 +599,20 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       — preserve stance, truncate the rest; refines ADR-042 §2). 646 tests + smoke 91/91 & 12/12 green,
       ruff clean, **independent review APPROVE-WITH-MINORS — no must-fix** (2 minors fixed). Web Review
       surface for these kinds is task 7. Details in [08-logs/m6.md](08-logs/m6.md) task 2.
-- [ ] **Task 3** — `POST /chat/sessions/{id}/remember` (sync distill on delta-after-watermark →
-      `{endorsed,review}` summary; async organize; advances the same watermark) + `POST /review/batch`.
+- [x] **Task 3 DONE (2026-07-16)** — `POST /chat/sessions/{id}/remember` + `POST /review/batch`.
+      **remember**: `ChatDistillerService.remember(session_id)` runs the **same** `_distill_session`
+      pass (same salience + stance gate, **no force-endorse**) on the delta-after-watermark, advances
+      the **same** `chat_distill_state` watermark (idempotent with the nightly + double-remember via
+      the deterministic capture id), opens a visible `agent_runs` row; endorsed captures organize in
+      the background (fast ack). A new `PgChatDistillStore.session_state` (by-id, no idle filter,
+      LEFT-JOIN) separates **unknown session → 404** from **nothing new → `{skipped}`**; returns
+      `200 {endorsed,to_review}` else `{skipped:reason}`; `422` malformed id. **batch**: `POST
+      /review/batch {ids[],action}` → `{results:[{id,ok,error?}]}`, best-effort per item reusing the
+      single-item `resolve` (action passed as both `choice`+`verdict`; each kind reads its own field —
+      rule 10), declared before `/{review_id}`, config-capped (`review_batch_max`, rule 9 → `422`).
+      665 tests (+19) + smoke 94/94 (+3 `session_state`), ruff clean, **independent review
+      APPROVE-WITH-MINORS — no must-fix** (batch cap + smoke-branch minors applied). Details in
+      [08-logs/m6.md](08-logs/m6.md) task 3. **Committed locally, not pushed.**
 - [ ] **Task 4** — **one-tap remove** for chat-distilled nodes: `captures.removed_at` migration +
       remove op (git-rm node file(s) + DB-delete `nodes`/`chunks`/`edges` + capture tombstone,
       replay/reprocess-excluded) + endpoint; the distiller run records capture-id + node-path(s) per
