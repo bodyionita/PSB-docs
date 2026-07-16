@@ -788,8 +788,13 @@ data instance** — a scan of 78 hubs (194 canonical + 582 derived edges, 157 wi
 **phone viewport** couldn't be re-narrowed on the managed prod-Chrome window (`resize_window` clamped
 at ~1707px), but the phone canvas + tap-to-recenter + reduced-motion→list were verified at 375px in
 task 3 on the **same deployed bundle** + review. Docs recorded ([08-logs/m7.md](08-logs/m7.md) task 4);
-code pushed through `469d504`; deploy live. **Next: user gives the final CLOSE nod (optionally a
-real-phone spot-check) → M7 CLOSED**, or respawn.
+code pushed through `469d504`; deploy live.
+**M7 CLOSED (2026-07-16):** the **user confirmed the map on their actual phone** ("works very good"),
+closing the phone-viewport residual; the only residual left is cosmetic (superseded `until` styling
+has no live data instance yet — rendering already in place). All Accept criteria met — the re-center
+neighborhood explorer (search→constellation, 3-hop re-center, canonical/derived edge styling, per-zone
+show-more, phone canvas + list toggle + reduced-motion→list, restore-last-centered) is **live at
+`braindan.cc`**. Next: **M8 (ops console & activity restructure)** — planning session (`/grilling` first).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

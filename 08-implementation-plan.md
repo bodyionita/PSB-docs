@@ -841,9 +841,13 @@ works with tap-to-recenter (list toggle present; reduced-motion → list); empty
   smoke- + mock-verified) and the phone viewport couldn't be re-narrowed on the managed prod-Chrome
   window (same bundle verified at 375px in task 3). ([08-logs/m7.md](08-logs/m7.md) task 4)
 
-**M7 Accept status:** live-verified, **2 documented residuals** — **user's final CLOSE nod pending**
-(milestone acceptance is the user's call per [09](09-session-protocol.md)). Optional: a real-phone
-spot-check of the map (canvas + tap-to-recenter + reduced-motion→list) to close residual (b) directly.
+**M7 CLOSED (2026-07-16).** Live-accepted: 5/6 criteria verified in the real authenticated browser +
+the **user confirmed the map on their actual phone** ("works very good"), closing the phone-viewport
+residual (b). The only residual left is cosmetic and not a defect — **superseded (`until`) edge
+styling has no live data instance** (0 `until` edges in the current additive graph; capability is
+contract- + smoke- + task-3-mock-verified; will become showable once an edge is first `until`-closed,
+M10 territory). The map (re-center neighborhood explorer) is live at `braindan.cc`
+([08-logs/m7.md](08-logs/m7.md) task 4).
 
 ## M8 — Ops console & activity restructure
 
