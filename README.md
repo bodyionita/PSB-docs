@@ -583,8 +583,22 @@ in the registry (best-effort, rule 7); **agree-from-review does not** → the li
 ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §11/§12). **681 tests** (+16), ruff clean,
 **real-PG smoke 103/103** (+10), migration 014 up/down verified; **independent review APPROVE-WITH-MINORS**
 — 1 must-fix (reorganize-resurrection) + 2 minors (self-healing DB delete; type nit), **all resolved +
-regression-tested** — [08-logs/m6.md](08-logs/m6.md) task 4. **Code committed locally, not pushed.** Next:
-**M6 task 5** (dedup sweep — extract the merge-core, `dedup-proposal` review kind).
+regression-tested** — [08-logs/m6.md](08-logs/m6.md) task 4. **Code committed locally, not pushed.**
+**M6 task 5 GRILLED/REPLANNED TO BUILD-READY (2026-07-16 — [ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)).**
+An implementation session hit the one unrecorded decision in the dedup task — which edge a `link`
+writes (the seed edge vocab has no associative rel) — and **switched to a replanning pass** per
+[09](09-session-protocol.md). Grilled decision-by-decision → **[ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)**:
+**`link` = a canonical `similar` edge** (persists where the derived one is recomputed away; no new
+governed rel); **extract the merge-core** shared by entity-merge (core + alias-union) and content-merge
+(core alone, rule 10); strict-AND gate (high-cosine + shared-entity-hub edge + occurred-overlap, undated
+never excludes) over **content nodes**, `indexed_at ≥` a last-success **watermark** (no migration);
+a **re-file guard** (skip any pair with an existing `dedup-proposal`, any status — a merged pair
+self-excludes via its tombstone); `default_survivor` = higher canonical-degree / older; resolution
+`{action: merge|keep|link, survivor?}`. **Two backlog items logged** (08 §Backlog): an
+**`occurred-enrichment` review kind** (NL date tagging → `occurred` range; also upgrades the dedup
+occurred-signal) under a broader **"enriching & correcting ingested data"** theme. Docs updated
+(02/03/04/08 + ADR-049). **Paused before implementation** per [09](09-session-protocol.md) — **no code
+this session.** Next: build **M6 task 5** against ADR-049, or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

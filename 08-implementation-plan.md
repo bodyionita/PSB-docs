@@ -627,10 +627,18 @@ list. Full rationale in [ADR-048](adr/048-m6-chat-distiller-build-decisions.md).
       skips a removed capture) + 1 correctness minor (DB-delete decoupled from the unlink result so a
       crash-retry self-heals — **fixed**) + 1 type nit (**fixed**). Details in
       [08-logs/m6.md](08-logs/m6.md) task 4. **Committed locally, not pushed.**
-- [ ] **Task 5** — **dedup sweep** job (nightly, all-source, post-reindex): high-cosine + shared-entity
-      + occurred-overlap → `dedup-proposal`; **extract the merge-core** out of `MergeService`
-      (retarget→tombstone→reindex→commit), content-merge = core-only; keep/link actions;
-      `dedup-proposal` truncate-on-reprocess. **augment deferred.**
+- [ ] **Task 5** — **dedup sweep** job (nightly, all-source, post-reindex) —
+      **GRILLED/REPLANNED TO BUILD-READY 2026-07-16, [ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)**
+      (an implementation session hit the unrecorded `link`-rel decision → replanned per
+      [09](09-session-protocol.md)): **extract the merge-core** out of `MergeService`
+      (retarget→tombstone→reindex→commit; content-merge = core-only, entity-merge = core + alias-union);
+      strict-AND gate = high-cosine + shared-entity-hub edge + occurred-overlap (undated never excludes)
+      over **content nodes** via HNSW top-K, `indexed_at ≥` last-success watermark (no migration);
+      **re-file guard** (skip any pair with an existing `dedup-proposal`, any status); `default_survivor`
+      = higher canonical-degree / older; resolution `{action: merge|keep|link, survivor?}` — merge folds
+      via the core, **keep** dismisses, **link** writes a **canonical `similar`** edge; `dedup-proposal`
+      truncate-on-reprocess (already handled by the kind-aware reset). Config knobs (rule 9); CLI verb
+      `dedup-sweep` (pipeline wiring = task 8). **augment deferred.**
 - [ ] **Task 6** — **inbox drainer** job (nightly, bounded, own step): find `inbox/`-materialized
       captures (`node_paths` in `inbox/`) → `reorganize_capture` with the richer registry.
 - [ ] **Task 7** — web: **Review** extensions (`stance-candidate` + `dedup-proposal` render, salience
@@ -754,6 +762,18 @@ from the user's own cited history — ADR-033 #4, deferred from M4) · **bitempo
 true token streaming (streaming provider interface + SSE).
 **Graph:** node editing in web · undo a manual ingestion (soft-delete via `git rm`,
 `captures.node_paths`) · entity extraction beyond person/idea.
+**Data enrichment & correction** (raised 2026-07-16 during the M6 task-5 grill; own planning
+session before build): a family of user-driven flows to enrich/correct what the organizer
+extracted, framed as night-time "sleep-cycle" work + review-queue items. First concrete instance —
+an **`occurred-enrichment` review kind**: surface undated / coarsely-dated nodes and ask the user to
+tag the event time in **natural language** ("summer 2019", "March 2024", "last Tuesday ~6pm"),
+LLM/date-lib parsed into an `occurred` range at the right *granularity*; **this also directly
+upgrades the dedup occurred-signal** ([ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md) §3,
+which is weak precisely because `occurred` is sparse). ⚠ Sub-day precision needs a schema/contract
+decision — `nodes.occurred_start`/`occurred_end` are `date`, not `timestamptz` (grill at kickoff).
+The broader theme: correcting mis-extracted facts, editing node body/title, fixing
+dates/planes/tags/edges, re-stancing a memory, and entity mis-split/merge fixes — the correction
+counterpart to the M6 auto-record/remove trust loop.
 **Sources:** LLM-chat exports connector (promoted by the pivot — stance-gated like the
 chat-distiller) · WhatsApp · Instagram spike ([ADR-009](adr/009-instagram-connector-deferred.md)) ·
 email · calendar.

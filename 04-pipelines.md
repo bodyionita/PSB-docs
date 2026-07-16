@@ -131,12 +131,18 @@ re-derivable). **Remove** = git-rm node file(s) + DB-delete + **tombstone the ca
 
 ## 3b. Dedup sweep + inbox drainer (M6 sleep-cycle jobs, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
 
-- **`dedup-sweep`** (nightly, all-source, after reindex so embeddings exist): recently-ingested
-  nodes with **high cosine (`nodes.embedding`) + shared entity edges + overlapping `occurred`** →
-  a `dedup-proposal` review item. Actions: **keep** / **link** (explicit typed edge) / **merge**
-  (fold — an **extracted merge-core** shared with entity-merge: retarget inbound edges → tombstone
-  loser `merged_into: survivor` → reindex → force-commit; content-merge = core only, no alias
-  union). `augment` ("same event, new fact") deferred.
+- **`dedup-sweep`** (nightly, all-source, after reindex so embeddings exist —
+  [ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)): recently-ingested **content** nodes
+  (`indexed_at ≥` the last-success watermark, no migration) whose HNSW top-K neighbour clears a
+  **strict AND** of **high cosine (`nodes.embedding`) + a shared canonical edge to a common entity
+  hub + occurred-overlap** (a null `occurred_start` never excludes) → a `dedup-proposal` review item
+  `{node_a, node_b, signals, default_survivor}` (higher canonical-degree / older). A **re-file guard**
+  skips any pair that already has a `dedup-proposal` in any status (a merged pair self-excludes via
+  its tombstone). Actions: **keep** (dismiss) / **link** (a **canonical `similar`** edge — persists
+  where the derived one is recomputed away) / **merge** (fold — an **extracted merge-core** shared
+  with entity-merge: retarget inbound edges → tombstone loser `merged_into: survivor` → reindex →
+  force-commit; content-merge = core only, no alias union). `augment` ("same event, new fact")
+  deferred. Pipeline wiring is M6 task 8.
 - **`inbox-drainer`** (nightly, before reindex, bounded): captures materialized as an `inbox/`
   fallback (`captures.node_paths` in `inbox/`) → `reorganize_capture` with the now-richer entity
   registry; replaced only on success, still-failing stays in `inbox/`. Residual ambiguity files

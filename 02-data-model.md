@@ -239,7 +239,11 @@ a queue kind** — no separate table; approved vocabulary lives in config + `app
 rebuilds the graph); `anchor_at` is the anchoring-message timestamp (ISO-8601, a *time* not a node
 id) the distiller records so **agree** stamps the capture with conversation time, matching
 auto-endorse. **agree** materializes a `captures` row = the auto-endorse path. `dedup-proposal`
-payload = the two node ids + signals (may reference node ids — it is truncate-on-reprocess).
+(M6 task 5, [ADR-049](adr/049-dedup-sweep-merge-core-build-decisions.md)) payload =
+`{node_a, node_b, signals:{cosine, shared_entity_ids, shared_entity_titles, occurred_overlap},
+default_survivor}` — canonical `least→greatest` ids (may reference node ids — it is
+truncate-on-reprocess); resolution `{action: merge|keep|link, survivor?}` (merge folds via the
+shared merge-core, link writes a canonical `similar` edge).
 **`maybe` is re-openable** (M6 fixes the `resolve` guard: `pending`+`maybe` are still-decidable,
 `resolved`/`discarded` terminal). **Kind-aware reprocess** (see below): `reprocess-all` preserves
 `stance-candidate`, truncates the other kinds.
