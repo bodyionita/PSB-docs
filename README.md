@@ -943,6 +943,22 @@ resolved id) as a separate review-chip (`NodeChip` stays node-uuid-only). **Refi
 edit / no new ADR — plan refinement + minor nav affordance) — [08-logs/m8.1.md](08-logs/m8.1.md) "Replan
 — T2 scope"; 08 §M8.1 T2/T4. **Paused before implementation.** Next: build **M8.1 task 2** to this plan,
 or respawn.
+**M8.1 task 2 DONE (2026-07-17):** web primitives (ADR-054 §1/§5 + the replan; **web-only, no server
+code — ADR-006**) — **`<TimeAgo>`** wraps `relativeTime` **unchanged** + a custom **mouse-gated-hover /
+tap** exact-time tooltip (`17 Jul 2026, 08:36`; `aria-label` carries relative + exact); swapped all 9
+`relativeTime` sites + SettingsScreen's absolute stamp. **`NodeChip`** → one app-level **`NodePreview`
+bottom-sheet drawer** via a `useNodePreview()` context in `AppShell` (drawer chrome owns the header +
+"Explore in map"; `NodePreview` unchanged, edges jump to Map; pixel-rise entrance). Graph-health
+**node-check** offenders → `NodeChip`; **`pending-review-aging`** → a new **Review deep-link**
+(`ReviewNavContext` → Review tab, scroll-to + transient ring, pending ∪ maybe, **React-18-StrictMode-
+safe** — seed not consumed in-child, `AppShell` clears it on manual nav). tsc/eslint/build green + a
+**real-browser mock walkthrough** (drawer open / Explore-in-map / deep-link ring / TimeAgo tooltip;
+caught + fixed 3 real bugs — timer-teardown, StrictMode double-mount, drawer percentage-`y`).
+**Independent review APPROVE-WITH-MINORS** — 1 must-fix (TimeAgo iOS touch-tap → pointer-gated) + 2
+minors applied (`ee229f0`); 1 follow-up logged (drawer focus-trap). Commits `20a8fba`/`ee229f0`, **not
+pushed** — [08-logs/m8.1.md](08-logs/m8.1.md) task 2. Next: **Batch C {T3 Explore, T4
+Activity/Captures}** (T4 folds in capture/Captures chip clickability + the server node-id exposure), or
+respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

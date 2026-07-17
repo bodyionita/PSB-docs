@@ -999,9 +999,18 @@ preview card, one more tap lands in the map. No console errors; 03-api/06 update
   — recorded a **carve-out refining ADR-054 §5** (node-checks → `NodeChip`; `pending-review-aging` →
   Review item, not a node). 816 unit + 149 real-PG smoke green; **independent review APPROVE after 1
   must-fix** (the 03-api over-claim on offender ids, corrected — code was right).
-- [ ] **Task 2 · Web primitives** — `<TimeAgo>` (tap+hover tooltip) + `NodeChip` (→ `NodePreview`
+- [x] **Task 2 · Web primitives** — `<TimeAgo>` (tap+hover tooltip) + `NodeChip` (→ `NodePreview`
   → map) + app-wide swaps (touches many feature files — runs solo, before the batch).
   `depends-on:` T1 · `batch:` —
+  **DONE 2026-07-17** ([08-logs/m8.1.md](08-logs/m8.1.md) task 2; commits `20a8fba`/`ee229f0`, not
+  pushed): `<TimeAgo>` (wraps `relativeTime` unchanged + custom mouse-gated-hover/tap exact-time
+  tooltip; 9 sites + SettingsScreen); `NodeChip` → one app-level `NodePreview` bottom-sheet drawer via
+  `useNodePreview()` in `AppShell` (drawer chrome owns header + "Explore in map"; `NodePreview`
+  unchanged); graph-health node-checks → `NodeChip`, `pending-review-aging` → a new **Review deep-link**
+  (`ReviewNavContext`, scroll-to + transient ring, pending ∪ maybe, StrictMode-safe). web-only (ADR-006).
+  tsc/eslint/build green + real-browser mock walkthrough (caught+fixed 3 bugs). **Independent review
+  APPROVE-WITH-MINORS** — 1 must-fix (TimeAgo iOS touch-tap) + 2 minors applied; 1 follow-up logged
+  (drawer focus-trap).
   - **Replan 2026-07-17 (grilled, refines ADR-054 §5 — see [08-logs/m8.1.md](08-logs/m8.1.md)
     "Replan — T2 scope"):** the T2 build is precisely — **① `<TimeAgo>`** wrapping the shared
     `relativeTime` **unchanged** (coarse "just now / Nm / Nh / Nd ago", even "400d ago") + a
