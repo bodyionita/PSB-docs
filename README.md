@@ -833,6 +833,12 @@ logged: the on-finish flush is scheduled-not-awaited so the **T5 web client must
 until an empty page**, not stop solely on `running==false`; the run-stack pop is coupled to `finish`).
 Commit `4750f12`, **not pushed** — [08-logs/m8.md](08-logs/m8.md) task 1. Next: **Batch B {T2,T3,T4}**
 as the ≤3 parallel fan-out, or respawn.
+**Batch B DISPATCHED (2026-07-17):** the ≤3 parallel fan-out (T2 feed · T3 agents/pipelines · T4
+graph-health) fanned out to three sibling implementer side-agents in the shared working tree — eligibility
+re-verified at dispatch (disjoint files, T3 the sole `main.py` editor; 0 in-batch migrations; no
+intra-batch dep). Coordinator (this session, minimal-context) owns git + the merged-tree integration gate
++ all doc writes; implementers edit + scoped-test only. In flight — [08-logs/m8.md](08-logs/m8.md)
+"Batch B — dispatched".
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
