@@ -1111,10 +1111,14 @@ reprocess backfills both dimensions (standing merges reported).
 
 ### Tasks (sequential — each builds on the last; no parallel batch)
 
-- [ ] **Task 1 · Temporal engine** (pure logic, no migration) — symbolic-reference schema,
-  deterministic resolver (`datetime`/`dateutil`: offsets, weekday walks, seasons, ranges,
-  year-snapping, granularity), token parse/serialize/render lib (web-mirrorable spec), unit tests
-  no mocks. `depends-on:` —
+- [x] **Task 1 · Temporal engine** (pure logic, no migration) — symbolic-reference schema,
+  deterministic resolver (offsets, weekday walks, seasons, ranges, year-snapping, granularity),
+  token parse/serialize/render lib (web-mirrorable spec), unit tests no mocks. `depends-on:` —
+  **DONE 2026-07-17** — new `server/app/temporal/` package (`symbolic`/`resolver`/`tokens`/`render`);
+  fail-closed "LLMs classify, code computes"; **stdlib-only, no `dateutil`** (web-mirrorable);
+  57 tests zero-mocks (both ADR-056 Accept scenarios), full suite 882 green, ruff clean; independent
+  review CHANGES-REQUIRED → 1 must-fix (Feb-29 snap fail-closed) + 2 minors all resolved. Commits
+  `d30d6b6`/`2787701`, **not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md) task 1).
 - [ ] **Task 2 · Organizer v6 + migration** — anchor injection; symbolic time-reference emission +
   server-side resolution into `occurred` + body tokens; `interiority` stamp + inner-voice
   extraction (ADR-055 §2); **migration 016** (`nodes.interiority`); validation fail-closed (no

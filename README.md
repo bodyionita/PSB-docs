@@ -999,6 +999,27 @@ render with chips + intact decision controls, chips open the drawer, the dedup b
 radio unchanged, console clean. **M8.1 CLOSED — all Accept criteria pass; the UI/nav consolidation is live
 at `braindan.cc`** ([08-logs/m8.1.md](08-logs/m8.1.md) "Task 5"). **Code pushed through `8b25cf6`.** Next:
 **M8.2 (data quality)** — build **M8.2 task 1** (per [08 §M8.2](08-implementation-plan.md)), or respawn.
+**M8.2 task 1 DONE (2026-07-17):** the **temporal engine** — the pure-logic core of "LLMs classify,
+code computes" ([ADR-056](adr/056-temporal-correctness-date-tokens.md), CLAUDE.md rule 12; **no
+migration/DB/LLM/wiring** — all consumers are T2–T5). New **`server/app/temporal/`** package:
+**`symbolic`** (a fail-closed pydantic discriminated union of what the organizer LLM may emit —
+explicit/relative/weekday/month/season *classifications*, never a computed date; `parse_symbolic`
+never raises), **`resolver`** (deterministic resolution against the capture's **stored anchor** —
+offsets, weekday walks, month/year snapping incl. yearless most-recent-past back-walk, N-hemisphere
+season windows; unresolvable → `None`, never guessed), **`tokens`** (the `[[t:START[/END][|label]]]`
+token + `PartialDate`: parse/serialize, locate-in-body, and the day-granular `occurred` floor/ceil
+the DB stores — `occurred_*` stay `date`, tokens own sub-day), and **`render`** (tokens → live
+relative phrase + absolute tooltip for web, absolute-only for the indexer, absolute+relative hint
+for LLM-bound paths; never shown raw). **Stdlib-only, no `dateutil`** — so the T4 web mirror is
+byte-identical (humanizer rounding pinned round-half-up). **57 unit tests, zero mocks** (both
+ADR-056 Accept scenarios: "10 days ago"→"a year ago" next year; "last summer"→
+`[[t:2025-06/2025-08|summer 2025]]`); **full suite 882 green, ruff clean**. **Independent review
+CHANGES-REQUIRED → 1 must-fix** (yearless "29 Feb" against a leap anchor fell through to a *future*
+date — rewrote snapping to a year-by-year back-walk → previous leap year or `None`) **+ 2 minors
+(round-half-up pin, test adds), all resolved + regression-tested.** Commits `d30d6b6`/`2787701`,
+**not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) task 1. Next: **M8.2 task 2** (organizer v6 +
+migration 016 — anchor injection, symbolic emission → resolution into `occurred` + body tokens,
+`interiority` stamp + inner-voice extraction, prompt-version bump).
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
