@@ -1032,9 +1032,17 @@ preview card, one more tap lands in the map. No console errors; 03-api/06 update
     so capture chips can't open `NodePreview` web-only. T4 (which builds the Captures surface) adds the
     **server-side node-id exposure** (resolve `node_paths` → `nodes.id`, a read-time join — **no
     migration**) and then wires those chips to `NodeChip`.
-- [ ] **Task 3 · Web Explore** — Search+Map merge, `AppShell` 7→6 (owns `AppShell`), filter chips
+- [x] **Task 3 · Web Explore** — Search+Map merge, `AppShell` 7→6 (owns `AppShell`), filter chips
   removed, in-explorer search affordance. `depends-on:` T2 · `batch:` C · `parallel-with:` T4
-- [ ] **Task 4 · Web Activity & Captures** — subtree render (early→late, depth-indented), Captures
+  **DONE 2026-07-17** (Batch C, commit `ee6c88d`; not pushed): `SearchScreen`+`MapScreen` merged into
+  `features/map/ExploreScreen.tsx` (search-box landing → result cards → constellation re-center; an
+  internal search⇄map toggle keeps search reachable), `AppShell` 7→6 tabs, filter chips dropped
+  (`planes`/`types` API params preserved, sent empty). Web-only (ADR-006). **Independent review
+  APPROVE-WITH-MINORS — no must-fix** (2 minors: a stale `useMap.ts` comment fixed in-commit; the
+  `features/map/`→`features/explore/` folder rename left as a post-batch cosmetic cleanup, blocked
+  by `ChatScreen`'s imports of the shared `useSearch`/`mapNav` hooks — the Accept criterion "one
+  Explore tab, no Search tab" is met regardless).
+- [x] **Task 4 · Web Activity & Captures** — subtree render (early→late, depth-indented), Captures
   tab (expand + Remove), Recents→5 + link; **+ capture/Captures node-chip clickability** — expose the
   resulting nodes' **node ids** server-side (resolve `node_paths` → `nodes.id`, read-time join, **no
   migration**) and wire the chips to the T2 `NodeChip` (folded in here per the 2026-07-17 replan —
@@ -1045,6 +1053,16 @@ preview card, one more tap lands in the map. No console errors; 03-api/06 update
     view/router for the node-id exposure**, disjoint from T3's web-only files), **0 migrations** (the
     node-id join is read-time), no intra-batch dependency. ✓ → eligible for a ≤3 fan-out at the
     coordinator's call (**re-check the server-touch at kickoff**).
+  - **DONE 2026-07-17** (Batch C, commit `ddbbb03`; not pushed): run-subtree render (recursive
+    `children[]`, depth-indented early→late, nested `capture` runs deeper); Captures feed tab (all
+    sources, expand via `GET /captures/{id}`, source badge, **Remove gated to chat-source rows**);
+    Capture-tab Recents→5 + expand + "see all"→Activity (`ActivityNavContext`, coordinator-wired in
+    `AppShell` at the integration gate). **Server fold-in:** read-time `node_paths → nodes.id` join
+    exposed as **`CaptureView.node_refs`** (`LEFT JOIN LATERAL`, order-preserving, unresolved paths
+    silently absent — **no migration, Alembic head still `015`**), 03-api documented; capture chips
+    wire to the T2 `NodeChip`. **Independent review APPROVE-WITH-MINORS — no code must-fix** (the one
+    "must-fix" was docs-only: the `node_refs` 03-api entry, applied by the coordinator; 3 cosmetic
+    minors logged).
 - [ ] **Task 5 · Live Accept** — deploy, verify the Accept block at `braindan.cc` → independent
   review → M8.1 CLOSED. `depends-on:` T3, T4
 

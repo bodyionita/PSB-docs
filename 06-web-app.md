@@ -81,17 +81,21 @@ login header; kept as a single config constant so it's changeable at zero cost.
   reversal loop; M8's general Activity feed absorbs it later (Activity stays the M8 placeholder in M6).
 
 ### 3. Activity (full restructure at M8 — [ADR-053](adr/053-m8-ops-console-observability-build-decisions.md))
-One top-level **Activity** tab with a **Feed / Ops segmented control** (no new top-level tab — there
-are already 8; poll cadence `refetchInterval` is active **only while a run is live**):
+One top-level **Activity** tab with a **Feed / Ops segmented control** (no new top-level tab — the
+shell is **6 tabs** after the M8.1 Explore merge; poll cadence `refetchInterval` is active **only
+while a run is live**):
 
 **Feed** — "what did my brain do", as **3 categorized tabs** over the merged `GET /activity`
-(agents/jobs · conversations · manual actions), automatic **and** manual events, newest-first
+(agents/jobs · **captures** · manual actions), automatic **and** manual events, newest-first
 infinite scroll (`before=` keyset); staggered entrance animations; tap to expand run details
 (`GET /activity/runs/{id}`). Fallback events visibly badged.
-- **Pipeline runs (M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md)):** a pipeline run is a
-  parent entry expandable to its per-step child runs.
-- **Conversations tab** absorbs the M6 **"recently auto-recorded"** list — auto-ingested stance
-  items carry a flag + **one-tap remove** inline (was chat-scoped in M6).
+- **Pipeline runs (M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md); M8.1 subtree):** the
+  feed shows **one parentless row per run**; expanding fetches the recursive `children[]` and renders
+  a **depth-indented tree, early→late at every level** (nested `capture` runs visibly deeper).
+- **Captures tab (M8.1, was Conversations)** — **all** captures regardless of source
+  (`text`/`voice`/`mcp`/`chat`), keyset-paginated; each row expands to full detail
+  (`GET /captures/{id}`: raw text, clickable **node chips** via `node_refs`, status, source badge);
+  chat-sourced rows keep the M6 **one-tap remove**. Absorbs the M6 "recently auto-recorded" surface.
 
 **Ops** — the console (invariant 4; the M2 Admin panel is absorbed here):
 - **Pipelines** (`GET /pipelines`): each with schedule + next-run + its ordered steps + a
@@ -118,9 +122,9 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
 - **Batch actions:** multi-select → agree/disagree/maybe (or keep/dismiss) in one call
   (`POST /review/batch`). A weekly **maybe digest** keeps the parked pile from stalling silently.
 
-### 3c. The Map (M7 — [ADR-051](adr/051-m7-map-build-decisions.md); desktop-first, canvas on phone too)
+### 3c. The Map (M7 — [ADR-051](adr/051-m7-map-build-decisions.md); desktop-first, canvas on phone too; **at M8.1 the map is the constellation half of the Explore tab, no longer standalone** — screen 5)
 - **Neighborhood explorer** over `GET /nodes/{id}/neighbors` (the same `GraphService.neighbors`
-  as MCP `traverse`), a new **full-width top-level tab** (opts out of the shell's 640px column).
+  as MCP `traverse`), the **full-width Explore surface** (opts out of the shell's 640px column).
   Built on **`react-force-graph-2d`** (2D canvas only — ADR-032 #12).
 - **Re-center navigation (not accumulate).** Exactly **one focal node at a time**: it renders
   pinned at center with its 1-hop neighbors fanned around it in **rel-based zones** (per-zone
@@ -175,23 +179,27 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)
 - Session management (logout), theme, reduced motion override.
 
-### 5. Search (M2; retargeted to nodes at M3 — **merges into the Map as "Explore" at M8.1**, [ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) §3)
-Standalone semantic-search screen over the whole graph (`POST /search`, no LLM call):
-- Query box + **plane-filter chips** (+ type filter, M3). *(M8.1: the filter-chip UI is dropped —
-  the API params stay; type icons/plane badges remain on cards as passive signals.)*
+### 5. Explore (M2 Search + M7 Map, **merged into one "Explore" tab at M8.1** — [ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) §3, **built**)
+Semantic-search-to-constellation over the whole graph (`POST /search`, no LLM call). One tab: a
+search-box landing → result cards → picking a hit centers it as the map constellation; a search
+affordance stays reachable from anywhere in the explorer (an internal search⇄map toggle). Code lives
+in `features/map/ExploreScreen.tsx` (the former `SearchScreen`/`MapScreen` merged; `MapScreen.tsx`
+and `SearchScreen.tsx` deleted). *(Cosmetic follow-up: the folder is still named `features/map/` and
+the shared `useSearch`/`mapNav` hooks still sit under `features/search/` — a rename is blocked by
+`ChatScreen`'s imports and left as a safe post-batch cleanup.)*
+- Query box (**filter chips removed at M8.1** — the `POST /search` `planes`/`types` params still
+  ride the client contract, sent empty; type icons/plane badges remain on cards as passive signals).
 - Results as **node cards** — title, type icon, plane badge, snippet (best-matching chunk),
   tags, score — ranked by relevance.
 - **Expand a card → read-only node preview** (`GET /nodes/{id}`): body read live from the graph
   store, plus its **edges** (canonical, labeled by `rel`, and derived similarity) — each a
   jump-off point (and the entry into the Map from M7). No in-app editing (git covers that).
-- **M8.1 — Explore:** this screen and the Map become **one "Explore" tab** (shell → 6 tabs):
-  search-box landing, these result cards, and **picking a hit centers the map constellation**;
-  a search affordance stays reachable from anywhere in the explorer. App-wide at M8.1 as well:
-  every relative timestamp gets a **tap+hover exact-time tooltip** (`<TimeAgo>`), and every node
-  reference is a clickable **`NodeChip`** → `NodePreview` → map ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md)
-  §1/§5). The Activity feed's Conversations tab becomes **Captures** (all sources, expandable,
-  paginated; Capture-tab Recents → ~5 + link), and pipeline runs collapse to one row with a
-  depth-indented early→late step tree on expand (§2/§4).
+- **App-wide at M8.1 (built):** every relative timestamp carries a **tap+hover exact-time tooltip**
+  (`<TimeAgo>`), and every node reference is a clickable **`NodeChip`** → `NodePreview` → map
+  ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) §1/§5). The Activity feed's Conversations
+  tab is now **Captures** (all sources, expandable, paginated; Capture-tab Recents → ~5 + "see all"
+  link), and pipeline runs collapse to one row with a depth-indented early→late step tree on expand
+  (§2/§4).
 
 ### 6. Admin (M2 panel — **absorbed into the M8 ops console**, screen 3 › Ops)
 The M2 lightweight operations panel (Reindex `POST /admin/reindex` with live

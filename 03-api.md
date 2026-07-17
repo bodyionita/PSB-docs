@@ -36,7 +36,7 @@ layer** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) — MCP tool 
 |---|---|
 | `POST /capture/text` | `{ "text", "created_at"?: iso }` → `202 { capture_id, status: "received" }`; pipeline continues in background |
 | `POST /capture/voice` | multipart `file` (m4a/webm/ogg/mp3/wav, ≤25 MB) → same `202` |
-| `GET /captures?limit=20` | recent captures, newest first: `[{ capture_id, kind, status, raw_text, node_paths[], follow_up_question, follow_up_answer, error, created_at, updated_at }]` |
+| `GET /captures?limit=20` | recent captures, newest first: `[{ capture_id, kind, status, raw_text, node_paths[], node_refs[], source, follow_up_question, follow_up_answer, error, created_at, updated_at }]` (`node_refs`/`source` added M8.1 T4 — see the addendum below) |
 | `GET /captures/{id}` | pipeline state (same shape as above) |
 | `POST /captures/{id}/retry` | re-run from first incomplete step; `409` unless `failed` |
 | `POST /captures/{id}/follow-up` | `{ "answer" }` → Pass-2 re-organize, replaces the capture's nodes ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)); `202`; `409` if no nudge pending |
@@ -112,6 +112,14 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 > single node — stance-candidate/dedup-proposal items intrinsically have no one node id), so the web
 > links those to the **Review** item, not `NodePreview`. The web distinguishes by check name (stable
 > constants). No server change.
+> **M8.1 addendum (task 4 — the T2-replan fold-in):** `CaptureView` (both `GET /captures` and
+> `GET /captures/{id}`) also carries **`node_refs: [{ id, store_path, type, title }]`** — a read-time
+> `node_paths → nodes.id` join (a `LEFT JOIN LATERAL` in the store, **no migration**), because
+> `node_paths` are store-path *projections* ([02](02-data-model.md) §Identity), not the frontmatter-uuid
+> identity that `GET /nodes/{id}` / the web `NodeChip` require. `node_refs` preserves `node_paths` order
+> (`array_position`); a path with no live `nodes` row (not yet indexed, or tombstoned/merged away) is
+> **silently absent** — never null, never an error; an empty `node_paths` yields `[]`. `node_paths`
+> itself is unchanged. This is what makes a capture's node chips clickable → `NodePreview`.
 > **M8.2 addendum ([ADR-056](adr/056-temporal-correctness-date-tokens.md)):** node body text may
 > carry inline date tokens `[[t:START[/END][|label]]]` — clients render, never show raw; two edit
 > endpoints land with the build (token edit = mechanical; capture-anchor edit → background

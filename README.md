@@ -959,6 +959,26 @@ minors applied (`ee229f0`); 1 follow-up logged (drawer focus-trap). Commits `20a
 pushed** — [08-logs/m8.1.md](08-logs/m8.1.md) task 2. Next: **Batch C {T3 Explore, T4
 Activity/Captures}** (T4 folds in capture/Captures chip clickability + the server node-id exposure), or
 respawn.
+**M8.1 Batch C DONE (2026-07-17):** the second 09 v1.7 provisional **≤3 parallel fan-out** (after M8
+Batch B) — **T3 Explore `ee6c88d`** + **T4 Activity/Captures `ddbbb03`** — landed **disjoint, zero
+collisions**, no reversal warning. **T3:** `SearchScreen`+`MapScreen` merged into
+`features/map/ExploreScreen.tsx` (search-box landing → cards → constellation re-center; internal
+search⇄map toggle; all prior behavior carried), `AppShell` **7→6 tabs**, filter chips dropped
+(`planes`/`types` API params preserved). **T4:** run-subtree render (recursive `children[]`,
+depth-indented early→late), **Captures** feed tab (all sources, expand, source badge, **Remove gated
+to chat rows**), Recents→5 + "see all"; **server fold-in** = read-time `node_paths → nodes.id` join
+as **`CaptureView.node_refs`** (`LEFT JOIN LATERAL`, no migration — **Alembic head still `015`**) so
+capture chips open `NodePreview` via the T2 `NodeChip`. Per-task **fresh independent review**: both
+**APPROVE-WITH-MINORS — no code must-fix** (T4's lone "must-fix" was docs-only: the `node_refs` 03-api
+entry, applied by the coordinator). **Coordinator** closed the one cross-task seam (the `AppShell`
+`ActivityNavContext` "see all" wire, mirroring `reviewNav`) + ran the **merged-tree integration gate**:
+ruff+format clean, eslint clean, tsc/vite green, **pytest 822 passed** (+6), **real-PG smoke 156/156**
+(+7 `node_refs` checks), head `015`. Docs recorded (03-api `node_refs` addendum · 06 Explore/Captures/
+subtree flipped to built · 08 T3/T4 ticked · [08-logs/m8.1.md](08-logs/m8.1.md) "Batch C — complete").
+Follow-ups logged: the `features/map/`→`features/explore/` rename (blocked by `ChatScreen` imports —
+post-batch cleanup), tracked `tsconfig.tsbuildinfo` hygiene, review minors. **Code committed locally
+through `ddbbb03`, not pushed.** Next: **M8.1 Task 5 · live Accept** (solo) — deploy the T1–T4 range,
+verify the Accept block at `braindan.cc` → independent review → **M8.1 CLOSED**.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
