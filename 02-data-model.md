@@ -220,11 +220,27 @@ like the preserved `stance-candidate` items). The audit list joins `captures` (f
 `source_ref` + `raw_text` snippet, filtered `removed_at IS NULL`) and `nodes` (for the primary
 content node's title, entity hubs skipped). M8's general Activity feed absorbs this later.
 
-**`agent_runs`** — unchanged shape except **M5.5 adds `parent_run_id`** (nullable self-fk,
+**`agent_runs`** — **M5.5 added `parent_run_id`** (nullable self-fk,
 [ADR-047](adr/047-pipeline-scheduling-primitive.md)): a pipeline run is a parent row, each step a
-child linked by `parent_run_id`. Agent names grow with the roadmap (`chat-distiller`, `dedup-sweep`,
-`inbox-drainer`, `maybe-digest`, `reflection`, …). Plus (M8 ops console) a **schedule registry**
-surface: each pipeline's cadence + next-run time is queryable (implementation detail at M8 grilling).
+child linked by `parent_run_id`. **M8 adds `trigger`** (`scheduled`|`manual`, default `scheduled` —
+[ADR-053](adr/053-m8-ops-console-observability-build-decisions.md) §5): set through an ambient
+`_trigger` contextvar the manual endpoint sets around the call (no job-body change), so the Activity
+feed can file a hand-run job under **manual actions** vs a scheduled run under **agents/jobs** by
+*origin* not table. Agent names grow with the roadmap (`chat-distiller`, `dedup-sweep`,
+`inbox-drainer`, `maybe-digest`, `graph-health`, `reflection`, …); **M8 also gives `store-sweep` its
+own run row** (was a phantom `skipped` step, M5.5-task-3 follow-up). Schedule/next-run is *derived*
+from the pipeline registry, exposed by `GET /pipelines` (03-api).
+
+**`agent_run_logs`** (**M8**, [ADR-053](adr/053-m8-ops-console-observability-build-decisions.md)
+§1/§2) — the live-log-tail store, backing `GET /activity/runs/{id}/logs`:
+| id bigserial pk · run_id uuid fk→`agent_runs`(id) · seq int (per-run ordinal) · ts timestamptz · level text · message text |
+An `app.*`/`INFO`+ logging handler tags records by the active run (a `_current_run_id` contextvar —
+the ADR-047 §5 ambient pattern, no job-body change) into a **bounded per-run in-memory buffer**
+(non-blocking; stdlib logging is sync, rule 8), which an async flusher persists here on a **~1s
+cadence + on finish**. Buffer overflow drops-oldest and records an elision marker (rule 7). The
+namespace/level filter structurally keeps library-DEBUG secret leakage out of this UI-rendered store
+(rule 11). **Rebuildable op-state, not graph truth** (rule 1) — dropped and re-derived like the rest
+of the index; a completed run's logs are fully durable after the on-finish flush.
 
 **`review_queue`** (**M3**, [ADR-030](adr/030-entity-substrate-and-lifecycle.md) — pulled forward
 from M6 and made **kind-generic**): every human-decision item the system files, one lifecycle.

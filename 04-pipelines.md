@@ -239,7 +239,10 @@ completes** — one start time, dependency order guaranteed regardless of step d
 RAM at a time. A bare job is **never** cron-scheduled; even single-step work is wrapped in a
 pipeline. Cadence maps to a pipeline:
 - **`nightly`** (one start, e.g. 03:00): chat-distiller → data-sync → db-backup → inbox-drain →
-  reindex → profile-refresh → backfill → identity-capsule → dedup-sweep → store-sweep → bundle.
+  reindex → profile-refresh → backfill → identity-capsule → dedup-sweep → store-sweep → bundle →
+  **graph-health** (M8, [ADR-053](adr/053-m8-ops-console-observability-build-decisions.md) §9 — the
+  **read-only** health reporter runs **last**, so it reports on the settled post-reindex/post-dedup
+  state; findings → its run's `details`, `on_fail: continue`).
 - **`weekly`** (Sunday): integrity-drill; maybe-digest (M6).
 A pipeline run opens a **parent `agent_runs`** row; each step keeps its **own child run**
 (`agent_runs.parent_run_id`). Jobs stay independently invokable (CLI + `POST /agents/{name}/run`,
@@ -255,7 +258,9 @@ nested `agent="capture"` runs; a capture that degrades to the `inbox/` fallback 
 pipeline parent and visible in the feed, but the step's pass/fail is read from **its own** run (the
 one whose `agent == step.name`) — so a benign inbox fallback of one capture never reads as a failed
 step and never trips an `on_fail=halt`. A step that raises still fails (halt still aborts on it); a
-step that opens no own run (`store-sweep`) still reads `skipped`.
+step that opens no own run (`store-sweep`) still reads `skipped` — **M8 gives `store-sweep` its own
+run row** ([ADR-053](adr/053-m8-ops-console-observability-build-decisions.md) §10), retiring that
+phantom-`skipped` case so the ops console shows it honestly.
 
 - Heavy agent work runs inside the **03:00–05:00 Europe/Bucharest** window (ADR-010), now enforced
   by *sequencing from one start*, not by hand-tuned stagger; store backup sweep near the end +

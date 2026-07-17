@@ -80,17 +80,34 @@ login header; kept as a single config constant so it's changeable at zero cost.
   (`POST /chat/auto-recorded/{capture_id}/remove`, soft-delete). This is M6's home for ADR-029 §6's
   reversal loop; M8's general Activity feed absorbs it later (Activity stays the M8 placeholder in M6).
 
-### 3. Activity (categorized tabs — full restructure at M8)
-- "What did my brain do", as **multiple categorized tabs** (agents/jobs · conversations ·
-  manual actions), recording automatic **and** manual events; staggered entrance animations;
-  tap to expand run details (`GET /activity/runs/{id}`). Fallback events visibly badged.
-- **Pipeline runs (M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md)):** a pipeline run
-  is a parent entry expandable to its per-step child runs; **auto-ingested stance items** carry a
-  flag + one-tap remove (surfaced in M6 via the chat "recently auto-recorded" list above; folded
-  into this feed at M8).
-- **Ops console (M8):** every **pipeline** listed with schedule + next run + its ordered steps
-  (`GET /agents`), a manual **Run** button per step (no cron-only ghosts), and — while running —
-  **live status + log tail** (`GET /activity/runs/{id}/logs`).
+### 3. Activity (full restructure at M8 — [ADR-053](adr/053-m8-ops-console-observability-build-decisions.md))
+One top-level **Activity** tab with a **Feed / Ops segmented control** (no new top-level tab — there
+are already 8; poll cadence `refetchInterval` is active **only while a run is live**):
+
+**Feed** — "what did my brain do", as **3 categorized tabs** over the merged `GET /activity`
+(agents/jobs · conversations · manual actions), automatic **and** manual events, newest-first
+infinite scroll (`before=` keyset); staggered entrance animations; tap to expand run details
+(`GET /activity/runs/{id}`). Fallback events visibly badged.
+- **Pipeline runs (M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md)):** a pipeline run is a
+  parent entry expandable to its per-step child runs.
+- **Conversations tab** absorbs the M6 **"recently auto-recorded"** list — auto-ingested stance
+  items carry a flag + **one-tap remove** inline (was chat-scoped in M6).
+
+**Ops** — the console (invariant 4; the M2 Admin panel is absorbed here):
+- **Pipelines** (`GET /pipelines`): each with schedule + next-run + its ordered steps + a
+  whole-pipeline **Run** (`POST /pipelines/{name}/run`).
+- **Agent roster** (`GET /agents`) in **nightly-pipeline order**: per-job last-run status + a bare
+  **Run** button (`POST /agents/{name}/run`) for every zero-arg job (all steps + `graph-health` +
+  reindex/backups); no cron-only ghosts.
+- **Live log tail** — while a run is active, its **status + streaming-by-poll log tail**
+  (`GET /activity/runs/{id}/logs?after_seq=`, ~1s poll).
+- **graph-health card** — the latest `graph-health` run's findings (orphans, `inbox/` depth, review
+  aging, missing `occurred`, alias-less entities, tombstone integrity, freshness) read from its run
+  `details`; **read-only** in M8 (acting on flags → M10).
+- **Parameterized admin ops** — `reindex` (live counts), `backup now`, `reprocess` (confirm-gated),
+  `entities/merge` (pick two nodes), `tags`/`vocab` consolidate (two-step propose→apply): rehomed
+  here with their **input controls** (they can't collapse to a bare Run), each showing live run
+  status.
 
 ### 3b. Review (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)/[048](adr/048-m6-chat-distiller-build-decisions.md) §8)
 - Badge-counted queue, **salience-ordered** (high first), of items from all conversational sources:
@@ -167,13 +184,13 @@ Standalone semantic-search screen over the whole graph (`POST /search`, no LLM c
   store, plus its **edges** (canonical, labeled by `rel`, and derived similarity) — each a
   jump-off point (and the entry into the Map from M7). No in-app editing (git covers that).
 
-### 6. Admin (M2; absorbed into the M8 ops console)
-A lightweight operations panel with a few buttons, each showing live run status:
-- **Reindex** (`POST /admin/reindex`) — async store rescan + edge recompute; shows the run's
-  live counts (`indexed/skipped/deleted/failed`); single-flight (guarded against overlap).
-- **Backup now** (`POST /admin/backup`) — force an immediate store commit + push.
-- **Consolidate tags** (`POST /admin/tags/consolidate`) — two-step tag cleanup: **Propose** →
-  review the merge plan → **Apply** ([ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md)).
+### 6. Admin (M2 panel — **absorbed into the M8 ops console**, screen 3 › Ops)
+The M2 lightweight operations panel (Reindex `POST /admin/reindex` with live
+`indexed/skipped/deleted/failed` counts; Backup now `POST /admin/backup`; Consolidate tags
+`POST /admin/tags/consolidate` two-step propose→apply, [ADR-024](adr/024-tag-vocabulary-reuse-and-consolidation.md))
+is **no longer a standalone screen at M8** — these parameterized ops are rehomed, with their input
+controls, into **Activity › Ops** (screen 3), alongside `reprocess`, `entities/merge`, and
+`vocab/consolidate` ([ADR-053](adr/053-m8-ops-console-observability-build-decisions.md) §8).
 
 ## Auth UX
 Password screen (single field, biometric-friendly via password manager autofill) →

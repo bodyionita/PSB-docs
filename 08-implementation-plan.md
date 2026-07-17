@@ -863,7 +863,70 @@ freshness flags (stale `(as of …)` observations).
 be run now; a running reindex streams its log live; a review verdict and a manual backup both
 appear in the right activity tab.
 
-- [ ] M8 grilled to build-ready detail · tasks defined there
+**GRILLED TO BUILD-READY (2026-07-17 — [ADR-053](adr/053-m8-ops-console-observability-build-decisions.md),
+decision-by-decision).** The load-bearing finding: **no per-run log capture exists** (`agent_runs`
+holds only an end-of-run `summary`/`details`), so the "live log tail" is the one genuinely new
+subsystem; everything else is projection/CRUD over existing tables + the live scheduler. Decisions
+(full rationale in ADR-053):
+- **Live logs** — an `app.*`-scoped `INFO`+ logging handler tags records by a `_current_run_id`
+  contextvar (the ADR-047 §5 ambient pattern → **no job-body churn**), appends to a **bounded per-run
+  in-memory buffer** (non-blocking; stdlib logging is sync, rule 8), an async flusher persists to a
+  durable **`agent_run_logs`** table on a **~1s cadence + on finish**; overflow drops-oldest with a
+  recorded elision marker (rule 7). `app.*`+`INFO` structurally keeps library-DEBUG secret leakage
+  off the UI-rendered store (rule 11). `GET /activity/runs/{id}/logs` = **poll** (`?after_seq=` +
+  `running` flag), not stream.
+- **Merged `GET /activity`** — a **UNION-of-views** projection over `agent_runs`/`captures`/
+  `review_queue` (no new events table), keyset-paginated `(ts, id)`, **3 tabs** (agents/jobs ·
+  conversations · manual actions). Category by **origin**, via a new **`agent_runs.trigger`**
+  (`scheduled`|`manual`, ambient `_trigger` contextvar → no churn). The M6 auto-recorded list folds
+  into Conversations.
+- **Ops surface** — **`GET /agents`** flat roster (each job → `pipelines: [names]`, **0..N**
+  membership, many-to-many) + **`GET /pipelines`** as its own resource (cron/next-run/ordered steps,
+  from the live scheduler) + **`POST /agents/{name}/run`** + **`POST /pipelines/{name}/run`**;
+  single-flight via one **in-process JobRunner guard** the scheduler + manual endpoint share
+  (authoritative — the scheduler runs single-process). **One unified, ordered console**: zero-arg jobs
+  (all steps + graph-health + reindex/backups) get a bare **Run** in nightly order; **parameterized
+  ops** (reprocess/entity-merge/tags+vocab-consolidate) keep their `/admin/*` input controls, rehomed
+  into the console. **Pipeline editing deferred.**
+- **`graph-health`** — read-only reporter (orphans, `inbox/` depth, review aging, missing `occurred`,
+  alias-less entities, tombstone integrity, freshness), findings in **`agent_runs.details`** (console
+  card reads the latest run), **nightly-tail** step, config thresholds; no auto-remediation (→ M10).
+- **`store-sweep` own run row** (carried M5.5-task-3 follow-up — kills the phantom `skipped` step).
+- **Web** — one **Activity** tab, **Feed / Ops** segmented sub-views; poll ~1s only while a run is
+  active. The M2 Admin panel is absorbed into Ops.
+- **Fenced out:** pipeline editing, connectors (M9), graph-health auto-acting (M10), log streaming
+  (backlog), CLI-hang + Sunday RAM overlap residuals, `occurred`-enrichment (own session).
+
+### Tasks (execution shape: T1 solo → **Batch B {T2,T3,T4} parallel fan-out** → T5 solo → T6 solo)
+
+- [ ] M8 grilled to build-ready detail · ADR-053 (2026-07-17)
+- [ ] **Task 1 · Observability foundation** (solo, **first**; **owns the migration**) —
+  `agent_run_logs` table + `agent_runs.trigger` column (one Alembic revision); the `app.*`/`INFO`
+  logging handler + `_current_run_id`/`_trigger` contextvars + bounded buffer + async flusher; the
+  **JobRunner run-scope seam** + in-process single-flight guard; the `store-sweep` own-run-row fix;
+  `GET /activity/runs/{id}/logs` (poll). Config knobs (buffer size / flush cadence).
+  `depends-on:` — · `batch:` foundation
+- [ ] **Task 2 · Merged `GET /activity` feed** — UNION-of-views (`agent_runs`/`captures`/
+  `review_queue`), 3 categories via `trigger`, keyset pagination. Files: `routers/activity.py` + a
+  new feed service. `depends-on:` T1 (needs `trigger`) · `batch:` B · `parallel-with:` T3, T4
+- [ ] **Task 3 · Agents + pipelines roster & triggers** — `GET /agents` (flat roster, 0..N pipeline
+  membership, last-run) + `GET /pipelines` (schedule/steps from the live scheduler) +
+  `POST /agents/{name}/run` + `POST /pipelines/{name}/run` (over the T1 JobRunner). Files: new
+  `routers/agents.py` + `routers/pipelines.py` + a roster service (all-new, disjoint).
+  `depends-on:` T1 (JobRunner) · `batch:` B · `parallel-with:` T2, T4
+- [ ] **Task 4 · `graph-health` job** — new read-only service (the seven checks + config thresholds,
+  findings → `agent_runs.details`), wired as the **nightly-tail** step + runnable. **Owns**
+  `config.py` + `scheduler.py` + `pipeline_defs`. `depends-on:` T1 (run-scope) · `batch:` B ·
+  `parallel-with:` T2, T3
+  - *Batch-B eligibility (09 §Parallel task batches):* disjoint files (T2→`activity.py`;
+    T4→`config.py`/`scheduler.py`; T3→all-new), **0 migrations in the batch** (T1 carries the sole
+    migration), no intra-batch dependency. ✓ all three conditions hold → **run as a ≤3 parallel
+    fan-out** (user-approved trial of the v1.7 provisional mode).
+- [ ] **Task 5 · Web Activity screen** (solo) — one Activity tab, **Feed** (3 tabs + auto-recorded
+  fold-in) / **Ops** (pipelines + roster + Run + **live log tail** + graph-health card + rehomed
+  admin ops) segmented sub-views; `refetchInterval` active only while running. `depends-on:` T2, T3, T4
+- [ ] **Task 6 · Live Accept** (solo, last) — deploy the range (migration applies), verify the M8
+  acceptance criteria at `braindan.cc` → independent review → M8 CLOSED.
 
 ## M9 — Connectors: Slack (stance-gated) + Telegram capture
 

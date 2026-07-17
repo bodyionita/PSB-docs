@@ -794,7 +794,31 @@ closing the phone-viewport residual; the only residual left is cosmetic (superse
 has no live data instance yet — rendering already in place). All Accept criteria met — the re-center
 neighborhood explorer (search→constellation, 3-hop re-center, canonical/derived edge styling, per-zone
 show-more, phone canvas + list toggle + reduced-motion→list, restore-last-centered) is **live at
-`braindan.cc`**. Next: **M8 (ops console & activity restructure)** — planning session (`/grilling` first).
+`braindan.cc`**.
+**M8 (ops console & activity restructure) GRILLED TO BUILD-READY (2026-07-17 — [ADR-053](adr/053-m8-ops-console-observability-build-decisions.md),
+decision-by-decision).** The load-bearing find: **no per-run log capture exists** (`agent_runs` holds
+only an end-of-run `summary`/`details`), so the **live log tail** is the one genuinely new subsystem;
+everything else is projection/CRUD over existing tables + the live scheduler. Decisions: **live logs**
+= an `app.*`/`INFO`+ logging handler tagged by a `_current_run_id` contextvar (ADR-047 §5 ambient
+pattern → **no job-body churn**) → bounded per-run in-memory buffer (non-blocking, rule 8) → async
+~1s + on-finish flush → durable **`agent_run_logs`** table; `GET /activity/runs/{id}/logs` **polls**
+(`?after_seq=`, not stream); `app.*`+`INFO` keeps library-DEBUG secret leakage off the UI-rendered
+store (rule 11). **Merged `GET /activity`** = a **UNION-of-views** over `agent_runs`/`captures`/
+`review_queue` (no events table), keyset-paginated, **3 tabs** (agents/jobs · conversations · manual
+actions), category by *origin* via a new **`agent_runs.trigger`** column. **Ops** = **`GET /agents`**
+flat roster (0..N pipeline membership) + **`GET /pipelines`** as a first-class resource +
+**`POST /agents|pipelines/{name}/run`**, single-flight via one in-process **JobRunner** guard the
+scheduler shares; **one unified ordered console** (bare Run for zero-arg jobs incl. `graph-health`;
+parameterized ops keep their `/admin/*` input controls); **pipeline editing deferred**.
+**`graph-health`** = read-only reporter (7 checks → `agent_runs.details`), **nightly-tail**, config
+thresholds, no auto-remediation (→M10). **`store-sweep`** gets its own run row (carried M5.5 follow-up).
+**Web** = one **Activity** tab, **Feed/Ops** segmented sub-views (M2 Admin panel absorbed). **Tasks**
+(08 §M8): **T1 foundation** (solo, owns the sole migration) → **Batch B {T2 feed · T3 agents/pipelines
+· T4 graph-health}** run as a **≤3 parallel fan-out** (disjoint files, 0 migrations in-batch, no
+intra-batch dep — user-approved trial of the 09 v1.7 provisional mode) → **T5 web** (solo) → **T6 live
+Accept** (solo). Docs recorded (ADR-053 + 08/03/02/04/06). **Paused before implementation** per
+[09](09-session-protocol.md) — **no code this session.** Next: build **M8 task 1** (foundation +
+migration), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
