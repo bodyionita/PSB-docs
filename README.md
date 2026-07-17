@@ -857,6 +857,31 @@ surface (a roster Reindex Run streamed its full log tail and the tail **persiste
 `/admin/*` cards → §8 roster jobs, which surfaced + added the 2 missing parameterized ops; `RunningDot`
 reduced-motion; roster tail unmounting before the drain) + 2 minors; minors logged. Commit `5c7a97b`,
 **not pushed** — [08-logs/m8.md](08-logs/m8.md) task 5. Next: **T6 · live M8 Accept** (solo, last), or respawn.
+**M8 Task 6 DONE → M8 (ops console & activity restructure) CLOSED (2026-07-17).** Pushed the 5-commit
+range `469d504..5c7a97b` (T1–T5) after a green local gate (ruff/format, 809 tests, tsc/eslint/build); CI
+green → deploy landed in ~30s. `/api/v1/health` all-true ⇒ **migration 015 applied** (`alembic upgrade
+head` runs under `set -e`; new `agent_run_logs` + `agent_runs.trigger`); the three M8 routes
+`/api/v1/{activity,agents,pipelines}` flipped **404→401** (session-gated, live). **Live-accepted in the
+user's authenticated `braindan.cc` browser** (agent read the live prod session, never handled the login
+secret) — **all Accept criteria pass:** ① Ops lists **14 jobs** each with schedule + pipeline membership
++ **Run** + last-run status, and **2 pipelines** (`nightly` `0 3 * * *` with 12 ordered steps incl. the
+new `store-sweep` + `graph-health` tail; `weekly` `30 4 * * sun`) with next-run + "Run pipeline" — the
+two new jobs correctly "Never run"; ② manual **`reindex`** and **`graph-health`** Runs each **streamed a
+real live log tail that persisted after SUCCEEDED** (the drain), `db-backup` = graceful empty-tail
+placeholder; ③ **Feed → Manual actions** shows the manual `db-backup` (`pg_dump …→ db/pg_dump-…sql`) +
+review verdicts (`Reviewed: entity-ambiguity/dedup-proposal/vocab-proposal`), **Agents & jobs** shows
+scheduled runs with pipeline parent/`↳ step` nesting + the `nightly … 10 succeeded/0 failed/1 skipped`
+rollup, **Conversations** shows the M6 auto-recorded list + one-tap Remove; keyset "Load older"; **no
+console errors**. **Bonus:** the **graph-health card** populated live (4/7 checks flagged, all 7 read-only
+checks with bounded offender samples) + the 4 parameterized Operations cards; Admin tab absorbed → 7 tabs.
+**Independent review APPROVE-WITH-MINORS — no must-fix** (fresh agent re-derived the criteria from ADR-053
++ 08 + 03-api against the deployed diff; adversarial rule-11 secret-leakage / no-job-body-churn / keyset /
+log-tail-drain / ADR-006 / contextvar-task-safety checks all clean; 5 minors logged — the one new
+follow-up: a whole-pipeline **manual** trigger doesn't 409 against a concurrent **scheduled** run of the
+same pipeline, data-safe + low-impact, agent-level guard is correct for `POST /agents/{name}/run`). The
+ops console & activity restructure is **live at `braindan.cc`** — [08-logs/m8.md](08-logs/m8.md) task 6.
+**Code pushed through `5c7a97b`.** Next: **M9 (connectors: Slack stance-gated + Telegram capture)** —
+planning session (`/grilling` first); Telegram capture may be pulled forward at the user's call.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

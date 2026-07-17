@@ -947,8 +947,22 @@ subsystem; everything else is projection/CRUD over existing tables + the live sc
   `/admin/*` cards → roster jobs per §8, which surfaced + added the 2 missing parameterized ops;
   `RunningDot` reduced-motion; roster tail unmounting before the drain) + 2 minors; minors logged —
   [08-logs/m8.md](08-logs/m8.md) task 5. `depends-on:` T2, T3, T4
-- [ ] **Task 6 · Live Accept** (solo, last) — deploy the range (migration applies), verify the M8
-  acceptance criteria at `braindan.cc` → independent review → M8 CLOSED.
+- [x] **Task 6 · Live Accept DONE → M8 CLOSED (2026-07-17)** (solo, last) — pushed the 5-commit
+  range `469d504..5c7a97b` after a green local gate (ruff/format, 809 tests, tsc/eslint/build); CI
+  green → deploy landed (~30s). `/health` all-true (⇒ **migration 015 applied** under `set -e`); the
+  three M8 routes `/api/v1/{activity,agents,pipelines}` flipped **404→401**. Live-accepted in the
+  user's authenticated `braindan.cc` browser (agent never handled the login secret) — **all Accept
+  criteria pass:** ① Ops lists **14 jobs** + **2 pipelines** (nightly `0 3 * * *` / weekly
+  `30 4 * * sun`) with schedule + next-run + run-now (new `store-sweep`/`graph-health` = "Never run");
+  ② a manual `reindex` and `graph-health` each **streamed a live log tail that persisted after
+  SUCCEEDED** (`db-backup` = graceful empty-tail placeholder); ③ **Manual actions** feed tab shows the
+  manual `db-backup` + review verdicts (`Reviewed: *`), **Agents & jobs** shows scheduled runs with
+  pipeline parent/`↳ step` nesting, **Conversations** shows auto-recorded + Remove; graph-health card
+  populated live (4/7 flagged, 7 checks); Admin absorbed → 7 tabs; no console errors. **Independent
+  review APPROVE-WITH-MINORS — no must-fix** (adversarial rule-11/no-churn/keyset/drain/ADR-006/
+  contextvar checks clean; 5 minors logged — the one new follow-up: whole-pipeline **manual** trigger
+  doesn't 409 vs a concurrent **scheduled** run of the same pipeline, data-safe/low-impact). Code
+  pushed through `5c7a97b`; deploy live — [08-logs/m8.md](08-logs/m8.md) task 6. `depends-on:` T5
 
 ## M9 — Connectors: Slack (stance-gated) + Telegram capture
 
