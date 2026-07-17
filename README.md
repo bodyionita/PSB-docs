@@ -817,8 +817,22 @@ thresholds, no auto-remediation (→M10). **`store-sweep`** gets its own run row
 · T4 graph-health}** run as a **≤3 parallel fan-out** (disjoint files, 0 migrations in-batch, no
 intra-batch dep — user-approved trial of the 09 v1.7 provisional mode) → **T5 web** (solo) → **T6 live
 Accept** (solo). Docs recorded (ADR-053 + 08/03/02/04/06). **Paused before implementation** per
-[09](09-session-protocol.md) — **no code this session.** Next: build **M8 task 1** (foundation +
-migration), or respawn.
+[09](09-session-protocol.md).
+**M8 task 1 DONE (2026-07-17):** the observability foundation — **migration 015** (`agent_run_logs`
+live-log-tail store + `agent_runs.trigger` scheduled|manual); an `app.*`/`INFO`+ **log-capture
+handler** tagging records by the active run (a `_current_run_id` contextvar **stack** the `agent_runs`
+store owns — task-safe + nested, **no job-body churn**) → a **bounded per-run buffer** (drop-oldest +
+elision marker, rule 7) → an **async flusher** (~1s + on finish, then reap); the **JobRunner**
+single-flight seam (scheduler + manual endpoints share it, threaded through the pipeline —
+`scheduled_step` skips on a manual collision, `run_manual` 409s); the **`store-sweep` own run row**
+(ADR-053 §10, kills the phantom `skipped` step); **`GET /activity/runs/{id}/logs`** (poll, `?after_seq=`
++ `running`). Namespace+`INFO` filter keeps library-`DEBUG` secret leakage off the UI-rendered store
+(rule 11). **764 tests** (+43), ruff clean, **real-PG smoke 136/136** (+7), migration 015 up/down +
+**e2e log capture** verified; **independent review APPROVE — no must-fix** (1 nit applied; 2 follow-ups
+logged: the on-finish flush is scheduled-not-awaited so the **T5 web client must page past the tail cap
+until an empty page**, not stop solely on `running==false`; the run-stack pop is coupled to `finish`).
+Commit `4750f12`, **not pushed** — [08-logs/m8.md](08-logs/m8.md) task 1. Next: **Batch B {T2,T3,T4}**
+as the ≤3 parallel fan-out, or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

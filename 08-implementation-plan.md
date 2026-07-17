@@ -900,12 +900,16 @@ subsystem; everything else is projection/CRUD over existing tables + the live sc
 ### Tasks (execution shape: T1 solo → **Batch B {T2,T3,T4} parallel fan-out** → T5 solo → T6 solo)
 
 - [ ] M8 grilled to build-ready detail · ADR-053 (2026-07-17)
-- [ ] **Task 1 · Observability foundation** (solo, **first**; **owns the migration**) —
-  `agent_run_logs` table + `agent_runs.trigger` column (one Alembic revision); the `app.*`/`INFO`
-  logging handler + `_current_run_id`/`_trigger` contextvars + bounded buffer + async flusher; the
-  **JobRunner run-scope seam** + in-process single-flight guard; the `store-sweep` own-run-row fix;
-  `GET /activity/runs/{id}/logs` (poll). Config knobs (buffer size / flush cadence).
-  `depends-on:` — · `batch:` foundation
+- [x] **Task 1 · Observability foundation DONE (2026-07-17)** (solo, **first**; **owns the
+  migration**) — **migration 015** (`agent_run_logs` + `agent_runs.trigger`); the `app.*`/`INFO`
+  logging handler + `_current_run_id` (contextvar **stack**, task-safe + nested) / `_trigger`
+  contextvars + bounded per-run buffer (drop-oldest + elision marker) + async flusher (~1s + on
+  finish, then reap); the **JobRunner** run-scope seam + in-process single-flight guard (threaded
+  through the pipeline); the `store-sweep` own-run-row fix (ADR-053 §10); `GET /activity/runs/{id}/logs`
+  (poll, `?after_seq=` + `running`). Config knobs (buffer size / flush cadence / tail cap). 764 tests
+  (+43) + real-PG smoke 136/136 + migration up/down + **e2e log capture** verified; **independent
+  review APPROVE — no must-fix** (1 nit applied; 2 follow-ups logged — see log). Commit `4750f12`,
+  **not pushed** — [08-logs/m8.md](08-logs/m8.md) task 1. `depends-on:` — · `batch:` foundation
 - [ ] **Task 2 · Merged `GET /activity` feed** — UNION-of-views (`agent_runs`/`captures`/
   `review_queue`), 3 categories via `trigger`, keyset pagination. Files: `routers/activity.py` + a
   new feed service. `depends-on:` T1 (needs `trigger`) · `batch:` B · `parallel-with:` T3, T4
