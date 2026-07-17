@@ -843,6 +843,20 @@ counts — decoupled count from sample via CTE, rule-7). Coordinator closed the 
 v1.7 provisional ≤3 fan-out ran clean — no reversal warning. Code committed through `c8e61f3`, **not
 pushed**. Next: **T5 web Activity screen** (solo), or respawn — [08-logs/m8.md](08-logs/m8.md) "Batch B —
 complete".
+**M8 Task 5 DONE (2026-07-17, `5c7a97b`):** the web **Activity screen** — one tab, **Feed/Ops** segmented
+(client-only, ADR-006; the M2 Admin tab **absorbed** → 7 tabs). **Feed** = the merged `GET /activity` as 3
+categorized tabs (keyset infinite scroll, expand run detail, conversations **one-tap remove** folding in
+the M6 auto-recorded control). **Ops** = pipelines (schedule/next-run/steps + whole-pipeline Run), the
+runnable **agent roster** with a **persistent live log tail** (polls `…/logs`, **drains past run
+completion** — ADR-053 §2), the **graph-health card** (latest run's `details.checks`), and the
+**parameterized ops** that can't collapse to a bare Run (ADR-053 §8): tags-consolidate, reprocess
+(confirm-gated), **entities/merge**, **edge vocab/consolidate** — zero-arg reindex/backup are the roster's
+Run buttons. tsc/eslint/vite green; a **real-browser walkthrough vs a throwaway mock API** drove every
+surface (a roster Reindex Run streamed its full log tail and the tail **persisted after SUCCEEDED**).
+**Independent review APPROVE after fixes** — 3 must-fix resolved (reindex/backup were mis-rehomed as
+`/admin/*` cards → §8 roster jobs, which surfaced + added the 2 missing parameterized ops; `RunningDot`
+reduced-motion; roster tail unmounting before the drain) + 2 minors; minors logged. Commit `5c7a97b`,
+**not pushed** — [08-logs/m8.md](08-logs/m8.md) task 5. Next: **T6 · live M8 Accept** (solo, last), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

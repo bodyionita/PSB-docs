@@ -936,9 +936,17 @@ subsystem; everything else is projection/CRUD over existing tables + the live sc
     T4→`config.py`/`scheduler.py`; T3→all-new), **0 migrations in the batch** (T1 carries the sole
     migration), no intra-batch dependency. ✓ all three conditions hold → **run as a ≤3 parallel
     fan-out** (user-approved trial of the v1.7 provisional mode).
-- [ ] **Task 5 · Web Activity screen** (solo) — one Activity tab, **Feed** (3 tabs + auto-recorded
-  fold-in) / **Ops** (pipelines + roster + Run + **live log tail** + graph-health card + rehomed
-  admin ops) segmented sub-views; `refetchInterval` active only while running. `depends-on:` T2, T3, T4
+- [x] **Task 5 · Web Activity screen DONE (2026-07-17, `5c7a97b`)** (solo) — one Activity tab,
+  **Feed** (3 tabs, keyset infinite scroll, expand run detail, conversations one-tap remove) /
+  **Ops** (pipelines + runnable roster with a **persistent live log tail** + graph-health card +
+  the parameterized ops: tags/reprocess/**entities-merge**/**edge-vocab-consolidate** — zero-arg
+  reindex/backup are roster Run buttons, ADR-053 §8) segmented sub-views; `refetchInterval` active
+  only while running. Admin tab absorbed (→ 7 tabs). Client-only (ADR-006). tsc/eslint/build green;
+  real-browser walkthrough vs a mock API (live tail streamed + persisted through completion);
+  **independent review APPROVE after fixes** — 3 must-fix resolved (reindex/backup mis-rehomed as
+  `/admin/*` cards → roster jobs per §8, which surfaced + added the 2 missing parameterized ops;
+  `RunningDot` reduced-motion; roster tail unmounting before the drain) + 2 minors; minors logged —
+  [08-logs/m8.md](08-logs/m8.md) task 5. `depends-on:` T2, T3, T4
 - [ ] **Task 6 · Live Accept** (solo, last) — deploy the range (migration applies), verify the M8
   acceptance criteria at `braindan.cc` → independent review → M8 CLOSED.
 
