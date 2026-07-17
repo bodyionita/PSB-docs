@@ -910,18 +910,28 @@ subsystem; everything else is projection/CRUD over existing tables + the live sc
   (+43) + real-PG smoke 136/136 + migration up/down + **e2e log capture** verified; **independent
   review APPROVE — no must-fix** (1 nit applied; 2 follow-ups logged — see log). Commit `4750f12`,
   **not pushed** — [08-logs/m8.md](08-logs/m8.md) task 1. `depends-on:` — · `batch:` foundation
-- [ ] **Task 2 · Merged `GET /activity` feed** — UNION-of-views (`agent_runs`/`captures`/
-  `review_queue`), 3 categories via `trigger`, keyset pagination. Files: `routers/activity.py` + a
-  new feed service. `depends-on:` T1 (needs `trigger`) · `batch:` B · `parallel-with:` T3, T4
-- [ ] **Task 3 · Agents + pipelines roster & triggers** — `GET /agents` (flat roster, 0..N pipeline
-  membership, last-run) + `GET /pipelines` (schedule/steps from the live scheduler) +
-  `POST /agents/{name}/run` + `POST /pipelines/{name}/run` (over the T1 JobRunner). Files: new
-  `routers/agents.py` + `routers/pipelines.py` + a roster service (all-new, disjoint).
-  `depends-on:` T1 (JobRunner) · `batch:` B · `parallel-with:` T2, T4
-- [ ] **Task 4 · `graph-health` job** — new read-only service (the seven checks + config thresholds,
-  findings → `agent_runs.details`), wired as the **nightly-tail** step + runnable. **Owns**
-  `config.py` + `scheduler.py` + `pipeline_defs`. `depends-on:` T1 (run-scope) · `batch:` B ·
-  `parallel-with:` T2, T3
+- [x] **Task 2 · Merged `GET /activity` feed DONE (2026-07-17, `f28dc5d`)** — UNION-of-views
+  (`agent_runs`/`captures`/`review_queue`), 3 categories via `trigger`, keyset pagination on `(ts,id)`.
+  Files: `routers/activity.py` + new `services/activity_feed.py`. **Fresh independent review APPROVE —
+  no must-fix** (keyset math + schema verified; 3 minors logged). `depends-on:` T1 · `batch:` B ·
+  `parallel-with:` T3, T4
+- [x] **Task 3 · Agents + pipelines roster & triggers DONE (2026-07-17, `c8e61f3`)** — `GET /agents`
+  (flat roster, 0..N pipeline membership, `running`, last-run) + `GET /pipelines` (cron/next-run/steps
+  from the live scheduler) + `POST /agents|pipelines/{name}/run` over the T1 JobRunner single-flight
+  (`JobAlreadyRunning`→409, unknown→404, scheduler-off→503). Files: new `routers/agents.py` +
+  `routers/pipelines.py` + `services/roster.py` + minimal `main.py` router registration. **The same
+  commit carries the coordinator's graph-health DI wiring** (main.py lifespan builds
+  `build_graph_health_service` and passes `graph_health=` to `PipelineScheduler`, so T4's step registers
+  + is runnable — the cross-task integration seam, closed at the gate not by a reviewer). **Fresh
+  independent review APPROVE — no must-fix** (409/single-flight + defensive scheduler access verified;
+  `main.py` diff confirmed minimal). `depends-on:` T1 · `batch:` B · `parallel-with:` T2, T4
+- [x] **Task 4 · `graph-health` job DONE (2026-07-17, `f51674b`)** — new read-only `services/graph_health.py`
+  (the seven checks + config thresholds, findings → `agent_runs.details`), wired as the **nightly-tail**
+  step + runnable. Owns `config.py` + `scheduler.py` + `pipeline_defs`. **Fresh independent review found
+  1 must-fix — resolved:** `graph_health_sample_offenders=0` collapsed 5 checks' counts to 0 (`LIMIT 0`
+  returned no rows to read `COUNT(*) OVER ()` from) → decoupled the count from the offender sample via a
+  CTE so any sample (incl. 0) reports the true count (rule 7 / no-silent-cap); +2 regression tests. The
+  `main.py` DI is done in T3's commit (see above). `depends-on:` T1 · `batch:` B · `parallel-with:` T2, T3
   - *Batch-B eligibility (09 §Parallel task batches):* disjoint files (T2→`activity.py`;
     T4→`config.py`/`scheduler.py`; T3→all-new), **0 migrations in the batch** (T1 carries the sole
     migration), no intra-batch dependency. ✓ all three conditions hold → **run as a ≤3 parallel
