@@ -89,14 +89,29 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 | `POST /agents/{name}/run` | **(M8)** manual trigger of one **zero-arg** job standalone (invariant 4 — every job runnable, no cron-only ghosts), stamped `trigger=manual`; `409` if that agent (or a live pipeline it is a step of) is running. Serialized by the in-process **JobRunner** single-flight guard the scheduler shares (authoritative — the scheduler runs single-process). Returns **`202 { agent }`** (runs in the background; the mint-inside-the-body run id is discovered via `last_run.run_id`); `404` unknown; `503` when the scheduler is off. Parameterized ops (`reprocess`/`entities merge`/tag+vocab consolidate) keep their own `/admin/*` endpoints |
 | `POST /pipelines/{name}/run` | **(M8)** manual trigger of a **whole pipeline** (the ADR-047 §6 CLI verb over HTTP); returns **`202 { pipeline }`**; `409` if it is already running; `404` unknown; `503` when the scheduler is off |
 
-> **M8.1 addendum ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) — exact shapes land with the build):**
+> **M8.1 addendum ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) — server built, task 1):**
 > the `GET /activity` `agent_runs` branch returns **only parentless runs** (`parent_run_id IS NULL`;
-> `parent_ref` kept on the wire for compatibility); `GET /activity/runs/{id}` gains a **recursive
-> `children[]` tree** (`{id, name, status, ts, summary, children[]}`, ascending ts); the
-> **`conversations` category becomes `captures`** — all captures regardless of source (voice/text/
-> mcp/chat; row carries `source` + `status`; expandable full detail incl. raw text + node paths;
-> chat rows keep the one-tap remove semantics); graph-health `details` offender samples carry
-> **node ids**, not just display strings.
+> `parent_ref` kept on the wire, now always null on that branch). Every feed row also carries
+> **`status`** (the source row's lifecycle status) and **`source`** (a Captures row's origin badge
+> `COALESCE(source, kind)` → `text`/`voice`/`mcp`/`chat`; null on the non-capture branches).
+> `GET /activity/runs/{id}` gains a **recursive `children[]` tree** — each node
+> `{ id, name, status, ts, summary, children[] }`, siblings ordered **ascending ts (early→late)**;
+> empty for a leaf run. (Per [ADR-050](adr/050-pipeline-step-status-is-the-jobs-own-run.md) a step's
+> spawned `capture` runs parent to the pipeline *root*, so current trees are one level deep — steps
+> and spawned runs are siblings; the render is recursive so any future deeper nesting shows its true
+> depth.) The **`conversations` category is renamed `captures`** and widened to **all** captures
+> regardless of source (was chat-only); the normalized row `kind` is **`capture`** (was
+> `chat_capture`); one-tap-removed captures stay excluded (`removed_at`); chat rows keep the one-tap
+> remove semantics. Expandable full detail (raw text + node paths + status + source) is the existing
+> **`GET /captures/{id}`**, whose `CaptureView` now also carries **`source`**. graph-health `details`
+> offender samples are already structured `sample: [{ id, label }]` (since M8 Batch B T4). **Carve-out
+> refining [ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) §5:** the six node-checks
+> (orphan-nodes, inbox-depth, memories-missing-occurred, alias-less-entities, tombstone-integrity,
+> stale-observations) carry a `nodes.id` → the web renders them as clickable `NodeChip`s; the
+> **`pending-review-aging`** check's offenders carry a `review_queue.id` (a review item, *not* a
+> single node — stance-candidate/dedup-proposal items intrinsically have no one node id), so the web
+> links those to the **Review** item, not `NodePreview`. The web distinguishes by check name (stable
+> constants). No server change.
 > **M8.2 addendum ([ADR-056](adr/056-temporal-correctness-date-tokens.md)):** node body text may
 > carry inline date tokens `[[t:START[/END][|label]]]` — clients render, never show raw; two edit
 > endpoints land with the build (token edit = mechanical; capture-anchor edit → background

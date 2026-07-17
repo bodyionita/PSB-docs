@@ -912,6 +912,21 @@ as the v1 capstone after M9/M10/M11** (user-confirmed: docs need the system feat
 requirements captured in 08 §Backlog. Sequencing: **M8.1 → M8.2 → M9 → M10 → M11 → docs capstone**.
 **Paused before implementation** per [09](09-session-protocol.md) — **no code this session** (docs +
 CLAUDE.md rule 12 only). Next: build **M8.1 task 1** (server), or respawn.
+**M8.1 task 1 (server) DONE (2026-07-17):** the server half of the UI/nav consolidation
+([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) §2/§4/§5; **no migration**). The activity
+feed's `agent_runs` branch now returns **parentless runs only** (a pipeline night collapses from 12
+rows to 1); `GET /activity/runs/{id}` gained a **recursive `children[]` tree** (pure `build_run_tree`
++ a depth-bounded recursive CTE `children_tree`, siblings early→late) — real trees are one level deep
+since [ADR-050](adr/050-pipeline-step-status-is-the-jobs-own-run.md) parents spawned `capture` runs to
+the pipeline root, but the render is genuinely recursive (depth-2 proven). The **`conversations` feed
+category is renamed `captures`** and widened to **all** sources (row `kind` `chat_capture`→`capture`);
+every row carries `status` + `source` (`COALESCE(source, kind)`), and the expand reuses
+`GET /captures/{id}` (`CaptureView` gained `source`). graph-health offender ids were already present
+(M8 T4) — recorded a **carve-out refining ADR-054 §5** (node-checks → `NodeChip`; `pending-review-
+aging` → Review item, not a node). 816 unit + 149 real-PG smoke green, ruff clean; **independent
+review APPROVE after 1 must-fix** (a 03-api over-claim on offender ids — corrected; the code was
+right) — [08-logs/m8.1.md](08-logs/m8.1.md) task 1. **Code committed locally, not pushed.** Next:
+**M8.1 task 2** (web primitives — `<TimeAgo>` + `NodeChip`), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

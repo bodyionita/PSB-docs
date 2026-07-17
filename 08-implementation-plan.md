@@ -988,9 +988,17 @@ preview card, one more tap lands in the map. No console errors; 03-api/06 update
 
 ### Tasks (execution shape: T1 server → T2 primitives → **Batch {T3, T4}** → T5 live Accept)
 
-- [ ] **Task 1 · Server** — feed `parent_run_id IS NULL` filter; recursive `children[]` on run
+- [x] **Task 1 · Server** — feed `parent_run_id IS NULL` filter; recursive `children[]` on run
   detail; captures branch → all sources (+ status/source on the row, detail fetch for expand);
   graph-health offender **node ids**. No migration. 03-api updated. `depends-on:` — · `batch:` —
+  **DONE 2026-07-17** ([08-logs/m8.1.md](08-logs/m8.1.md) task 1; not pushed): parentless-only feed
+  branch; `build_run_tree` + recursive-CTE `children_tree` on run detail (depth-2 proven; real trees
+  are depth-1 per ADR-050 — spawned runs parent to the pipeline root); captures widened to all
+  sources, `conversations`→`captures` + `kind` `chat_capture`→`capture`, `status`/`source` columns,
+  `CaptureView.source` for the `GET /captures/{id}` expand; graph-health ids already present (M8 T4)
+  — recorded a **carve-out refining ADR-054 §5** (node-checks → `NodeChip`; `pending-review-aging` →
+  Review item, not a node). 816 unit + 149 real-PG smoke green; **independent review APPROVE after 1
+  must-fix** (the 03-api over-claim on offender ids, corrected — code was right).
 - [ ] **Task 2 · Web primitives** — `<TimeAgo>` (tap+hover tooltip) + `NodeChip` (→ `NodePreview`
   → map) + app-wide swaps (touches many feature files — runs solo, before the batch).
   `depends-on:` T1 · `batch:` —
