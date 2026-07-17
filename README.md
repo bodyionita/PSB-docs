@@ -1063,9 +1063,24 @@ enrichment item re-filed nightly) + 1 finding a **false positive** (capsule exce
 already index-expanded); commit `0417079`. Minors logged (a derived-node date edit is reverted by a
 later `reprocess-all` — accepted ADR-042-class caveat, anchor edit is reprocess-safe; capsule internal
 double-count; occurred-enrichment SQL wants a T5 real-PG smoke). 03-api pinned (both endpoints + the
-`answer` field/kind). **Not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3 · PART 2". Next:
-**M8.2 Task 4 (web)** — token-aware date rendering + tap-to-edit, anchor-edit affordance, interiority
-marker, `occurred-enrichment` review card.
+`answer` field/kind). **Not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3 · PART 2".
+**M8.2 Task 3.5 DONE (2026-07-17) — a replan seam.** Starting Task 4 (web) surfaced a plan gap: T3's
+consumer sweep wired `interiority` into the LLM-bound renders + chat boost + capsule slice but **never
+exposed it on the two web read endpoints**, so the web couldn't render the ADR-055 §3c inner-voice
+marker. Rather than fold server work into a "web" task (ADR-006), the user **stopped and replanned the
+seam** — grilled, then split out as its own **server Task 3.5 before the web task** (numbering stays
+3.5 / 4 / 5; **no new ADR** — contract wiring delivering the already-Accepted ADR-055 §3c). Built
+(no migration — the column exists from migration 016): **`GET /nodes/{id}`** now carries `interiority`
+(1-line pass-through from the `NodePreview` that already had it) and **`GET /nodes/{id}/neighbors`**
+carries it on every neighbor (`MapNeighborItem`, grouped + `?rel=` page) **and** the `center`
+(`NeighborCenter`), threaded through the graph-store SQL (`neighbors`/`neighbor_zones`/`center_header`)
++ the `NeighborEdge`/`NeighborHeader` dataclasses (trailing + defaulted → all call sites safe).
+`SearchResultItem` deliberately unchanged. Marker semantics pinned for T4: `internal` = full / `mixed`
+= subtle / `external`|null = none. **951 unit green** (+2) + **real-PG neighbor smoke 157/157** (added
+assertion, not deferred), ruff clean; **independent review (`/code-review high`) — no findings**.
+Commit `44fb4e1`, **not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3.5". Next: **M8.2 Task 4
+(web)** — token-aware date rendering + tap-to-edit, anchor-edit affordance, interiority marker
+(Map/NodePreview — consuming the T3.5 field), `occurred-enrichment` review card.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

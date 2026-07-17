@@ -1158,9 +1158,29 @@ reprocess backfills both dimensions (standing merges reported).
   reverts derived date-edits — accepted ADR-042-class caveat; capsule internal double-count;
   occurred-enrichment store SQL wants a real-PG smoke at T5). **Not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md)
   "Task 3 · PART 2").
+- [x] **Task 3.5 · Expose `interiority` on the read API** (server, **no migration** — the column
+  exists from migration 016) — a **replan seam** (2026-07-17): T3's consumer sweep wired interiority
+  into LLM-bound renders + the chat boost + the capsule slice, but **never exposed it on the two web
+  read endpoints**, so the web couldn't render the ADR-055 §3c marker. Fix (contract wiring, **no new
+  ADR** — delivers the already-Accepted ADR-055 §3c): (a) **`GET /nodes/{id}`** — 1-line pass-through
+  of `preview.interiority` (the `search/service.py` `NodePreview` already carries it) →
+  `NodeDetailResponse.interiority`; (b) **`GET /nodes/{id}/neighbors`** — added `interiority` to both
+  neighbor SQL selects (`graph/store.py`; the grouped page and the `?rel=` "show more" page share
+  `MapNeighborItem`, so one model change covers both) **and** the **center** header SQL + `NeighborCenter`
+  (so the focal node is markable too), threaded through the `NeighborEdge`/`NeighborHeader` dataclasses
+  (trailing + defaulted → all existing call sites — MCP render, tests — unaffected). **Out of scope:**
+  `SearchResultItem` (search cards stay within ADR-055 §3c's "Map/`NodePreview`" wording). **Marker
+  semantics pinned for T4:** `internal` = full marker, `mixed` = subtle variant, `external`/`null` =
+  none. `depends-on:` T3 · `parallel-with:` none (T4 depends-on T3.5). **DONE 2026-07-17** (commit
+  `44fb4e1`, **not pushed**): **951 unit green** (+2: node-detail + map center/neighbor pass-through) +
+  **real-PG neighbor smoke 157/157** (added assertion: `mixed` neighbor + `internal` center flow,
+  unstamped → NULL — **not deferred to T5**), ruff clean; **independent review (`/code-review high`) —
+  no findings** (verified no exact-equality response assert or MCP render path changes) —
+  ([08-logs/m8.2.md](08-logs/m8.2.md) "Task 3.5").
 - [ ] **Task 4 · Web** — token-aware date rendering (live phrase + tooltip, never raw) + tap-to-edit
   (date/range picker); anchor-edit affordance on capture detail; interiority visual marker
-  (Map/`NodePreview`); `occurred-enrichment` review card (NL input). `depends-on:` T3
+  (Map/`NodePreview` — `internal` full / `mixed` subtle, per T3.5); `occurred-enrichment` review card
+  (NL input). Pure web (ADR-006 — consumes the T3.5-exposed field). `depends-on:` T3.5
 - [ ] **Task 5 · Deploy + prod reprocess + live Accept** — deploy the range (migration 016), run
   the prod `reprocess-all-from-raw` (backfills interiority + tokens; standing-merge caveat
   reported), verify the Accept block live → independent review → M8.2 CLOSED. `depends-on:` T4
