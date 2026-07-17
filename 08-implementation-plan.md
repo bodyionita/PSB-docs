@@ -1119,10 +1119,22 @@ reprocess backfills both dimensions (standing merges reported).
   57 tests zero-mocks (both ADR-056 Accept scenarios), full suite 882 green, ruff clean; independent
   review CHANGES-REQUIRED → 1 must-fix (Feb-29 snap fail-closed) + 2 minors all resolved. Commits
   `d30d6b6`/`2787701`, **not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md) task 1).
-- [ ] **Task 2 · Organizer v6 + migration** — anchor injection; symbolic time-reference emission +
+- [x] **Task 2 · Organizer v6 + migration** — anchor injection; symbolic time-reference emission +
   server-side resolution into `occurred` + body tokens; `interiority` stamp + inner-voice
   extraction (ADR-055 §2); **migration 016** (`nodes.interiority`); validation fail-closed (no
-  token on unresolvable); prompt-version bump. `depends-on:` T1
+  token on unresolvable); prompt-version bump. `depends-on:` T1 — **DONE 2026-07-17** — organizer
+  prompt v6 emits **symbolic `time_refs`** (never computed dates, rule 12); `validate_organizer_output`
+  gained an `anchor` param + a **two-pass `arose_from` remap**, resolving refs against the capture's
+  **stored anchor** (`created_local`, all 3 organize call sites) into day-granular `occurred`/
+  `occurred_end` + inline `[[t:…]]` body tokens (fail-closed — no token/date on unresolvable),
+  stamping `interiority` (`external` default; hubs unstamped). **Inner-voice edge decided at the
+  M8.2 grill (this session, user call): reuse the seeded `led_to` rel — edge on the EVENT node →
+  internal node, organizer references the sibling by local index; NO new vocabulary** (matches
+  ADR-055 §2's "existing types" minimalism). Migration 016 additive/nullable/reversible (up/down/up
+  verified on real PG); interiority persisted end-to-end (writer render, frontmatter parse, index
+  upsert `$19` verified on real PG); node contract → `v4`, prompt → `organizer-v6`. **900 tests
+  green** (+18), ruff clean; **independent review APPROVE-WITH-MINORS — no must-fix** (2 coverage/
+  comment minors both applied). Commits `afd959f`/`8e85a67`, **not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md) task 2).
 - [ ] **Task 3 · Consumers (server)** — indexer token expansion before embedding; **LLM-bound
   rendering contract sweep** (MCP `render.py`, chat prompt, capsule source, profile gen,
   consolidation — expansion + metadata header); chat-retrieval interiority boost knob; capsule
