@@ -1177,10 +1177,22 @@ reprocess backfills both dimensions (standing merges reported).
   unstamped → NULL — **not deferred to T5**), ruff clean; **independent review (`/code-review high`) —
   no findings** (verified no exact-equality response assert or MCP render path changes) —
   ([08-logs/m8.2.md](08-logs/m8.2.md) "Task 3.5").
-- [ ] **Task 4 · Web** — token-aware date rendering (live phrase + tooltip, never raw) + tap-to-edit
+- [x] **Task 4 · Web** — token-aware date rendering (live phrase + tooltip, never raw) + tap-to-edit
   (date/range picker); anchor-edit affordance on capture detail; interiority visual marker
   (Map/`NodePreview` — `internal` full / `mixed` subtle, per T3.5); `occurred-enrichment` review card
-  (NL input). Pure web (ADR-006 — consumes the T3.5-exposed field). `depends-on:` T3.5
+  (NL input). Pure web (ADR-006 — consumes the T3.5-exposed field). `depends-on:` T3.5 — **DONE
+  2026-07-17** — new `ui/dateToken.ts` (byte-for-byte web mirror of the server temporal render, round-
+  half-up pinned) + `ui/TokenizedBody.tsx` (body tokens → live phrase via a shared `ui/HoverTip.tsx`
+  extracted from `<TimeAgo>`, tap-to-edit date/range picker → `PUT /nodes/{id}/date-token`, never raw) +
+  read-only occurred line in `NodePreview`; anchor edit in `FeedView` capture detail
+  (`PUT /captures/{id}/anchor` → background reorganize); interiority marker (`ui/interiority.ts` +
+  `InteriorityBadge` on NodePreview + accent-2 ring on the Map, threaded through `graphModel`/`MapCanvas`);
+  `occurred-enrichment` review card (NL date → `POST /review/{id}` `{answer}`, maybe/skip, 400→rephrase).
+  Wire types gained `interiority` (NodeDetail/MapNeighbor/NeighborCenter) + the date-token/answer shapes;
+  **no server code (ADR-006)**. Gate green (tsc/eslint/vite); temporal mirror executed — both ADR-056
+  Accept scenarios reproduce exactly; **independent review `/code-review high` — 1 correctness must-fix
+  fixed** (malformed-token slice off-by-one) + 1 simplification applied + 1 cosmetic logged.
+  Committed locally, not pushed ([08-logs/m8.2.md](08-logs/m8.2.md) "Task 4").
 - [ ] **Task 5 · Deploy + prod reprocess + live Accept** — deploy the range (migration 016), run
   the prod `reprocess-all-from-raw` (backfills interiority + tokens; standing-merge caveat
   reported), verify the Accept block live → independent review → M8.2 CLOSED. `depends-on:` T4

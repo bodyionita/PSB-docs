@@ -1078,9 +1078,31 @@ carries it on every neighbor (`MapNeighborItem`, grouped + `?rel=` page) **and**
 `SearchResultItem` deliberately unchanged. Marker semantics pinned for T4: `internal` = full / `mixed`
 = subtle / `external`|null = none. **951 unit green** (+2) + **real-PG neighbor smoke 157/157** (added
 assertion, not deferred), ruff clean; **independent review (`/code-review high`) — no findings**.
-Commit `44fb4e1`, **not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3.5". Next: **M8.2 Task 4
-(web)** — token-aware date rendering + tap-to-edit, anchor-edit affordance, interiority marker
-(Map/NodePreview — consuming the T3.5 field), `occurred-enrichment` review card.
+Commit `44fb4e1`, **not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3.5".
+**M8.2 Task 4 (web) DONE (2026-07-17):** the web half of interiority + temporal correctness — **pure
+web, no server code** (ADR-006; consumes the T3.5 fields + the Task-3 edit endpoints). New
+**`ui/dateToken.ts`** — a **byte-for-byte web mirror** of the server temporal render (`tokens.py`+
+`render.py`; round-half-up pinned, stdlib-only) — feeds **`ui/TokenizedBody.tsx`**, which splits a node
+body on its `[[t:…]]` tokens and renders each as a **live relative phrase** (recomputed at render) with a
+tap/hover exact-date tooltip via a new shared **`ui/HoverTip.tsx`** (extracted from `<TimeAgo>`, which
+became a thin wrapper — rule 10); tokens are **never shown raw**, and where the body is editable
+(NodePreview) tapping one opens a **date/range picker → `PUT /nodes/{id}/date-token`** (client-side
+fail-closed validation via the mirror; a server 400 surfaces inline). `NodePreview` also gained a
+read-only occurred "when" line. **Anchor-edit affordance** on the capture detail (`FeedView`) — a
+`datetime-local` editor → **`PUT /captures/{id}/anchor`** (background one-capture reorganize).
+**Interiority marker** (ADR-055 §3c) — `ui/interiority.ts` (`internal` full / `mixed` subtle /
+`external`|null none) + an "inner voice" pill on NodePreview + a subtle accent-2 **ring** on the Map mark
+(threaded through `graphModel`/`MapCanvas`; `SearchResultItem` untouched). **`occurred-enrichment`
+review card** — an NL date input → `POST /review/{id}` `{answer}` (maybe/skip; a 400 "couldn't
+interpret" is shown verbatim to rephrase). Wire types gained `interiority` on NodeDetail/MapNeighbor/
+NeighborCenter + the date-token/`answer` shapes. Gate green (tsc/eslint/vite); the temporal mirror was
+**executed** and **both ADR-056 Accept scenarios reproduce exactly** ("10 days ago"→"a year ago" next
+year; "last summer"→"summer 2025"); **independent review `/code-review high` — 1 correctness must-fix
+fixed** (malformed-token slice off-by-one) + 1 simplification applied + 1 cosmetic logged. The standard
+real-browser mock walkthrough was **not run this session** (no browser tooling) — the live interactive
+drive is Task 5. Committed locally, **not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 4". Next:
+**M8.2 Task 5** — deploy the range (migration 016), prod `reprocess-all-from-raw` (backfills interiority
++ tokens), verify the Accept block live → independent review → M8.2 CLOSED.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
