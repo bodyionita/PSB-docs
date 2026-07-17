@@ -979,6 +979,26 @@ Follow-ups logged: the `features/map/`→`features/explore/` rename (blocked by 
 post-batch cleanup), tracked `tsconfig.tsbuildinfo` hygiene, review minors. **Code committed locally
 through `ddbbb03`, not pushed.** Next: **M8.1 Task 5 · live Accept** (solo) — deploy the T1–T4 range,
 verify the Accept block at `braindan.cc` → independent review → **M8.1 CLOSED**.
+**M8.1 Task 5 DONE → M8.1 (UI & navigation consolidation) CLOSED (2026-07-17).** Deployed the T1–T4 range
+(`5c7a97b..02132a0`, **no migration — Alembic head `015`**; CI green, `/health` all-true, bundle
+content-verified) and **verified all six Accept criteria live at `braindan.cc`** in a real authenticated
+prod session (agent never handled the login secret): exact-time `<TimeAgo>` tooltip (viewport-clamped),
+one collapsed feed row per pipeline run expanding to the recursive step tree (early→late), the single
+**Explore** tab (6-tab bar, search→constellation, no Search tab), the **Captures** feed (all sources +
+badges, Recents=5 + "See all"), universal **`NodeChip`**→NodePreview→"Explore in map", console clean. The
+independent Accept-gate review surfaced **one must-fix** — [ADR-054](adr/054-m8.1-ui-navigation-consolidation.md)
+§5 / the Accept block name "review cards" as a clickable-NodeChip surface, but review-card node references
+shipped as **decision controls only**. The user chose to **wire** them (keep §5 literal, not carve out):
+commit **`8b25cf6`** makes each uuid-bearing **entity-ambiguity candidate** and **dedup-proposal node** a
+`NodeChip`→NodePreview (candidate pick moved to an explicit "Use this"; the dedup survivor radio preserved
+— a button-in-`<label>` that previews without toggling; stance name-only refs + vocab values correctly stay
+static, NodeChip being **strictly node-uuid-only**). Fix reviewed **APPROVE-WITH-MINORS — no must-fix**,
+deployed (`02132a0..8b25cf6`, prod bundle = deterministic local build `index-8fhD_X4z.js`), and verified
+via a **real-browser walkthrough vs a throwaway mock API** (the prod Review queue was empty) — both cards
+render with chips + intact decision controls, chips open the drawer, the dedup button-in-label leaves the
+radio unchanged, console clean. **M8.1 CLOSED — all Accept criteria pass; the UI/nav consolidation is live
+at `braindan.cc`** ([08-logs/m8.1.md](08-logs/m8.1.md) "Task 5"). **Code pushed through `8b25cf6`.** Next:
+**M8.2 (data quality)** — build **M8.2 task 1** (per [08 §M8.2](08-implementation-plan.md)), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

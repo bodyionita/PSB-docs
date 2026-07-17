@@ -1063,8 +1063,19 @@ preview card, one more tap lands in the map. No console errors; 03-api/06 update
     wire to the T2 `NodeChip`. **Independent review APPROVE-WITH-MINORS — no code must-fix** (the one
     "must-fix" was docs-only: the `node_refs` 03-api entry, applied by the coordinator; 3 cosmetic
     minors logged).
-- [ ] **Task 5 · Live Accept** — deploy, verify the Accept block at `braindan.cc` → independent
+- [x] **Task 5 · Live Accept** — deploy, verify the Accept block at `braindan.cc` → independent
   review → M8.1 CLOSED. `depends-on:` T3, T4
+  **DONE 2026-07-17 → M8.1 CLOSED** ([08-logs/m8.1.md](08-logs/m8.1.md) "Task 5"): deployed the T1–T4
+  range (`5c7a97b..02132a0`, no migration — head `015`); **all six Accept criteria verified live** at
+  `braindan.cc` in a real authenticated session (agent never handled the login secret). The independent
+  Accept-gate review surfaced **one must-fix** — ADR-054 §5 / the Accept block name "review cards" as a
+  clickable-NodeChip surface, but review-card node references shipped as decision controls only. The user
+  chose to **wire** them (not carve out): `8b25cf6` makes each uuid-bearing entity-candidate / dedup-node
+  a `NodeChip` → NodePreview (with an explicit "Use this" pick / the survivor radio preserved; stance
+  name-only refs + vocab values correctly stay static — NodeChip is uuid-only). Fix reviewed
+  **APPROVE-WITH-MINORS — no must-fix**, deployed (`02132a0..8b25cf6`), and verified via a real-browser
+  mock walkthrough (the prod Review queue was empty) — both cards render, chips open the drawer, the
+  dedup button-in-label doesn't toggle the radio, console clean. Code pushed through `8b25cf6`.
 
 ## M8.2 — Data quality: interiority + temporal correctness ([ADR-055](adr/055-interiority-inner-voice-first-class.md) · [ADR-056](adr/056-temporal-correctness-date-tokens.md) · GRILLED TO BUILD-READY 2026-07-17)
 
