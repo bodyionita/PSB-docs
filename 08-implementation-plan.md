@@ -1055,6 +1055,47 @@ Cloudflare Access second wall · demo/presentation layer (curated/redacted show-
 multi-tenant (far horizon; keep jobs CLI-invokable) · backup fast-follows (monthly CI restore
 drill, semi-annual DR rehearsal — [ADR-014](adr/014-vault-history-durability.md)).
 
+### New requests — 2026-07-17 (post-M8, PENDING GRILLING; sequenced *before connectors/M9* at user's call)
+
+Captured verbatim-in-intent so a respawn can't lose them; **none are grilled or scoped yet** — each
+needs the planning loop ([09](09-session-protocol.md)) before build. Split into the user's two buckets:
+
+**A. Near-term UI adjustments** ("adjust now" — small, web-side, previewable):
+1. **Exact time on hover, everywhere.** Every relative timestamp (`4h ago`, `1d ago`, …) across the app
+   should reveal the exact absolute date/time on hover (shared `relativeTime` helper → add a `title`/
+   tooltip; app-wide).
+2. **Feed pipeline steps collapse under the parent.** In Activity → Feed → Agents & jobs, a pipeline run
+   shows its steps **collapsed under the pipeline row, expand-on-click**, and within the group steps read
+   **top→bottom = early→late** (chronological ascending — reverses today's `ts DESC` and supersedes the
+   T5-logged "true subtree grouping deferred" minor).
+3. **Consolidate Search into Map → rename "Explore"?** Open question (user phrased it as one): does Map
+   (re-center neighborhood explorer, already carries an empty-state embedded search) subsume the Search
+   tab enough to merge them into one **Explore** tab? Needs a grill — Search's results-list + type/plane
+   filters vs Map's canvas, what's kept/dropped, naming. (Relates to the existing *Map* backlog items.)
+
+**B. Pre-connector scope** ("soon next steps, before connectors" — real design work, grill + record):
+4. **Emphasize internal thoughts / feelings.** Give the user's own introspective memories/data a more
+   pivotal place vs. conversations-with-people — a weighting/plane/retrieval-prominence question (touches
+   the plane model + retrieval prior; grill where it lives).
+5. **Temporal correctness** (folds into the existing *Data enrichment & correction* theme above — now
+   user-requested, expanded): (a) **resolve relative dates at ingestion** — a memory saying "10 days ago"
+   must be pinned to a real date at ingest, not stay literally "10 days ago" a year later (give the
+   organizer a real "now"/date tool — e.g. a datetime tool call — so `occurred`/anchor dates are
+   accurate); (b) **dynamic date rendering** — when a memory is shown/queried, any date-phrase (short /
+   long / "x ago" form) renders as live always-current text; (c) **edit dates in place** — change a
+   memory's ingestion/anchor date *and* dates within the body, visually, right where you find them, and
+   save → triggers an immediate-or-deferred **restructure/re-understanding** from that correction (ties to
+   the reprocess-from-raw op + the correction-loop counterpart to M6's remove/trust loop). ⚠ Sub-day
+   precision still hits the `nodes.occurred_*` = `date` schema question flagged above.
+6. **v1 documentation suite** (explicitly *one of the last v1 tasks*): a short, self-contained,
+   **non-technical-audience** (friends/family; terminology explained; technicality only where the data
+   algorithms demand it) doc suite — how it works, why it helps, what it achieves, its novelty, and future
+   directions — **committed + hosted on the page** (grill the delivery/format), with visualizations (data
+   flow, architecture, …) covering: **data model · ingestion + connectors · processing (distill →
+   cleanup/merges/ongoing loops) · querying · formulas used · overall vision architecture · important
+   scheduled/automatic jobs · the vision itself · every hardcoded agent PROMPT and where in the system it
+   fits.**
+
 ## Testing policy
 
 Pure logic (chunking, frontmatter/edge parsing, slugs, entity-resolution scoring, cursor math,
