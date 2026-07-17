@@ -1048,8 +1048,24 @@ the `scored` SQL, **chat-only** (`/search` neutral at 1.0). **(D) capsule intern
 — `recent_internal` + a labeled "inner voice" section in the distiller source, counted + provenanced.
 **908 unit green** (+8) + **real-PG smoke 156/156** (the changed search SQL runs on live pgvector), ruff
 clean; commits `7f2271e`/`edc6e80`, **not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3 · PART 1".
-**PART 2 (fresh session):** **E** `occurred-enrichment` review kind + **F** two-tier edit endpoints →
-then the independent review over the whole of Task 3.
+**M8.2 Task 3 · PART 2 of 2 DONE (2026-07-17):** the **write-side** half. **(E)** `occurred-enrichment`
+review kind — a nightly DB-only flagger (`OccurredEnrichmentService`, idempotent incl. **dismiss-sticks**,
+bounded) files a review item per **undated content node**; the NL `answer` is classified into a symbolic
+time-ref (`NlTimeClassifier`, `conspect`, rule 12, fail-closed) → the T1 resolver (anchored to the
+answer's own date) → the **mechanical** `occurred` apply. **(F)** two-tier edits — `NodeWriter`
+`replace_body_token`/`set_occurred_frontmatter`/`edit_time_token` + `ResolvedTime.start/end_date_iso`;
+**`PUT /nodes/{id}/date-token`** (mechanical: rewrite body token + move `occurred` iff event date +
+re-embed) and **`PUT /captures/{id}/anchor`** (→ background one-capture reorganize, reprocess-safe).
+Wired end-to-end (nightly step + scheduler/CLI/roster; `answer` on `POST /review/{id}`). **949 unit
+green**, ruff clean; commits `5c4ccd7`/`2911f42`. **Independent review over the whole of Task 3 →
+CHANGES-REQUIRED → 2 must-fix fixed** (day-precise event-date `occurred` never moved; a dismissed
+enrichment item re-filed nightly) + 1 finding a **false positive** (capsule excerpt is chunk-sourced,
+already index-expanded); commit `0417079`. Minors logged (a derived-node date edit is reverted by a
+later `reprocess-all` — accepted ADR-042-class caveat, anchor edit is reprocess-safe; capsule internal
+double-count; occurred-enrichment SQL wants a T5 real-PG smoke). 03-api pinned (both endpoints + the
+`answer` field/kind). **Not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3 · PART 2". Next:
+**M8.2 Task 4 (web)** — token-aware date rendering + tap-to-edit, anchor-edit affordance, interiority
+marker, `occurred-enrichment` review card.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

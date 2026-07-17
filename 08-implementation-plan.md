@@ -1135,18 +1135,29 @@ reprocess backfills both dimensions (standing merges reported).
   upsert `$19` verified on real PG); node contract → `v4`, prompt → `organizer-v6`. **900 tests
   green** (+18), ruff clean; **independent review APPROVE-WITH-MINORS — no must-fix** (2 coverage/
   comment minors both applied). Commits `afd959f`/`8e85a67`, **not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md) task 2).
-- [ ] **Task 3 · Consumers (server)** — indexer token expansion before embedding; **LLM-bound
+- [x] **Task 3 · Consumers (server)** — indexer token expansion before embedding; **LLM-bound
   rendering contract sweep** (MCP `render.py`, chat prompt, capsule source, profile gen,
   consolidation — expansion + metadata header); chat-retrieval interiority boost knob; capsule
   internal slice; `occurred-enrichment` nightly step + review kind + resolver reuse; two-tier edit
   endpoints (token edit + anchor edit → `reorganize_capture_now`). `depends-on:` T2 —
   **PART 1 DONE 2026-07-17** (read-side: A indexer expansion · B LLM-bound sweep — chat/MCP/capsule
   done, profile-gen + consolidation verified **N/A** no-bodies · C interiority boost · D capsule
-  internal slice). 908 unit green + real-PG smoke 156/156, ruff clean; commits `7f2271e`/`edc6e80`,
-  **not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md) "Task 3 · PART 1"). **PART 2 (fresh session):**
-  **E** `occurred-enrichment` review kind (nightly flag → NL answer → same resolver → mechanical
-  apply) + **F** two-tier edit endpoints (token = mechanical; anchor → `reorganize_capture_now`) →
-  then the **independent review over the whole of Task 3**.
+  internal slice; commits `7f2271e`/`edc6e80`). **PART 2 DONE 2026-07-17** (write-side): **E**
+  `occurred-enrichment` — a nightly flagger (`OccurredEnrichmentService`, DB-only, idempotent,
+  bounded) files a review item per undated content node; the NL `answer` is classified into a
+  symbolic time-ref (`NlTimeClassifier`, `conspect`, rule 12, fail-closed) → the T1 resolver
+  (anchored to the answer's own date) → the **mechanical** occurred apply (`NodeWriter.set_occurred`
+  + re-index). **F** two-tier edits — `NodeWriter.replace_body_token`/`set_occurred_frontmatter`/
+  `edit_time_token` + `ResolvedTime.start/end_date_iso`; **`PUT /nodes/{id}/date-token`** (mechanical,
+  event-date occurred moves + re-embed) and **`PUT /captures/{id}/anchor`** (`CapturePipeline.edit_anchor`
+  → background reorganize). Wired: nightly `occurred-enrichment` step + scheduler/CLI/roster; new
+  `answer` field on `POST /review/{id}`. **949 unit green**, ruff clean; commits `5c4ccd7`/`2911f42`.
+  **Independent review over the whole of Task 3 → CHANGES-REQUIRED → 2 must-fix fixed** (day-precise
+  event-date match; dismissed-item resurrection) + 1 finding verified a **false positive** (capsule
+  excerpt is chunk-sourced, already index-expanded); commit `0417079`. Minors logged (reprocess
+  reverts derived date-edits — accepted ADR-042-class caveat; capsule internal double-count;
+  occurred-enrichment store SQL wants a real-PG smoke at T5). **Not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md)
+  "Task 3 · PART 2").
 - [ ] **Task 4 · Web** — token-aware date rendering (live phrase + tooltip, never raw) + tap-to-edit
   (date/range picker); anchor-edit affordance on capture detail; interiority visual marker
   (Map/`NodePreview`); `occurred-enrichment` review card (NL input). `depends-on:` T3
