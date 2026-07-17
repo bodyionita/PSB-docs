@@ -1002,13 +1002,40 @@ preview card, one more tap lands in the map. No console errors; 03-api/06 update
 - [ ] **Task 2 · Web primitives** — `<TimeAgo>` (tap+hover tooltip) + `NodeChip` (→ `NodePreview`
   → map) + app-wide swaps (touches many feature files — runs solo, before the batch).
   `depends-on:` T1 · `batch:` —
+  - **Replan 2026-07-17 (grilled, refines ADR-054 §5 — see [08-logs/m8.1.md](08-logs/m8.1.md)
+    "Replan — T2 scope"):** the T2 build is precisely — **① `<TimeAgo>`** wrapping the shared
+    `relativeTime` **unchanged** (coarse "just now / Nm / Nh / Nd ago", even "400d ago") + a
+    **custom** tap(mobile)+hover(desktop) tooltip showing exact local time (`17 Jul 2026, 08:36`,
+    24h, no seconds; also in `aria-label`); swap **all 9** `relativeTime` sites **+** SettingsScreen's
+    absolute `session_created_at` stamp. **② `NodeChip`** (`nodeId`/`type`/`title` → pill) opening a
+    **single app-level `NodePreview` bottom-sheet drawer** via a new `useNodePreview()` context
+    (mirrors `MapNavContext`; mounted in `AppShell`), drawer chrome owns the header (icon+title+close)
+    **and** the "Explore in map" hop — `NodePreview` itself is **unchanged** (edge chips still jump to
+    Map, uniform across Search/Chat/drawer); `openNode(id, hint?)` carries `type`/`title` for an instant
+    header. **③ Wire only uuid-bearing surfaces:** graph-health **node-check** offenders → `NodeChip`;
+    the **`pending-review-aging`** offenders (a `review_queue.id`, not a node) → a **new Review
+    deep-link** (a `ReviewNavContext.openReviewItem(id)` from `AppShell` → Review tab, scroll-to +
+    transient reduced-motion-safe highlight, searching pending ∪ maybe; stale/resolved id → silent
+    land) rendered as a **separate review-chip** (`NodeChip` stays strictly node-uuid-only).
+  - **Deferred to T4 (the piece that triggered the replan):** **capture / Captures node-chip
+    clickability**. `CaptureView.node_paths` are store *paths* (projections — [02](02-data-model.md)
+    §Identity: "paths are projections"), not the frontmatter-uuid node id `GET /nodes/{id}` requires,
+    so capture chips can't open `NodePreview` web-only. T4 (which builds the Captures surface) adds the
+    **server-side node-id exposure** (resolve `node_paths` → `nodes.id`, a read-time join — **no
+    migration**) and then wires those chips to `NodeChip`.
 - [ ] **Task 3 · Web Explore** — Search+Map merge, `AppShell` 7→6 (owns `AppShell`), filter chips
   removed, in-explorer search affordance. `depends-on:` T2 · `batch:` C · `parallel-with:` T4
 - [ ] **Task 4 · Web Activity & Captures** — subtree render (early→late, depth-indented), Captures
-  tab (expand + Remove), Recents→5 + link. `depends-on:` T1, T2 · `batch:` C · `parallel-with:` T3
+  tab (expand + Remove), Recents→5 + link; **+ capture/Captures node-chip clickability** — expose the
+  resulting nodes' **node ids** server-side (resolve `node_paths` → `nodes.id`, read-time join, **no
+  migration**) and wire the chips to the T2 `NodeChip` (folded in here per the 2026-07-17 replan —
+  ADR-054 §5's "capture node chips", deferred out of T2 as web-only-infeasible). `depends-on:` T1, T2 ·
+  `batch:` C · `parallel-with:` T3
   - *Batch-C eligibility (09 §Parallel task batches):* disjoint files (T3 → `features/map`/
-    `features/search`/`AppShell`; T4 → `features/activity`/`features/capture`), 0 migrations, no
-    intra-batch dependency. ✓ → eligible for a ≤3 fan-out at the coordinator's call.
+    `features/search`/`AppShell`; T4 → `features/activity`/`features/capture` **+ the server captures
+    view/router for the node-id exposure**, disjoint from T3's web-only files), **0 migrations** (the
+    node-id join is read-time), no intra-batch dependency. ✓ → eligible for a ≤3 fan-out at the
+    coordinator's call (**re-check the server-touch at kickoff**).
 - [ ] **Task 5 · Live Accept** — deploy, verify the Accept block at `braindan.cc` → independent
   review → M8.1 CLOSED. `depends-on:` T3, T4
 

@@ -927,6 +927,22 @@ aging` → Review item, not a node). 816 unit + 149 real-PG smoke green, ruff cl
 review APPROVE after 1 must-fix** (a 03-api over-claim on offender ids — corrected; the code was
 right) — [08-logs/m8.1.md](08-logs/m8.1.md) task 1. **Code committed locally, not pushed.** Next:
 **M8.1 task 2** (web primitives — `<TimeAgo>` + `NodeChip`), or respawn.
+**M8.1 task 2 REPLANNED (2026-07-17, grilled — no code).** A T2 implementation session hit a
+contract-vs-data conflict and stopped to replan (09 rule 4): ADR-054 §5 wants **capture node chips**
+clickable → `NodePreview`, but `NodePreview` needs a **frontmatter-uuid** node id (`GET /nodes/{id}`)
+while captures expose only store **paths** (`CaptureView.node_paths`; [02](02-data-model.md) §Identity —
+"paths are projections"), so it's web-only-infeasible. Grilled decision-by-decision: **capture/Captures
+chip clickability + the server node-id exposure defer to T4** (read-time `node_paths → nodes.id` join,
+**no migration**); **T2 ships** `<TimeAgo>` (wraps `relativeTime` unchanged + custom tap+hover exact-time
+tooltip; 9 sites + SettingsScreen), a single app-level **`NodePreview` bottom-sheet drawer** (`NodeChip`
+→ `useNodePreview()` context in `AppShell`; drawer chrome owns header + "Explore in map"; `NodePreview`
+unchanged, edges jump to Map), and wires **only uuid-bearing surfaces** — graph-health **node-check**
+offenders → `NodeChip`, **`pending-review-aging`** offenders → a **new Review deep-link**
+(`ReviewNavContext` → Review tab, scroll-to + transient highlight, pending ∪ maybe, silent-land on a
+resolved id) as a separate review-chip (`NodeChip` stays node-uuid-only). **Refines ADR-054 §5** (no
+edit / no new ADR — plan refinement + minor nav affordance) — [08-logs/m8.1.md](08-logs/m8.1.md) "Replan
+— T2 scope"; 08 §M8.1 T2/T4. **Paused before implementation.** Next: build **M8.1 task 2** to this plan,
+or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that
