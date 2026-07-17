@@ -1033,9 +1033,23 @@ backfill, Rule-1 rebuildable); interiority persisted end-to-end (writer render, 
 index upsert). Node contract → `v4`, prompt → `organizer-v6`. **900 tests green** (+18), ruff clean;
 migration up/down/up + the real `PgIndexStore` interiority upsert **verified on real PG**;
 **independent review APPROVE-WITH-MINORS — no must-fix** (2 minors applied). Commits `afd959f`/`8e85a67`,
-**not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) task 2. Next: **M8.2 task 3** (consumers — indexer
-token expansion, LLM-bound rendering-contract sweep, chat interiority boost, capsule internal slice,
-`occurred-enrichment` review kind, two-tier edits).
+**not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) task 2.
+**M8.2 task 3 · PART 1 of 2 DONE (2026-07-17):** the **read-side consumers** (user split the 6-part task
+— the two data-critical write halves deferred to a fresh session for a focused pass). **(A)** the
+**indexer expands `[[t:…]]` tokens to absolute before chunking/embedding** (ADR-056 §4 — vectors + the
+FTS `tsvector` see prose, not token noise; `content_hash` stays on the untouched file). **(B) LLM-bound
+rendering-contract sweep** — new `temporal.render.temporal_header`/`format_occurred`; **chat context**,
+**MCP** `render_search_results`/`render_node`/`render_build_context`, and the **capsule source** all
+ship token expansion + a per-item **temporal header** (`recorded … · occurred …`); `SearchHit`/
+`NodePreview`/`NodeRow` carry `occurred_*`/`created_at`/`interiority`; **profile-gen + tag/edge
+consolidation verified N/A** (no node bodies reach the LLM). **(C) chat interiority boost** (ADR-055
+§3a) — `chat_interiority_boost` (1.2) multiplies the fused RRF×recency score for `internal` nodes in
+the `scored` SQL, **chat-only** (`/search` neutral at 1.0). **(D) capsule internal slice** (ADR-055 §3b)
+— `recent_internal` + a labeled "inner voice" section in the distiller source, counted + provenanced.
+**908 unit green** (+8) + **real-PG smoke 156/156** (the changed search SQL runs on live pgvector), ruff
+clean; commits `7f2271e`/`edc6e80`, **not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 3 · PART 1".
+**PART 2 (fresh session):** **E** `occurred-enrichment` review kind + **F** two-tier edit endpoints →
+then the independent review over the whole of Task 3.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

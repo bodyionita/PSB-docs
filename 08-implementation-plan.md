@@ -1139,7 +1139,14 @@ reprocess backfills both dimensions (standing merges reported).
   rendering contract sweep** (MCP `render.py`, chat prompt, capsule source, profile gen,
   consolidation — expansion + metadata header); chat-retrieval interiority boost knob; capsule
   internal slice; `occurred-enrichment` nightly step + review kind + resolver reuse; two-tier edit
-  endpoints (token edit + anchor edit → `reorganize_capture_now`). `depends-on:` T2
+  endpoints (token edit + anchor edit → `reorganize_capture_now`). `depends-on:` T2 —
+  **PART 1 DONE 2026-07-17** (read-side: A indexer expansion · B LLM-bound sweep — chat/MCP/capsule
+  done, profile-gen + consolidation verified **N/A** no-bodies · C interiority boost · D capsule
+  internal slice). 908 unit green + real-PG smoke 156/156, ruff clean; commits `7f2271e`/`edc6e80`,
+  **not pushed** ([08-logs/m8.2.md](08-logs/m8.2.md) "Task 3 · PART 1"). **PART 2 (fresh session):**
+  **E** `occurred-enrichment` review kind (nightly flag → NL answer → same resolver → mechanical
+  apply) + **F** two-tier edit endpoints (token = mechanical; anchor → `reorganize_capture_now`) →
+  then the **independent review over the whole of Task 3**.
 - [ ] **Task 4 · Web** — token-aware date rendering (live phrase + tooltip, never raw) + tap-to-edit
   (date/range picker); anchor-edit affordance on capture detail; interiority visual marker
   (Map/`NodePreview`); `occurred-enrichment` review card (NL input). `depends-on:` T3
