@@ -882,6 +882,36 @@ same pipeline, data-safe + low-impact, agent-level guard is correct for `POST /a
 ops console & activity restructure is **live at `braindan.cc`** — [08-logs/m8.md](08-logs/m8.md) task 6.
 **Code pushed through `5c7a97b`.** Next: **M9 (connectors: Slack stance-gated + Telegram capture)** —
 planning session (`/grilling` first); Telegram capture may be pulled forward at the user's call.
+**M8.1 + M8.2 GRILLED TO BUILD-READY; M9 re-sequenced after them (2026-07-17 — planning session,
+decision-by-decision).** A post-M8 request batch was grilled the same day into two inserted milestones
+(M5.5-style decimals) + a re-pinned capstone: **[M8.1 — UI & navigation consolidation](08-implementation-plan.md)
+([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md)):** exact-time **tap+hover** tooltip on every
+relative timestamp (one `<TimeAgo>` primitive); pipeline runs collapse to **one feed row** with a
+**recursive `children[]` tree** on run detail (depth in the data structure; early→late reading order);
+**Search + Map merge into one "Explore" tab** (7→6; filter chips dropped — taxonomy stays product-wide,
+manual pre-filter UI earns nothing at personal scale; chat plane chips stay); the Conversations feed
+category becomes **Captures** (all sources, paginated, expandable, chat rows keep Remove; Capture-tab
+Recents → 5 + link); a universal clickable **`NodeChip`** → `NodePreview` → map (graph-health samples
+gain node ids). 5 tasks, batch-annotated. **[M8.2 — Data quality](08-implementation-plan.md)
+([ADR-055](adr/055-interiority-inner-voice-first-class.md) · [ADR-056](adr/056-temporal-correctness-date-tokens.md)):**
+**interiority** — organizer stamps `internal|external|mixed` + **extracts inner-voice content into its
+own nodes** (no new type; sole migration = `nodes.interiority`), consumed by a chat-retrieval boost knob,
+a dedicated identity-capsule slice, and a Map/preview marker; **temporal correctness** — organizer prompt
+carries the **stored capture anchor** (never wall-clock; P10-deterministic under reprocess), the LLM
+emits **symbolic time-references only** with a deterministic Python resolver doing all date math
+(**"LLMs classify, code computes" — new CLAUDE.md hard rule 12**, product-wide; fail → prose, never
+guessed), resolved dates land as inline **`[[t:START[/END][|label]]]` tokens** (ranges + absolute labels;
+recurrence fenced to M11) rendered live in web (never raw; exact-time tooltip), expanded **before
+embedding** in the indexer, and governed by a binding **LLM-bound rendering contract** (every path to any
+LLM ships token expansion + a recorded-at·occurred metadata header); **two-tier edits** (token edit =
+mechanical/instant; anchor edit = background one-capture reorganize; ripple = nightly); `occurred_*`
+stays `date` (tokens own sub-day); the backlog's **`occurred-enrichment` review kind absorbed** into
+M8.2; one prod **reprocess-all** backfills both dimensions. 5 sequential tasks. **The v1 documentation
+suite** (non-technical audience, hosted, visualized, incl. a full agent-prompt inventory) is **re-pinned
+as the v1 capstone after M9/M10/M11** (user-confirmed: docs need the system feature-complete);
+requirements captured in 08 §Backlog. Sequencing: **M8.1 → M8.2 → M9 → M10 → M11 → docs capstone**.
+**Paused before implementation** per [09](09-session-protocol.md) — **no code this session** (docs +
+CLAUDE.md rule 12 only). Next: build **M8.1 task 1** (server), or respawn.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

@@ -89,6 +89,19 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 | `POST /agents/{name}/run` | **(M8)** manual trigger of one **zero-arg** job standalone (invariant 4 — every job runnable, no cron-only ghosts), stamped `trigger=manual`; `409` if that agent (or a live pipeline it is a step of) is running. Serialized by the in-process **JobRunner** single-flight guard the scheduler shares (authoritative — the scheduler runs single-process). Returns **`202 { agent }`** (runs in the background; the mint-inside-the-body run id is discovered via `last_run.run_id`); `404` unknown; `503` when the scheduler is off. Parameterized ops (`reprocess`/`entities merge`/tag+vocab consolidate) keep their own `/admin/*` endpoints |
 | `POST /pipelines/{name}/run` | **(M8)** manual trigger of a **whole pipeline** (the ADR-047 §6 CLI verb over HTTP); returns **`202 { pipeline }`**; `409` if it is already running; `404` unknown; `503` when the scheduler is off |
 
+> **M8.1 addendum ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) — exact shapes land with the build):**
+> the `GET /activity` `agent_runs` branch returns **only parentless runs** (`parent_run_id IS NULL`;
+> `parent_ref` kept on the wire for compatibility); `GET /activity/runs/{id}` gains a **recursive
+> `children[]` tree** (`{id, name, status, ts, summary, children[]}`, ascending ts); the
+> **`conversations` category becomes `captures`** — all captures regardless of source (voice/text/
+> mcp/chat; row carries `source` + `status`; expandable full detail incl. raw text + node paths;
+> chat rows keep the one-tap remove semantics); graph-health `details` offender samples carry
+> **node ids**, not just display strings.
+> **M8.2 addendum ([ADR-056](adr/056-temporal-correctness-date-tokens.md)):** node body text may
+> carry inline date tokens `[[t:START[/END][|label]]]` — clients render, never show raw; two edit
+> endpoints land with the build (token edit = mechanical; capture-anchor edit → background
+> reorganize), plus the `occurred-enrichment` review kind.
+
 ## Settings ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md), [ADR-027](adr/027-typed-vocabulary-governance.md))
 
 | | |

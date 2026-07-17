@@ -964,6 +964,100 @@ subsystem; everything else is projection/CRUD over existing tables + the live sc
   doesn't 409 vs a concurrent **scheduled** run of the same pipeline, data-safe/low-impact). Code
   pushed through `5c7a97b`; deploy live — [08-logs/m8.md](08-logs/m8.md) task 6. `depends-on:` T5
 
+## M8.1 — UI & navigation consolidation ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) · GRILLED TO BUILD-READY 2026-07-17)
+
+**Scope.** Five post-M8 UI/navigation decisions (full rationale in ADR-054): **① `<TimeAgo>`** —
+exact-time **tap+hover tooltip** on every relative timestamp (custom tooltip, not `title` — must
+work on touch; `17 Jul 2026, 08:36` local). **② Pipeline subtree** — the feed lists only parentless
+runs (`parent_run_id IS NULL`); `GET /activity/runs/{id}` gains a **recursive `children[]` tree**;
+UI renders one depth-indented tree, **early→late** at every level, expand-on-click. **③ Explore** —
+Search + Map merge into one tab (7→6): search-box landing, full result cards, hit → constellation,
+search reachable from anywhere; **filter chips removed** (API `types`/`planes` params stay); chat
+plane chips stay. **④ Captures** — the Conversations feed category becomes **Captures** (all
+sources, paginated, expandable full detail incl. raw text + node chips + source badge; chat rows
+keep Remove); Capture-tab Recents → **~5** + in-place expand + "see all" link. **⑤ `NodeChip`** —
+every node reference clickable → `NodePreview` drawer → "Explore in map"; graph-health offender
+samples gain **node ids** in `details`.
+
+**Accept.** Hovering/tapping any timestamp anywhere shows the exact local time; the feed shows one
+row per nightly run whose expansion reveals the full step tree (early→late, nested `capture` runs
+visibly deeper); one Explore tab covers search-to-constellation with no Search tab left; the
+Captures feed tab pages through *all* historical captures with full detail while the Capture tab
+shows 5; clicking a node chip on a review card / graph-health sample / capture row opens its
+preview card, one more tap lands in the map. No console errors; 03-api/06 updated alongside.
+
+### Tasks (execution shape: T1 server → T2 primitives → **Batch {T3, T4}** → T5 live Accept)
+
+- [ ] **Task 1 · Server** — feed `parent_run_id IS NULL` filter; recursive `children[]` on run
+  detail; captures branch → all sources (+ status/source on the row, detail fetch for expand);
+  graph-health offender **node ids**. No migration. 03-api updated. `depends-on:` — · `batch:` —
+- [ ] **Task 2 · Web primitives** — `<TimeAgo>` (tap+hover tooltip) + `NodeChip` (→ `NodePreview`
+  → map) + app-wide swaps (touches many feature files — runs solo, before the batch).
+  `depends-on:` T1 · `batch:` —
+- [ ] **Task 3 · Web Explore** — Search+Map merge, `AppShell` 7→6 (owns `AppShell`), filter chips
+  removed, in-explorer search affordance. `depends-on:` T2 · `batch:` C · `parallel-with:` T4
+- [ ] **Task 4 · Web Activity & Captures** — subtree render (early→late, depth-indented), Captures
+  tab (expand + Remove), Recents→5 + link. `depends-on:` T1, T2 · `batch:` C · `parallel-with:` T3
+  - *Batch-C eligibility (09 §Parallel task batches):* disjoint files (T3 → `features/map`/
+    `features/search`/`AppShell`; T4 → `features/activity`/`features/capture`), 0 migrations, no
+    intra-batch dependency. ✓ → eligible for a ≤3 fan-out at the coordinator's call.
+- [ ] **Task 5 · Live Accept** — deploy, verify the Accept block at `braindan.cc` → independent
+  review → M8.1 CLOSED. `depends-on:` T3, T4
+
+## M8.2 — Data quality: interiority + temporal correctness ([ADR-055](adr/055-interiority-inner-voice-first-class.md) · [ADR-056](adr/056-temporal-correctness-date-tokens.md) · GRILLED TO BUILD-READY 2026-07-17)
+
+**Scope.** Two organizer-centered data-quality upgrades, one reprocess backfills both.
+**Interiority (ADR-055):** organizer stamps `interiority: internal|external|mixed` on every content
+node (frontmatter + `nodes` column — the sole migration) **and extracts inner-voice content into its
+own `internal` nodes** (existing types, edge-linked to their event node); consumers = a config-knobbed
+**chat-retrieval boost** on the fused score (`/search` neutral), a **dedicated internal slice** in the
+identity-capsule source, and a subtle Map/`NodePreview` visual marker.
+**Temporal correctness (ADR-056):** the organizer prompt carries the capture's **stored anchor**
+(`created_at`/`anchor_at`, never wall-clock — reprocess-deterministic); the LLM emits **symbolic
+time-references only** (never computed dates), a deterministic Python resolver does **all** date math
+(**"LLMs classify, code computes"** — new CLAUDE.md hard rule, product-wide; unresolvable → prose,
+never guessed); resolved references land as inline **`[[t:START[/END][|label]]]` tokens** (ranges,
+honest granularity, optional time-of-day, absolute labels; recurrence fenced out → prose); rendering
+contracts — web = live phrase + exact-time tooltip (never raw), indexer expands **before embedding**,
+and the **LLM-bound rendering contract**: every path to any LLM (MCP / chat prompt / capsule /
+profiles / consolidation) ships token expansion + a per-item **temporal metadata header**
+(recorded-at · occurred); **two-tier edits** — token edit = mechanical/instant (+re-embed), anchor
+edit = background one-capture reorganize, graph ripple = nightly; `occurred_*` **stays `date`**
+(tokens own sub-day); the **`occurred-enrichment` review kind** (nightly flags undated/coarse → NL
+answer → same resolver → mechanical apply) absorbed from the backlog.
+
+**Accept.** A capture saying "10 days ago" lands with the correct absolute `occurred` and a token
+that renders "10 days ago" today and "a year ago" next year (tooltip = exact date); reprocess-all
+reproduces identical dates (anchor-determinism); a "last summer" capture yields a range token
+labeled "summer 2025"; chat/MCP answers show temporally-correct grounding (metadata header visible
+in the fenced prompt); editing a body date updates token + `occurred` instantly, editing a capture's
+anchor visibly reorganizes it in the background; an undated node surfaced in Review gets dated via
+an NL answer; a feelings-bearing capture produces a distinct `internal` node linked to its event
+node, visible on the map, boosted in chat retrieval, and present in the capsule source; the prod
+reprocess backfills both dimensions (standing merges reported).
+
+### Tasks (sequential — each builds on the last; no parallel batch)
+
+- [ ] **Task 1 · Temporal engine** (pure logic, no migration) — symbolic-reference schema,
+  deterministic resolver (`datetime`/`dateutil`: offsets, weekday walks, seasons, ranges,
+  year-snapping, granularity), token parse/serialize/render lib (web-mirrorable spec), unit tests
+  no mocks. `depends-on:` —
+- [ ] **Task 2 · Organizer v6 + migration** — anchor injection; symbolic time-reference emission +
+  server-side resolution into `occurred` + body tokens; `interiority` stamp + inner-voice
+  extraction (ADR-055 §2); **migration 016** (`nodes.interiority`); validation fail-closed (no
+  token on unresolvable); prompt-version bump. `depends-on:` T1
+- [ ] **Task 3 · Consumers (server)** — indexer token expansion before embedding; **LLM-bound
+  rendering contract sweep** (MCP `render.py`, chat prompt, capsule source, profile gen,
+  consolidation — expansion + metadata header); chat-retrieval interiority boost knob; capsule
+  internal slice; `occurred-enrichment` nightly step + review kind + resolver reuse; two-tier edit
+  endpoints (token edit + anchor edit → `reorganize_capture_now`). `depends-on:` T2
+- [ ] **Task 4 · Web** — token-aware date rendering (live phrase + tooltip, never raw) + tap-to-edit
+  (date/range picker); anchor-edit affordance on capture detail; interiority visual marker
+  (Map/`NodePreview`); `occurred-enrichment` review card (NL input). `depends-on:` T3
+- [ ] **Task 5 · Deploy + prod reprocess + live Accept** — deploy the range (migration 016), run
+  the prod `reprocess-all-from-raw` (backfills interiority + tokens; standing-merge caveat
+  reported), verify the Accept block live → independent review → M8.2 CLOSED. `depends-on:` T4
+
 ## M9 — Connectors: Slack (stance-gated) + Telegram capture
 
 **Scope.** (a) **Slack** connector ([05-connectors.md](05-connectors.md)): user-token
@@ -1055,46 +1149,35 @@ Cloudflare Access second wall · demo/presentation layer (curated/redacted show-
 multi-tenant (far horizon; keep jobs CLI-invokable) · backup fast-follows (monthly CI restore
 drill, semi-annual DR rehearsal — [ADR-014](adr/014-vault-history-durability.md)).
 
-### New requests — 2026-07-17 (post-M8, PENDING GRILLING; sequenced *before connectors/M9* at user's call)
+### New requests — 2026-07-17 · GRILLED + DISPATCHED (planning session 2026-07-17)
 
-Captured verbatim-in-intent so a respawn can't lose them; **none are grilled or scoped yet** — each
-needs the planning loop ([09](09-session-protocol.md)) before build. Split into the user's two buckets:
-
-**A. Near-term UI adjustments** ("adjust now" — small, web-side, previewable):
-1. **Exact time on hover, everywhere.** Every relative timestamp (`4h ago`, `1d ago`, …) across the app
-   should reveal the exact absolute date/time on hover (shared `relativeTime` helper → add a `title`/
-   tooltip; app-wide).
-2. **Feed pipeline steps collapse under the parent.** In Activity → Feed → Agents & jobs, a pipeline run
-   shows its steps **collapsed under the pipeline row, expand-on-click**, and within the group steps read
-   **top→bottom = early→late** (chronological ascending — reverses today's `ts DESC` and supersedes the
-   T5-logged "true subtree grouping deferred" minor).
-3. **Consolidate Search into Map → rename "Explore"?** Open question (user phrased it as one): does Map
-   (re-center neighborhood explorer, already carries an empty-state embedded search) subsume the Search
-   tab enough to merge them into one **Explore** tab? Needs a grill — Search's results-list + type/plane
-   filters vs Map's canvas, what's kept/dropped, naming. (Relates to the existing *Map* backlog items.)
-
-**B. Pre-connector scope** ("soon next steps, before connectors" — real design work, grill + record):
-4. **Emphasize internal thoughts / feelings.** Give the user's own introspective memories/data a more
-   pivotal place vs. conversations-with-people — a weighting/plane/retrieval-prominence question (touches
-   the plane model + retrieval prior; grill where it lives).
-5. **Temporal correctness** (folds into the existing *Data enrichment & correction* theme above — now
-   user-requested, expanded): (a) **resolve relative dates at ingestion** — a memory saying "10 days ago"
-   must be pinned to a real date at ingest, not stay literally "10 days ago" a year later (give the
-   organizer a real "now"/date tool — e.g. a datetime tool call — so `occurred`/anchor dates are
-   accurate); (b) **dynamic date rendering** — when a memory is shown/queried, any date-phrase (short /
-   long / "x ago" form) renders as live always-current text; (c) **edit dates in place** — change a
-   memory's ingestion/anchor date *and* dates within the body, visually, right where you find them, and
-   save → triggers an immediate-or-deferred **restructure/re-understanding** from that correction (ties to
-   the reprocess-from-raw op + the correction-loop counterpart to M6's remove/trust loop). ⚠ Sub-day
-   precision still hits the `nodes.occurred_*` = `date` schema question flagged above.
-6. **v1 documentation suite** (explicitly *one of the last v1 tasks*): a short, self-contained,
-   **non-technical-audience** (friends/family; terminology explained; technicality only where the data
-   algorithms demand it) doc suite — how it works, why it helps, what it achieves, its novelty, and future
-   directions — **committed + hosted on the page** (grill the delivery/format), with visualizations (data
-   flow, architecture, …) covering: **data model · ingestion + connectors · processing (distill →
-   cleanup/merges/ongoing loops) · querying · formulas used · overall vision architecture · important
-   scheduled/automatic jobs · the vision itself · every hardcoded agent PROMPT and where in the system it
-   fits.**
+The post-M8 batch was grilled decision-by-decision the same day. Where each item went:
+- **Items 1–3 + two additions** (captures rehome to a paginated Activity tab + Recents→5; universal
+  clickable node references) → **[M8.1](#m81--ui--navigation-consolidation-adr-054--grilled-to-build-ready-2026-07-17)**
+  ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md)). Notable resolutions: tooltip must be
+  **tap+hover** (touch parity); subtree grouping is **server-side + recursive** (depth visible in
+  the data structure); Explore merge **drops the search filter chips** (taxonomy stays, manual
+  pre-filter UI earns nothing at personal scale) while **chat plane chips stay**.
+- **Items 4–5** → **[M8.2](#m82--data-quality-interiority--temporal-correctness-adr-055--adr-056--grilled-to-build-ready-2026-07-17)**
+  ([ADR-055](adr/055-interiority-inner-voice-first-class.md) interiority ·
+  [ADR-056](adr/056-temporal-correctness-date-tokens.md) temporal). Notable resolutions: inner voice =
+  ingestion-time marker + **extraction into own nodes** (no new type yet); relative dates resolve
+  against the **stored capture anchor, never wall-clock** (P10-deterministic — the user's "live
+  now-tool" idea was refined into anchor injection); **"LLMs classify, code computes"** became a
+  product-wide hard rule (symbolic emission + deterministic resolver, fail→prose never guess);
+  inline **`[[t:…]]` tokens** with ranges/labels; recurrence fenced out; `occurred_*` stays `date`
+  (tokens own sub-day); the **`occurred-enrichment`** backlog item was absorbed into M8.2 (its "own
+  planning session" = this one — the *Data enrichment & correction* paragraph above stays for the
+  broader non-date corrections: facts, titles, planes, tags, edges, re-stancing).
+- **Item 6 (v1 documentation suite)** → **the v1 capstone, after M9/M10/M11** (user-confirmed: docs
+  need the system feature-complete — connectors/reflection/life-manager change what's documented).
+  Requirements pinned for its own later grill: short, self-contained, **non-technical audience**
+  (friends/family; terminology explained; technicality only where the data algorithms demand it);
+  how it works / why it helps / what it achieves / novelty / future directions; **committed +
+  hosted on the page** (delivery format to grill); visualizations (data flow, architecture, …)
+  covering: data model · ingestion + connectors · processing (distill → cleanup/merges/loops) ·
+  querying · formulas used · overall architecture · scheduled/automatic jobs · the vision itself ·
+  **every hardcoded agent PROMPT and where it fits**.
 
 ## Testing policy
 

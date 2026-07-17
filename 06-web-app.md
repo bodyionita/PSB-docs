@@ -175,14 +175,23 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   drafted as `PUT /settings/agents` is now the **Conspect** group above — ADR-025.)
 - Session management (logout), theme, reduced motion override.
 
-### 5. Search (M2; retargeted to nodes at M3)
+### 5. Search (M2; retargeted to nodes at M3 — **merges into the Map as "Explore" at M8.1**, [ADR-054](adr/054-m8.1-ui-navigation-consolidation.md) §3)
 Standalone semantic-search screen over the whole graph (`POST /search`, no LLM call):
-- Query box + **plane-filter chips** (+ type filter, M3).
+- Query box + **plane-filter chips** (+ type filter, M3). *(M8.1: the filter-chip UI is dropped —
+  the API params stay; type icons/plane badges remain on cards as passive signals.)*
 - Results as **node cards** — title, type icon, plane badge, snippet (best-matching chunk),
   tags, score — ranked by relevance.
 - **Expand a card → read-only node preview** (`GET /nodes/{id}`): body read live from the graph
   store, plus its **edges** (canonical, labeled by `rel`, and derived similarity) — each a
   jump-off point (and the entry into the Map from M7). No in-app editing (git covers that).
+- **M8.1 — Explore:** this screen and the Map become **one "Explore" tab** (shell → 6 tabs):
+  search-box landing, these result cards, and **picking a hit centers the map constellation**;
+  a search affordance stays reachable from anywhere in the explorer. App-wide at M8.1 as well:
+  every relative timestamp gets a **tap+hover exact-time tooltip** (`<TimeAgo>`), and every node
+  reference is a clickable **`NodeChip`** → `NodePreview` → map ([ADR-054](adr/054-m8.1-ui-navigation-consolidation.md)
+  §1/§5). The Activity feed's Conversations tab becomes **Captures** (all sources, expandable,
+  paginated; Capture-tab Recents → ~5 + link), and pipeline runs collapse to one row with a
+  depth-indented early→late step tree on expand (§2/§4).
 
 ### 6. Admin (M2 panel — **absorbed into the M8 ops console**, screen 3 › Ops)
 The M2 lightweight operations panel (Reindex `POST /admin/reindex` with live

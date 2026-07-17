@@ -78,6 +78,15 @@ disambig: "younger brother, b.1994"        # one line, resolves same-name collis
 > organizer may never emit any of those as a content node (a person/place/… is expressed **only** as
 > a mention on a content node; a structural guard coerces a mis-typed one to `memory`). Content nodes
 > are `memory`/`conversation`/`insight`/`idea`.
+
+> **M8.2 addendum (exact shapes land with the build):** content nodes gain
+> **`interiority: internal | external | mixed`** ([ADR-055](adr/055-interiority-inner-voice-first-class.md) —
+> frontmatter + a `nodes` column; the organizer also *extracts* inner-voice content into its own
+> `internal` nodes, edge-linked to their event node), and body prose may carry inline **date tokens**
+> `[[t:START[/END][|label]]]` ([ADR-056](adr/056-temporal-correctness-date-tokens.md) — partial-ISO,
+> ranges, optional time-of-day, absolute labels; resolved deterministically against the capture's
+> stored anchor, never by the LLM; renderers expand, the indexer expands **before embedding**, raw
+> captures untouched). `occurred`/`occurred_end` stay date-granular — tokens own sub-day.
 > **Alias accretion** ([ADR-040](adr/040-token-overlap-retrieval-and-alias-accretion.md)): when a
 > mention links to a hub under a surface form not already in its `aliases` (confirmed by the resolver
 > LLM or a human review pick), that form is appended — so the exact short-circuit covers it next

@@ -50,6 +50,12 @@ ORGANIZE — LLM, JSON out (synchronous-full, ADR-031; MCP surface burst-queued)
    │   a superseded edge with `until` (invalidate, never delete)
    │ • all derived text diacritic-FOLDED to ASCII at the writer (ADR-041); raw kept
    │ • occurred extracted only when the text implies a time (partial ISO), never fabricated
+   │   — M8.2 (ADR-056): the prompt carries the capture's STORED ANCHOR (created_at /
+   │   anchor_at, never wall-clock); the LLM emits SYMBOLIC time-references only
+   │   ({kind, offset, …}); a deterministic Python resolver computes occurred + inline
+   │   [[t:…]] body tokens ("LLMs classify, code computes", hard rule 12); unresolvable →
+   │   prose, never guessed. Also stamps interiority (internal|external|mixed) + extracts
+   │   inner-voice content into its own `internal` nodes (ADR-055)
    │ • typed edges (involves/about/part_of/led_to/follows/at) targeting node ids
    │ • may SPLIT into multiple atomic nodes; tag-vocabulary reuse (ADR-024, bounded)
    │ • injection hygiene (ADR-031): delimited untrusted text, no node bodies in prompt
@@ -244,6 +250,10 @@ pipeline. Cadence maps to a pipeline:
   **read-only** health reporter runs **last**, so it reports on the settled post-reindex/post-dedup
   state; findings → its run's `details`, `on_fail: continue`).
 - **`weekly`** (Sunday): integrity-drill; maybe-digest (M6).
+- *M8.2 adds* **`occurred-enrichment`** ([ADR-056](adr/056-temporal-correctness-date-tokens.md) §7):
+  a read-only nightly-tail scan (alongside graph-health) flagging undated/coarsely-dated content
+  nodes into review items; the user's NL answer resolves through the same deterministic date
+  resolver (exact roster slot fixed at the M8.2 build within the ADR-047 ordering rules).
 A pipeline run opens a **parent `agent_runs`** row; each step keeps its **own child run**
 (`agent_runs.parent_run_id`). Jobs stay independently invokable (CLI + `POST /agents/{name}/run`,
 invariant 4); the scheduler registers **one cron per pipeline**. Ordering rationale: the distiller
