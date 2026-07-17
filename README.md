@@ -1103,6 +1103,33 @@ real-browser mock walkthrough was **not run this session** (no browser tooling) 
 drive is Task 5. Committed locally, **not pushed** — [08-logs/m8.2.md](08-logs/m8.2.md) "Task 4". Next:
 **M8.2 Task 5** — deploy the range (migration 016), prod `reprocess-all-from-raw` (backfills interiority
 + tokens), verify the Accept block live → independent review → M8.2 CLOSED.
+**M8.2 Task 5 DONE → M8.2 (data quality: interiority + temporal correctness) CLOSED (2026-07-18).**
+Pushed the 11-commit range `6d9a97b..ffd4ca9`; CI green (gitleaks + server pytest + web build), the
+deploy step ran `alembic upgrade head` under `set -e` → **migration 016 (`nodes.interiority`) applied**,
+`/api/v1/health` all-true. **Prod `reprocess-all-from-raw`** (web Ops **Reprocess everything** card,
+confirm→apply): **41/41 captures re-ingested, 0 failed; 143→160 nodes** (the ~17 extra are inner-voice
+`internal` nodes — **interiority backfilled**), **800 derived edges**, **84 profiles refreshed inline**
+(the M3 "empty profiles" follow-up does not bite), 4 inbox fallbacks, 3 accreted, 0 coerced, push=True;
+**2 standing merges NOT re-applied** (ADR-042 §4 caveat — surfaced to the user before the destructive
+apply per the data-survival principle, reported in the run summary). Post-reprocess graph-health:
+**tombstone-integrity=0 / alias-less=0** (ADR-038 held), orphans 4→1, stale-obs 22→8. **Live Accept**
+(real Chrome vs the prod session — agent never handled the login secret): #1 a 2005-dated node renders
+its `[[t:2005]]` token as the live phrase **"21 years ago"** + exact-date tooltip **"2005"**, never raw,
+while the search snippet shows the index-expanded absolute (ADR-056 §4 dual contract); #4 chat grounded
+*"…from 2005 [1]. That's about 21 years ago, from today's date in 2026."*; #5 tap-to-edit picker
+opens/parses + live "Reads as" preview; #7 occurred-enrichment cards surface in Review + **fail-closed**
+proven ("could not interpret …; try rephrasing"); #8 an inner-voice `internal` node linked via `led_to`
+from its event node, "Inner voice" pill on NodePreview + accent ring on the Map. **#6 anchor-edit +
+#7 occurred-enrichment SUCCESS writes were not live-demonstrated by user call** (both write real personal
+dates) — covered by T3 unit tests + T4 client validation + verified UI. **Independent milestone-close
+review (fresh agent over `6d9a97b..ffd4ca9` vs Accept + ADR-055/056 + hard rules): APPROVE-WITH-MINORS —
+no must-fix** (rule 12 clean; ADR-042 data-survival clean; `dateToken.ts` mirror faithful/import-free;
+reindex-rebuildable; idempotent); 3 minors logged (phrase-splice word-boundary nit; manual date
+corrections don't survive reprocess — quieter than the merge caveat; cosmetic coarse occurred line).
+**M8.2 CLOSED** — the interiority + temporal-correctness data-quality upgrade is live at `braindan.cc`
+([08-logs/m8.2.md](08-logs/m8.2.md) "Task 5"). Code pushed through `ffd4ca9`. Next: **M9 — Slack
+(stance-gated) + Telegram capture** (Telegram pull-forward-eligible); needs a **planning session
+(grill to build-ready)** first — 08 §M9 is a stub.
 
 > The per-milestone status, task checklist (done/open), and the full implementation logs live
 > in **[08-implementation-plan.md](08-implementation-plan.md)** + **[08-logs/](08-logs/)** — that

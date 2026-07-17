@@ -1193,9 +1193,30 @@ reprocess backfills both dimensions (standing merges reported).
   Accept scenarios reproduce exactly; **independent review `/code-review high` — 1 correctness must-fix
   fixed** (malformed-token slice off-by-one) + 1 simplification applied + 1 cosmetic logged.
   Committed locally, not pushed ([08-logs/m8.2.md](08-logs/m8.2.md) "Task 4").
-- [ ] **Task 5 · Deploy + prod reprocess + live Accept** — deploy the range (migration 016), run
-  the prod `reprocess-all-from-raw` (backfills interiority + tokens; standing-merge caveat
-  reported), verify the Accept block live → independent review → M8.2 CLOSED. `depends-on:` T4
+- [x] **Task 5 · Deploy + prod reprocess + live Accept → M8.2 CLOSED (2026-07-18)** — pushed the
+  11-commit range `6d9a97b..ffd4ca9`; CI green (gitleaks + server pytest + web build), deploy job
+  ran `alembic upgrade head` under `set -e` → **migration 016 applied**, `/api/v1/health` all-true.
+  Prod `reprocess-all-from-raw` (confirm→apply from the Ops **Reprocess everything** card):
+  **41/41 captures re-ingested, 0 failed; 143→160 nodes** (the +~17 are inner-voice `internal` nodes —
+  interiority backfilled), **800 derived edges**, **84 profiles refreshed** (reprocess refreshes
+  profiles inline now — the M3 "empty profiles" follow-up does NOT bite), 4 inbox fallbacks, 3
+  accreted, 0 coerced, push=True; **2 standing merges NOT re-applied (ADR-042 §4 caveat, reported)**.
+  Post-reprocess graph-health: **tombstone-integrity=0, alias-less=0** (ADR-038 held), orphans 4→1,
+  stale-obs 22→8, missing-occurred 11→21 (expected — the new undated `internal` nodes). **Live Accept
+  (real Chrome vs the prod session; agent never handled the login secret):** #1 a 2005-dated family
+  node renders its `[[t:2005]]` token as the live phrase **"21 years ago"** with hover tooltip
+  **"2005"**, never raw — and the search snippet shows the index-expanded absolute (dual contract, §4);
+  #4 chat grounded "…from 2005 [1]. That's about 21 years ago, from today's date in 2026."; #5
+  tap-to-edit picker opens/parses year-granularity + live "Reads as" preview + range/label; #7
+  occurred-enrichment cards surface in Review + **fail-closed proven** (uninterpretable answer → "could
+  not interpret …; try rephrasing", never guessed); #8 an inner-voice `internal` node linked via
+  `led_to` from its event node, "Inner voice" pill on NodePreview + accent ring on the Map. #6
+  anchor-edit WRITE and #7 occurred-enrichment SUCCESS write were **not live-demonstrated by user call**
+  (both write real personal dates) — covered by T3 unit tests + T4 client validation + verified UI.
+  **Independent milestone-close review (fresh agent over the whole range vs Accept + ADRs + hard
+  rules): APPROVE-WITH-MINORS — no must-fix** (rule-12 clean, ADR-042 data-survival clean, the
+  `dateToken.ts` mirror faithful/import-free, reindex-rebuildable, idempotent). 3 minors logged (see
+  [08-logs/m8.2.md](08-logs/m8.2.md) "Task 5"). **M8.2 CLOSED.** `depends-on:` T4
 
 ## M9 — Connectors: Slack (stance-gated) + Telegram capture
 
