@@ -227,11 +227,17 @@ build task, migration numbered then): the source-generic **conversation substrat
 `name_override`), per-thread import state. `connector_messages` — **connector raw** (the
 replay source for re-sessionization/re-distillation): `(source, thread_id, message_id)` unique
 **upsert key** (idempotent import), sender, `sent_at` (ms precision), repaired text, reactions,
-share/link payload, edit marker. `connector_media` — one row per media item: message fk, kind
-(`photo`/`voice`/`video`), file path under `/srv/data/media/<source>/…` (**null for video** —
-summary-only, ADR-057 §2), **derivation status** (`pending`/`derived`/`unavailable` — the
-resumability + targeted-re-derive hinge) + derived text (photo description / voice transcript /
-video summary) + model used. Messages/threads are **operational raw** (not rebuildable —
+share/link payload, edit marker. **`media`** (**physical table name pinned at M9 T2**, migration 017; ADR-057 §3 sketched it as
+`connector_media`, but it is **source-generic** — it serves ad-hoc PWA photo captures *now* (M9)
+and connector media at M9.5 — so the physical table is `media`) — one row per media item: `kind`
+(`photo`/`voice`/`video`), `source` (`capture` for ad-hoc | `instagram` at M9.5 — also the top of
+the `/srv/data/media/<source>/…` layout), a **nullable `capture_id` fk → `captures`**
+(`ON DELETE CASCADE` — the M9 ad-hoc-capture link) with a **nullable `message_id` fk →
+`connector_messages` added at M9.5** (the connector link — "media fk wiring" in M9.5 T1),
+`file_path` **relative to the media root** (**null for video** — summary-only, ADR-057 §2),
+`thumb_path`, `mime_type`, **derivation `status`** (`pending`/`derived`/`unavailable` — the
+resumability + targeted-re-derive hinge) + `derived_text` (photo description / voice transcript /
+video summary) + `model_used` + `attempts` + `error`. Messages/threads are **operational raw** (not rebuildable —
 backed up with the DB; media *files* additionally R2-synced per ADR-014); derived text is
 derived-tier (recomputable from kept raw, except video summaries — the recorded ADR-057 §2
 exception). **Session distill state** (watermark per `(source, thread, session)` — the ADR-048

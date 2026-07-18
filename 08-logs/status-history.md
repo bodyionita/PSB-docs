@@ -1130,3 +1130,19 @@ corrections don't survive reprocess — quieter than the merge caveat; cosmetic 
 ([08-logs/m8.2.md](../08-logs/m8.2.md) "Task 5"). Code pushed through `ffd4ca9`. Next: **M9 — Slack
 (stance-gated) + Telegram capture** (Telegram pull-forward-eligible); needs a **planning session
 (grill to build-ready)** first — 08 §M9 is a stub.
+
+**Where we are (2026-07-18):** **M9 + M9.5 GRILLED TO BUILD-READY** (planning session,
+decision-by-decision) — **[ADR-057](../adr/057-multimodal-media-ingestion-substrate.md)** (multi-modal
+media substrate: media first-class raw, `vision` routing group Groq-primary, screenshot-attribution
+contract, PWA photo capture; video = processed-form-only exception) ·
+**[ADR-058](../adr/058-instagram-dm-connector-and-conversation-substrate.md)** (Instagram DM
+connector: export-first, local prep tool + opt-in CSV triage, conversation substrate
+`connector_threads`/`messages`/`media`, deterministic 6h-gap sessionization — no summary-chaining,
+M6 distiller generalized with stance gate + backfill floor/cap protections, parallel-Claude
+backfill campaign, targeted re-derive/re-distill, session-transcript traceability, entity-merge
+UI, business-account API spike gating a webhook/poller daily fetcher) ·
+**[ADR-059](../adr/059-roadmap-restructure-telegram-removed-slack-m12.md)** (roadmap: **Telegram
+removed entirely**, **Slack → M12**). Contract docs 00–08 updated; task lists with
+parallel-eligibility live in [08 §M9/§M9.5](../08-implementation-plan.md). **Paused before
+implementation** per [09](../09-session-protocol.md) — **no code this session.**
+**Next:** build **M9 T1+T2** (batch-A: vision routing group ∥ media substrate), or respawn.

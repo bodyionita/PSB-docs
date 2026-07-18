@@ -30,21 +30,22 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-18):** **M9 + M9.5 GRILLED TO BUILD-READY** (planning session,
-decision-by-decision) — **[ADR-057](adr/057-multimodal-media-ingestion-substrate.md)** (multi-modal
-media substrate: media first-class raw, `vision` routing group Groq-primary, screenshot-attribution
-contract, PWA photo capture; video = processed-form-only exception) ·
-**[ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)** (Instagram DM
-connector: export-first, local prep tool + opt-in CSV triage, conversation substrate
-`connector_threads`/`messages`/`media`, deterministic 6h-gap sessionization — no summary-chaining,
-M6 distiller generalized with stance gate + backfill floor/cap protections, parallel-Claude
-backfill campaign, targeted re-derive/re-distill, session-transcript traceability, entity-merge
-UI, business-account API spike gating a webhook/poller daily fetcher) ·
-**[ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md)** (roadmap: **Telegram
-removed entirely**, **Slack → M12**). Contract docs 00–08 updated; task lists with
-parallel-eligibility live in [08 §M9/§M9.5](08-implementation-plan.md). **Paused before
-implementation** per [09](09-session-protocol.md) — **no code this session.**
-**Next:** build **M9 T1+T2** (batch-A: vision routing group ∥ media substrate), or respawn.
+**Where we are (2026-07-18):** **M9 batch-A BUILT** (implementation session) — **T1 vision routing
+group** + **T2 media substrate** ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md)). The
+4th UI-editable `vision` routing group (Groq VLM `llama-4-scout` primary → Nebius `Qwen2.5-VL-72B`
+fallback, effort N/A; OpenAI-compatible provider gains `image_url` parts + N-models-per-endpoint),
+the `media` table (migration 017; serves ad-hoc captures now via `capture_id`, connector media at
+M9.5), `/srv/data/media/<source>/…` storage (R2-synced free), the resumable status-tracked
+derivation stage (photo→`vision`, voice→STT; bounded retries → `unavailable` → placeholder;
+targeted re-derive core), the §5 screenshot-attribution description prompt, and session-gated
+`GET /media/{id}`. Both tasks passed a **fresh independent review** (PASS, no must-fix; two cheap
+hardenings applied). Full suite **977 green**, ruff clean; commits `fff261d`/`b1d1aa5`/`dac5a72`/
+`d592cc4` — **code not pushed** (user's call). Build-time pins recorded in
+[08 §M9](08-implementation-plan.md): vision model seeds + the **`media` table name** (was sketched
+`connector_media` in ADR-057 §3; reconciled in [02](02-data-model.md) + the M9.5 T1 bullet).
+**Next:** **M9 T3** (image capture pipeline: `POST /capture/image` → describe → organize; wires the
+derivation trigger — `depends-on: T1+T2`), then T4 (web) → T5 (live Accept incl. migration apply);
+or respawn.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

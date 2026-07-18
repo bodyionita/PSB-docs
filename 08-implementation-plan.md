@@ -1248,13 +1248,15 @@ retry → `unavailable` → explicit placeholder without blocking the pipeline, 
 re-derive then recovers it; media serve only behind the session gate.
 
 **Tasks** (parallel-eligibility per [09 §Parallel task batches](09-session-protocol.md)):
-- [ ] **T1 — vision routing group (server)**: provider `image_url` support, `vision` group +
-      seeds, registry catalog + `GET/PUT /settings` carry it. No migration. `batch-A,
-      parallel-with: T2`
-- [ ] **T2 — media substrate (server)**: media table (migration; exact columns pinned here) +
-      `/srv/data/media` layout + `GET /media/{id}` + resumable derivation job (+ description
-      contract prompt incl. screenshot attribution) + targeted re-derive core. `batch-A,
-      parallel-with: T1` (calls vision through the routing-service seam)
+- [x] **T1 — vision routing group (server)** — done `fff261d`, independent review **PASS**
+      (no must-fix). Provider `image_url` support + N-models-per-endpoint, `vision` group + seeds,
+      registry catalog + `GET/PUT /settings` carry it. No migration. `batch-A, parallel-with: T2`
+- [x] **T2 — media substrate (server)** — done `b1d1aa5` (+ review hardenings `d592cc4`),
+      independent review **PASS**. `media` table (migration 017) + `/srv/data/media/<source>/…`
+      layout + `GET /media/{id}` (session-gated) + resumable status-tracked derivation
+      (photo→`vision`, voice→STT; bounded retries → `unavailable` → placeholder) + targeted
+      re-derive core (own `agent_runs` row) + the §5 screenshot-attribution description prompt.
+      `batch-A, parallel-with: T1` (calls vision through the routing-service seam)
 - [ ] **T3 — image capture pipeline (server)**: `POST /capture/image` (kind `image`), raw kept,
       describe → organize (fenced), retry/placeholder path. `depends-on: T1+T2`
 - [ ] **T4 — web**: capture-strip image affordance + thumbnail/status, photo on capture/node
@@ -1263,6 +1265,36 @@ re-derive then recovers it; media serve only behind the session gate.
 - [ ] **T5 — live M9 Accept**: deploy (migration applies), real-phone photo → node, screenshot
       attribution, group edit forward-live, failure→placeholder→re-derive drill, independent
       review. `depends-on: T4`
+
+**Progress — batch-A complete (2026-07-18, implementation session).** T1 ∥ T2 built
+**sequentially by the coordinator** (not fanned out): `config.py`/`models.py`/`main.py`/
+`dependencies.py` are shared integration points both tasks touch, so the batch's "disjoint files"
+guarantee didn't fully hold — sequential build sidestepped the collision risk the rule guards
+against (per [09](09-session-protocol.md) *Parallel task batches*, reverting to sequential is a
+documented option, not a failure). Commits: `fff261d` (T1) · `b1d1aa5` (T2) · `dac5a72` (deploy
+config for the VLMs) · `d592cc4` (review hardenings). Full suite **977 green**, ruff clean; **code
+not pushed** (user's call). Live migration apply is T5.
+
+*Decisions recorded (build-time pins the plan delegated):*
+- **Vision model seeds** (README §5 "ask the user when reached"): **Groq
+  `meta-llama/llama-4-scout-17b-16e-instruct`** primary → **Nebius `Qwen/Qwen2.5-VL-72B-Instruct`**
+  fallback (user-confirmed 2026-07-18; Scout over Maverick for speed/cost on bulk description).
+  Config scalars in `defaults.env`/`.env.example`, editable live in Settings → Models.
+- **Media table named `media`, not `connector_media`** (ADR-057 §3 sketch): source-generic, serves
+  ad-hoc captures now via nullable `capture_id`; M9.5 adds the nullable `message_id` fk. Reconciled
+  in [02-data-model](02-data-model.md) + the M9.5 T1 bullet below (ADRs are immutable, so the pin
+  lives in the data-model contract the ADR points to). Confirmed by the T2 independent review as a
+  defensible build-time pin once the docs name it.
+
+*Independent-review follow-ups (non-blocking, for the tasks noted):*
+- **T3/derivation trigger:** T2 ships the derivation *core*; nothing yet drives a `pending` item to
+  `unavailable` on a schedule (the no-arg `rederive` scans `unavailable` only). T3's capture
+  pipeline must re-invoke `derive_one` (or a drain) so the failure→placeholder path completes
+  without a human. ADR-057 §3 mentions retry *backoff* — **deferred**; retries are per-invocation.
+- **T4/settings guard:** a user could manually route the `vision` group to a Claude model, which
+  silently drops images (ADR-057 §4 — Claude has no vision path). Consider a Settings warning/guard
+  when T4 renders the group. VLMs also appear in the chat composer's model list (one shared catalog,
+  ADR-045) — acceptable, flagged for awareness.
 
 ## M9.5 — Instagram DM connector ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) — GRILLED TO BUILD-READY 2026-07-18)
 
@@ -1292,8 +1324,10 @@ reported); the **spike verdict is recorded** (+ daily fetcher live if it passed)
 tests stay green throughout.
 
 **Tasks:**
-- [ ] **T1 — conversation substrate (server)**: `connector_threads`/`connector_messages` (+
-      media fk wiring), **the milestone's one migration**, idempotent import endpoints
+- [ ] **T1 — conversation substrate (server)**: `connector_threads`/`connector_messages` +
+      **media fk wiring** = add the nullable `message_id` fk → `connector_messages` to the
+      **existing `media` table** (created at M9 T2, migration 017 — do **not** create a
+      `connector_media` table), **the milestone's one migration**, idempotent import endpoints
       (threads/messages/media). `batch-B, parallel-with: T2`
 - [ ] **T2 — prep tool: parse + triage (local)**: export parser, mojibake repair, inventory →
       **CSV manifest** (opt-in; overrides; auto-skip tier; excludes), SQLite ledger. Disjoint
