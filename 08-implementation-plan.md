@@ -1635,14 +1635,16 @@ fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequenti
       endpoints (open/part/delete/text/submit), **one active draft** (resume + discard), **≤1 voice**
       + **≥1-part Send** enforcement; orphan-sweep **skips `draft`**; **7-day draft GC**. Owns the
       migration. `first, solo` (see T1 progress note below)
-- [ ] **T2 — blended `_process` + assembly + concurrent derivation (server)**: generalize `_process`
-      to N parts; **deferred concurrent-bounded** derivation (config cap); assemble `raw_text` =
-      `text_body` + ordinal-ordered **indexed part markers**, **cache** it (reprocess parity);
-      `rederive_capture` over non-`derived` parts; **per-part `agent_runs`** detail. `depends-on: T1`
-- [ ] **T3 — per-node attribution + organizer contract (server)**: indexed part markers in the
-      organize input; organizer prompt + output **`parts:[…]`** (bounds-checked like `arose_from`);
-      `_link_node_media` links by ref; **unattributed → capture-only**, **total-failure →
-      all-to-all**; supersede the `<photo: …>` fence **format** (semantic preserved). `depends-on: T2`
+- [x] **T2 — blended `_process` + assembly + concurrent derivation (server)** — **DONE
+      (2026-07-19)**: generalize `_process` to N parts; **deferred concurrent-bounded** derivation
+      (config cap); assemble `raw_text` = `text_body` + ordinal-ordered **indexed part markers**,
+      **cache** it (reprocess parity); `rederive_capture` over non-`derived` parts; **per-part
+      `agent_runs`** detail. `depends-on: T1` (see T2/T3 note below)
+- [x] **T3 — per-node attribution + organizer contract (server)** — **DONE (2026-07-19)**: indexed
+      part markers in the organize input; organizer prompt + output **`parts:[…]`** (bounds-checked
+      like `arose_from`); `_link_node_media` links by ref; **unattributed → capture-only**,
+      **total-failure → all-to-all**; supersede the `<photo: …>` fence **format** (semantic
+      preserved). `depends-on: T2` (see T2/T3 note below)
 - [ ] **T4 — API views + fold endpoints (server)**: `CaptureView.media` → **list** + `text_body`;
       **remove** the three one-shot capture endpoints; the capture→Activity-run **deep-link** field
       (store `run_id` on the capture, or expose the `capture_id`-filtered run). `depends-on: T3`
@@ -1677,6 +1679,24 @@ cached indexed part markers + per-part `agent_runs`, T3 adds per-node attributio
 full suite **1026 pass**, ruff clean. **Not yet deployed** (M9.6 deploys once at T6). Independent
 review deferred to a server-diff `/code-review` pass after T4 (per the user's one-session directive
 + [09] Reversal clause); manual/live drills postponed to T6.
+
+**Progress — T2 + T3 done (2026-07-19).** **T2** (`8ebd2c4`): `_assemble_composite` now derives all
+parts **concurrently under `composite_derive_max_concurrency`=4** (`asyncio.gather` preserves ordinal
+order); `raw_text` is assembled as `text_body` + per-part **`[[part N · kind]]` markers + bare body**
+(the shared `_compose_raw_text` core), cached for reprocess byte-parity; `rederive_capture`
+generalized to composite (re-derives only non-`derived` parts, reassembles, reorganizes); per-part
+`agent_runs` derive detail (media id/kind/ordinal/marker/status). **T3** (`d4f1df9`): `OrganizerNode`
+gains `parts:tuple[int,…]`; `validate_organizer_output(num_parts=…)` bounds-checks 1-based indices in
+`1..num_parts` (deduped, like `arose_from`); **organizer prompt → v8** documents the markers + the
+per-node `parts:[…]` field with the two-layer semantic (photo = shared material, screenshot messages
+attributed to people inside; voice = the person's own words), keeping the single-part `<photo: …>`
+fence for legacy replay; `_link_node_media(node_parts=…)` links each part **only to the node(s) that
+name it** — **unattributed part → capture-only**, **total-failure → all-to-all** — threaded through
+`_process` / `reprocess` / `reorganize` (all replay the cached markers, so attribution rebuilds
+deterministically). Tests: marker format/order, composite rederive recovery, attribution +
+capture-only + all-to-all fallback, `parts` bounds unit tests. Full suite **1033 pass**, ruff clean.
+**Still not deployed** (T6). **Next: T4** (CaptureView media→list + `text_body`; remove the three
+one-shot `POST /capture/{text,voice,image}` endpoints; capture→Activity-run deep-link).
 
 ## M10 — Reflection agent (+ push notifications)
 

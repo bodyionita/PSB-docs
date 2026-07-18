@@ -30,7 +30,7 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.6 composite capture — IMPLEMENTATION IN PROGRESS (T1 done).**
+**Where we are (2026-07-19):** **M9.6 composite capture — IMPLEMENTATION IN PROGRESS (T1–T3 done).**
 A single-session build against the approved plan ([08 §M9.6](08-implementation-plan.md) +
 [ADR-061](adr/061-composite-multi-part-capture.md)); the user directed all M9.6 tasks in one pass
 (no per-task pause), agreeing to pushes + postponing manual/live drills to T6. **T1 (draft lifecycle
@@ -39,12 +39,14 @@ migration **019** (`captures.text_body`, `media.part_ordinal`, `captures_single_
 unique index), the server draft surface (open/resume · part add/remove with ≤1-voice + ordinals ·
 text edit · submit ≥1-part gate · discard · 7-day GC; orphan-sweep skips drafts), draft endpoints +
 `DraftView`, and a **baseline sequential composite `_process`** so submit works end-to-end. Full
-suite **1026 pass**, ruff clean. See the **T1 progress note** in [08 §M9.6](08-implementation-plan.md).
-**Next:** continue the sequential M9.6 build — **T2** (concurrent-bounded derivation + cached indexed
-part markers + per-part `agent_runs`) → **T3** (per-node attribution + organizer `parts:[…]`) →
-**T4** (CaptureView media→list + fold the one-shot endpoints + Activity deep-link) → **T5** (compose
-web) → **T6** (deploy + live Accept, folding the M9 T6 drills). Independent review runs as a
-server-diff `/code-review` pass after T4.
+suite **1033 pass**, ruff clean. **T2** (`8ebd2c4`) added concurrent-bounded part derivation +
+cached `[[part N · kind]]` marker assembly + composite `rederive`; **T3** (`d4f1df9`) added the
+organizer `parts:[…]` contract (prompt v8) + per-node media attribution (unattributed → capture-only,
+total-failure → all-to-all). See the **T1/T2/T3 progress notes** in [08 §M9.6](08-implementation-plan.md).
+**Next:** continue the sequential M9.6 build — **T4** (CaptureView media→list + `text_body`; remove
+the three one-shot `POST /capture/{text,voice,image}` endpoints; capture→Activity-run deep-link) →
+**T5** (compose web) → **T6** (deploy + live Accept, folding the M9 T6 drills). Independent review
+runs as a server-diff `/code-review` pass after T4.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
