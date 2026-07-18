@@ -30,7 +30,7 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.6 composite capture — IMPLEMENTATION IN PROGRESS (T1–T4 done + reviewed).**
+**Where we are (2026-07-19):** **M9.6 composite capture — CODE COMPLETE (T1–T5 done); T6 live Accept is all that remains.**
 A single-session build against the approved plan ([08 §M9.6](08-implementation-plan.md) +
 [ADR-061](adr/061-composite-multi-part-capture.md)); the user directed all M9.6 tasks in one pass
 (no per-task pause), agreeing to pushes + postponing manual/live drills to T6. **T1 (draft lifecycle
@@ -44,9 +44,14 @@ suite **1027 pass**, ruff clean. **T2** (`8ebd2c4`) concurrent-bounded derivatio
 contract (prompt v8) + per-node attribution; **T4** (`d942432`) CaptureView media→list + `text_body`
 + removed the one-shot endpoints; **independent `/code-review` (high)** on the T1–T4 server diff found
 **4 issues, all fixed** (`ba9d465`): `captures.run_id` (migration **020**, live Activity deep-link
-replacing an unindexed JSON scan) + two draft-race guards. See the **T1–T4 progress notes** in
-[08 §M9.6](08-implementation-plan.md). **Next:** **T5** (draft-backed compose web) → **T6** (deploy,
-migration applies + live Accept, folding the M9 T6 drills).
+replacing an unindexed JSON scan) + two draft-race guards. **T5** (`6ada4f4`) shipped the **web
+compose surface** — draft-backed text + multi-photo + record-voice-≤1 + per-part 'x' + Send +
+resume/discard, `CaptureView.media` singular→list across the capture surfaces, and the "See
+processing →" run deep-link (`tsc`+`eslint`+`vite build` green). See the **T1–T5 progress notes** in
+[08 §M9.6](08-implementation-plan.md). **Next:** **T6 only** — deploy (migrations **019+020** apply),
+real-phone **composite** drills + the folded M9 T6 single-part drills, reprocess byte-parity, SQL
+smoke, final independent review. **All M9.6 code is committed but NOT deployed** (M9.6 deploys once
+at T6). Pushing the code triggers CI deploy — that is the user's call.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

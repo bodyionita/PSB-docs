@@ -1649,10 +1649,9 @@ fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequenti
       `CaptureView.media` → **list** + `text_body`; **removed** the three one-shot capture endpoints;
       the capture→Activity-run **deep-link** field (`captures.run_id`, migration 020). `depends-on: T3`
       (see T4 note below)
-- [ ] **T5 — compose surface (web)**: the draft-backed **compose** UI (text + multi-photo +
-      record-voice ≤1 + per-part 'x' + **Send**), **resume/discard**, capture list renders the media
-      list, **Activity-run deep-link**. Server files disjoint but consumes T4's contract.
-      `depends-on: T4`
+- [x] **T5 — compose surface (web)** — **DONE (2026-07-19)**: the draft-backed **compose** UI (text
+      + multi-photo + record-voice ≤1 + per-part 'x' + **Send**), **resume/discard**, capture list
+      renders the media list, **Activity-run deep-link**. `depends-on: T4` (see T5 note below)
 - [ ] **T6 — live M9.6 Accept**: deploy (migration applies), real-phone **composite** drills +
       the **folded M9 T6 single-part drills** (above), reprocess byte-parity check, SQL smoke,
       independent review. `depends-on: T5`
@@ -1712,8 +1711,22 @@ tests; unused `CaptureTextRequest` dropped. Router-test suite migrated to the me
 (3) `open_or_resume_draft` now catches the one-active-draft unique-index violation on a concurrent
 double-open and resolves to the winner (no 500); (4) `edit_draft_text` returns a graceful **404**
 instead of asserting when the draft is concurrently discarded. `compute_head → 020`. Full suite
-**1027 pass**, ruff clean. **Still not deployed** (T6). **Next: T5** (compose web) → **T6** (deploy +
-live Accept).
+**1027 pass**, ruff clean. **Still not deployed** (T6).
+
+**Progress — T5 done (2026-07-19, `6ada4f4`).** The web capture screen is a **composite compose
+surface**: one server-side draft carries text + 0..N photos + ≤1 voice; the record **orb attaches a
+voice part** (disabled once one exists — server also enforces ≤1), a **multi-photo** picker
+(HEIC→JPEG then `POST …/part`), a removable **per-part tile tray** (photo thumbnails stream raw
+bytes pre-derivation; 'x' → `DELETE …/part`), **debounced text save** (resume + never-lose), **Send**
+(≥1 part) → `submit`, and **Discard**. `api` client swapped the one-shot methods for the draft
+lifecycle; `useCaptures` gained `useDraft` + part/text/submit/discard mutations (draft not re-POSTed
+on window focus). `CaptureView.media` **singular → list** threaded through `RecentCaptures` +
+`CaptureDetail` (composite row shows `text_body` + attachment count + the media list); `activityNav`
+gained optional **`openRun`** and the capture row shows a **"See processing →"** deep-link when
+`run_id` is present (degrades until AppShell wires `openRun` — same convention as the existing,
+still-unwired `openCaptures`). `tsc --noEmit` + `eslint --max-warnings 0` + `vite build` all green.
+**Still not deployed** (T6). **Next: T6** — deploy (migrations 019+020 apply), real-phone composite
+drills + the folded M9 T6 single-part drills, reprocess byte-parity, SQL smoke.
 
 ## M10 — Reflection agent (+ push notifications)
 

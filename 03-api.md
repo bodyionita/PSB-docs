@@ -32,23 +32,32 @@ layer** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) — MCP tool 
 
 ## Capture
 
-> **M9.6 ([ADR-061](adr/061-composite-multi-part-capture.md)) reshapes this surface.** The three
-> one-shot `POST /capture/{text,voice,image}` rows below are **replaced** by a server-side **draft**
-> flow — `POST /capture/draft` → `POST /capture/{id}/part` → `DELETE …/part/{mediaId}` → text-body
-> edit → `POST /capture/{id}/submit` — so one capture can carry text + N photos + ≤1 voice, organized
-> in **one blended pass**. `CaptureView.media` becomes a **list** (+ `text_body`). MCP/chat internal
-> capture is unchanged. The single-part contract below stands until the M9.6 build lands (08 §M9.6).
+> **M9.6 ([ADR-061](adr/061-composite-multi-part-capture.md)) reshaped this surface — SHIPPED.** The
+> three one-shot `POST /capture/{text,voice,image}` endpoints are **removed** (§8); every web capture
+> goes through the server-side **draft** flow below — one capture carries a typed text body + 0..N
+> photos + ≤1 voice, organized in **one blended pass** at submit. MCP `capture` + chat-distiller
+> ingest are **unchanged** (they create committed captures directly through the same organizer).
+
+**Composite draft lifecycle** ([ADR-061](adr/061-composite-multi-part-capture.md) §3 — one active draft):
 
 | | |
 |---|---|
-| `POST /capture/text` | `{ "text", "created_at"?: iso }` → `202 { capture_id, status: "received" }`; pipeline continues in background |
-| `POST /capture/voice` | multipart `file` (m4a/webm/ogg/mp3/wav, ≤25 MB) → same `202`. **M9 T4 ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §5/§6):** mints a `media` row (kind `voice`, audio under the media layout, playable via `GET /media/{id}`); STT runs through the derivation engine — persistent failure degrades to the `<voice note — transcript unavailable>` placeholder and **organizes anyway** (`failed` = infra only), recovered later by re-derive |
-| `GET /captures?limit=20` | recent captures, newest first: `[{ capture_id, kind, status, raw_text, node_paths[], node_refs[], source, media, follow_up_question, follow_up_answer, error, created_at, updated_at }]` (`node_refs`/`source` added M8.1 T4 — see the addendum below). **M9 T3:** `kind` gains **`image`**, `status` gains **`deriving`** (photo→description phase, sibling of `transcribing`), and `media` = the backing media item `{ id, kind, status }` for an image capture (the web renders the photo via `GET /media/{id}` + a derivation-status badge). **M9 T4 ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §5): `media` is kind-generic** — non-null for **voice** captures too (playable audio + status); null only where no media backs the capture (text/mcp/chat) |
+| `POST /capture/draft` | open-or-**resume** the single active draft → `DraftView { capture_id, status:"draft", text_body, parts:[{ id, kind, status, part_ordinal, mime_type }], created_at }`. Idempotent (resumes the existing draft; a racing concurrent open resolves to the winner) |
+| `POST /capture/{id}/part` | multipart `kind` (`photo`\|`voice`) + `file` → `DraftPart`. Raw persists immediately; **derivation is deferred to submit**. `≤1 voice` enforced (`409`); `400` bad type/size; `409` not an open draft; `404` unknown |
+| `DELETE /capture/{id}/part/{mediaId}` | remove a draft part (the 'x') — hard-removes raw + row → `204`; `409` not a draft; `404` unknown |
+| `PUT /capture/{id}/text` | `{ "text" }` edit the draft's text body (empty allowed) → the fresh `DraftView`; `409` not a draft; `404` unknown |
+| `POST /capture/{id}/submit` | commit the draft → `202 { capture_id }`; flips `draft→received`, spawns the blended organize. `400` if no non-empty part (`≥1` required); `409` not an open draft (idempotent) |
+| `DELETE /capture/{id}/draft` | discard the open draft (raw files + rows) → `204`; `409` not a draft |
+
+**Capture read:**
+
+| | |
+|---|---|
+| `GET /captures?limit=20` | recent captures, newest first: `[{ capture_id, kind, status, raw_text, text_body, node_paths[], node_refs[], source, media[], run_id, follow_up_question, follow_up_answer, error, created_at, updated_at }]`. **M9.6 T4:** `kind` gains **`composite`**; `media` is a **list** `[{ id, kind, status, part_ordinal }]` (0..N photos + ≤1 voice, part-ordinal order — was a single item); `text_body` = the person's typed words; `run_id` = the capture's most recent processing `agent_runs` id (the **Activity-tab deep-link**, live during processing — [ADR-061](adr/061-composite-multi-part-capture.md) §10). (`node_refs`/`source` M8.1 T4; `kind` `image` + `status` `deriving` M9 T3; voice media M9 T4 — see the addendum.) |
 | `GET /captures/{id}` | pipeline state (same shape as above) |
 | `POST /captures/{id}/retry` | re-run from first incomplete step; `409` unless `failed` |
 | `POST /captures/{id}/follow-up` | `{ "answer" }` → Pass-2 re-organize, replaces the capture's nodes ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)); `202`; `409` if no nudge pending |
 | `PUT /captures/{id}/anchor` | **(M8.2, [ADR-056](adr/056-temporal-correctness-date-tokens.md) §5 — the anchor edit)** `{ "anchor": iso-datetime }` corrects the capture's recorded-at, then triggers a **background one-capture reorganize** re-resolving every relative date against the new anchor; `202`; `404` unknown. The stored anchor is data (never wall-clock), so the replay is deterministic |
-| `POST /capture/image` | **(M9, [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §6)** multipart image (jpg/png/webp/heic, size cap config) → same `202`; raw kept under `/srv/data/media/captures/`, vision description derived (resumable), then organize |
 
 ## Connectors & media (M9/M9.5 — [ADR-057](adr/057-multimodal-media-ingestion-substrate.md)/[058](adr/058-instagram-dm-connector-and-conversation-substrate.md); shapes draft-level, re-checked at task kickoff)
 
