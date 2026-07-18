@@ -1645,9 +1645,10 @@ fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequenti
       like `arose_from`); `_link_node_media` links by ref; **unattributed → capture-only**,
       **total-failure → all-to-all**; supersede the `<photo: …>` fence **format** (semantic
       preserved). `depends-on: T2` (see T2/T3 note below)
-- [ ] **T4 — API views + fold endpoints (server)**: `CaptureView.media` → **list** + `text_body`;
-      **remove** the three one-shot capture endpoints; the capture→Activity-run **deep-link** field
-      (store `run_id` on the capture, or expose the `capture_id`-filtered run). `depends-on: T3`
+- [x] **T4 — API views + fold endpoints (server)** — **DONE + REVIEWED (2026-07-19)**:
+      `CaptureView.media` → **list** + `text_body`; **removed** the three one-shot capture endpoints;
+      the capture→Activity-run **deep-link** field (`captures.run_id`, migration 020). `depends-on: T3`
+      (see T4 note below)
 - [ ] **T5 — compose surface (web)**: the draft-backed **compose** UI (text + multi-photo +
       record-voice ≤1 + per-part 'x' + **Send**), **resume/discard**, capture list renders the media
       list, **Activity-run deep-link**. Server files disjoint but consumes T4's contract.
@@ -1695,8 +1696,24 @@ name it** — **unattributed part → capture-only**, **total-failure → all-to
 `_process` / `reprocess` / `reorganize` (all replay the cached markers, so attribution rebuilds
 deterministically). Tests: marker format/order, composite rederive recovery, attribution +
 capture-only + all-to-all fallback, `parts` bounds unit tests. Full suite **1033 pass**, ruff clean.
-**Still not deployed** (T6). **Next: T4** (CaptureView media→list + `text_body`; remove the three
-one-shot `POST /capture/{text,voice,image}` endpoints; capture→Activity-run deep-link).
+**Still not deployed** (T6).
+
+**Progress — T4 done + independent review (2026-07-19).** T4 (`d942432`): `CaptureView.media`
+**singular → ordered list** + `text_body` + `run_id`; `CaptureMediaRef`/`View` gain `part_ordinal`;
+the capture-store media read-join **aggregates all parts** (part_ordinal order). The three one-shot
+`POST /capture/{text,voice,image}` endpoints are **removed** (ADR-061 §8 — every web capture goes
+`draft → part/text → submit`); pipeline `create_*` helpers kept for internal producers + legacy
+tests; unused `CaptureTextRequest` dropped. Router-test suite migrated to the media-list shape.
+**Independent review** (`/code-review` high, server T1–T4 diff) surfaced **4 findings, all fixed**
+(`ba9d465`): (1)+(2) the capture→run deep-link was resolved by a read-time correlated scan of
+`agent_runs.details->>'capture_id'` (unindexed, per-row) **and** returned null *during* processing
+(details only written at finish) — replaced by **`captures.run_id`** (migration **020**) stamped at
+`_process`/reorganize **run-start**, so the deep-link is live mid-processing and reads are O(1);
+(3) `open_or_resume_draft` now catches the one-active-draft unique-index violation on a concurrent
+double-open and resolves to the winner (no 500); (4) `edit_draft_text` returns a graceful **404**
+instead of asserting when the draft is concurrently discarded. `compute_head → 020`. Full suite
+**1027 pass**, ruff clean. **Still not deployed** (T6). **Next: T5** (compose web) → **T6** (deploy +
+live Accept).
 
 ## M10 — Reflection agent (+ push notifications)
 
