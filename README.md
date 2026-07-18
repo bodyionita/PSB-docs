@@ -30,27 +30,27 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-18):** **M9 T4 BUILT** (implementation session) — server **media–node
-substrate + voice unification** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
-§1–§6). The first-class **`node_media`** link (migration 018) makes a node's media visible:
-derived-tier, rebuilt on **every** content-node write (organize/retry/reorganize/`rederive_capture`/
-reprocess) keyed on the raw-truth `media_id`, **content-nodes-only** (§2), and **repointed
-loser→survivor** by `MergeCore` so a merged survivor inherits the loser's media. **Voice unified onto
-the T2 derivation engine**: `create_voice_capture` mints a `voice` `media` row under the uniform
-`/srv/data/media/capture/…` layout, STT runs through `derive_until_settled`, the transcript mirrors
-**plain** to `captures.raw_text` (the person's words, unlike the `<photo: …>` fence); **symmetric
-placeholder-degrade** (§6) — a persistent STT failure walks retry → `unavailable` → the
-`<voice note — transcript unavailable>` placeholder and organizes anyway (**never `failed`**;
-`failed` = true infra only). `redescribe_image_capture` → kind-aware **`rederive_capture`**. Read
-side: **`GET /nodes/{id}.media[]`** + **`media_kinds`** glyphs on search results & chat sources.
-An **idempotent, degrading voice-media backfill op** (CLI `voice-media-backfill`) relocates legacy
-voice audio → mints rows → links `node_media`; wired into `build_capture_pipeline` so a CLI
-reprocess-all re-links too. Full suite **999 green**, ruff + format clean; **independent review PASS**
-(no must-fix; two minors resolved). Commit `1a1528d` — **code not pushed** (user's call). Live
-migration 018 apply + the backfill run are **T6**.
-**Next:** build **M9 T5** (web: the surfacing package — capture-strip image affordance, NodePreview
-media strip + lightbox + "see raw capture" sheet, themed voice player, list glyphs, HEIC→JPEG,
-Settings Vision group + Claude-route warning; `depends-on: T4`), then T6 (live Accept); or respawn.
+**Where we are (2026-07-18):** **M9 T5 BUILT** (implementation session) — the web **media surfacing
+package** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §7–§8 + the original T4
+web scope). A shared **`ui/media/`** package: the **NodePreview media strip** (lazy photo thumbnails,
+themed voice player, `pending` shimmer / `unavailable` broken tiles — never a silent gap), a
+full-screen **lightbox** (framer-motion zoom, swipe/Esc dismiss, left/right nav across a node's
+photos, reduced-motion aware), and the **"see raw capture" sheet** — a shared **`CaptureDetailBody`**
+(source badge, status, the capture's media, raw text, NodeChips) that the Activity › Captures
+expanded row now renders too (no new surface area). The **capture screen** gains a photo affordance
+(`POST /capture/image`) with **lazy client-side HEIC→JPEG** (`heic2any` dynamic-imported only on a
+HEIC pick → synthetic `photo.jpg`; its own build chunk, never on the jpg/png path); Recent-captures
+rows + Activity show the photo/voice inline. Search-result + chat-source cards get a tiny **📷/🎙
+glyph** off `media_kinds` (no thumbnails in lists). **Settings → Models** renders the **Vision group**
+(auto, off `GET /settings`) with the inline **Claude-route warning** (active/fallback on a `claude`
+provider → images silently dropped). Wire types added (`node_media`/`media_kinds`/`CaptureView.media`,
+`vision` routing group); `NodeRefChips` moved to `ui/`. **tsc + eslint clean, `vite build` green**;
+**independent review PASS** — one must-fix (lightbox index reset on ancestor re-render) resolved +
+one minor simplification applied. Commit `4adab51` — **code not pushed** (user's call).
+**Next:** build **M9 T6 — live M9 Accept**: deploy (migrations 017+018 apply, **backfill op run**),
+real-phone photo → node inline, voice **playable on its node** (+ Range/206 scrub), screenshot
+attribution, group-edit forward-live, failure→placeholder→`rederive_capture` drill for **both kinds**,
+merge-inherits-media check, media-join SQL smoke; independent review. `depends-on: T5`. Or respawn.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

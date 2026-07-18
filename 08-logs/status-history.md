@@ -1202,3 +1202,25 @@ both-kind re-derive drill)** — strictly sequential; contracts updated (02 / 03
 code this session.**
 **Next:** build **M9 T4** (server: media–node substrate + voice unification; `depends-on: T3`),
 then T5 (web) → T6 (live Accept); or respawn.
+
+**Where we are (2026-07-18):** **M9 T4 BUILT** (implementation session) — server **media–node
+substrate + voice unification** ([ADR-060](../adr/060-node-media-linkage-and-voice-unification.md)
+§1–§6). The first-class **`node_media`** link (migration 018) makes a node's media visible:
+derived-tier, rebuilt on **every** content-node write (organize/retry/reorganize/`rederive_capture`/
+reprocess) keyed on the raw-truth `media_id`, **content-nodes-only** (§2), and **repointed
+loser→survivor** by `MergeCore` so a merged survivor inherits the loser's media. **Voice unified onto
+the T2 derivation engine**: `create_voice_capture` mints a `voice` `media` row under the uniform
+`/srv/data/media/capture/…` layout, STT runs through `derive_until_settled`, the transcript mirrors
+**plain** to `captures.raw_text` (the person's words, unlike the `<photo: …>` fence); **symmetric
+placeholder-degrade** (§6) — a persistent STT failure walks retry → `unavailable` → the
+`<voice note — transcript unavailable>` placeholder and organizes anyway (**never `failed`**;
+`failed` = true infra only). `redescribe_image_capture` → kind-aware **`rederive_capture`**. Read
+side: **`GET /nodes/{id}.media[]`** + **`media_kinds`** glyphs on search results & chat sources.
+An **idempotent, degrading voice-media backfill op** (CLI `voice-media-backfill`) relocates legacy
+voice audio → mints rows → links `node_media`; wired into `build_capture_pipeline` so a CLI
+reprocess-all re-links too. Full suite **999 green**, ruff + format clean; **independent review PASS**
+(no must-fix; two minors resolved). Commit `1a1528d` — **code not pushed** (user's call). Live
+migration 018 apply + the backfill run are **T6**.
+**Next:** build **M9 T5** (web: the surfacing package — capture-strip image affordance, NodePreview
+media strip + lightbox + "see raw capture" sheet, themed voice player, list glyphs, HEIC→JPEG,
+Settings Vision group + Claude-route warning; `depends-on: T4`), then T6 (live Accept); or respawn.

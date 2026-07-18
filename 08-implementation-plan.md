@@ -1292,7 +1292,8 @@ contract, T6 deploys both.)*
       **idempotent voice backfill op** (relocate audio → mint rows with `derived_text` =
       existing transcript → link `node_media`; missing file degrades). `CaptureView.media` goes
       kind-generic. `depends-on: T3`
-- [ ] **T5 — web: the surfacing package** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+- [x] **T5 — web: the surfacing package** — done `4adab51`, independent review **PASS** (one
+      must-fix caught + resolved). ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
       §7–§8 + the original T4 scope) — capture-strip **image affordance** + thumbnail/status;
       **NodePreview media strip** (photos lazy, voice player, shimmer/broken tiles) +
       **lightbox** + **"see raw capture" capture-detail sheet** (shared with Activity ›
@@ -1363,7 +1364,47 @@ resolved in-code (dropped the unused `NodeMediaStore.media_for_node`; refreshed 
 media-ref comments now that voice carries a media row). **Code not pushed** (user's call). Live
 migration 018 apply + the backfill run are **T6**.
 
+**Progress — T5 built (2026-07-18, implementation session).** The web media surfacing package, built
+**sequentially** (single task, no fan-out). A new shared **`web/src/ui/media/`** package —
+`MediaStrip` (node `media[]` → lazy photo thumbnails + themed `VoicePlayer` + `pending` shimmer /
+`unavailable` broken tiles, ADR-060 §7 "never a silent gap"), `Lightbox` (framer-motion zoom, swipe/
+tap/Esc dismiss, left/right nav across the node's photos, reduced-motion aware), `CaptureMediaBlock`
+(a single `CaptureView.media` on the capture surfaces), `MediaGlyphs` (the 📷/🎙 list glyph off
+`media_kinds`), and the shared **`CaptureDetail`** (`CaptureDetailBody` — source badge, status, the
+capture's media, raw text, NodeChips — + `CaptureDetailSheet` wrapping it as the "see raw capture"
+bottom sheet). Wired in: **`NodePreview`** renders the strip between header and body (content-node
+media; opens the sheet via each media item's `capture_id`); **Activity › Captures** now renders the
+**same `CaptureDetailBody`** (FeedView keeps its anchor editor on top — the two surfaces never
+diverge); **Recent captures** rows show the photo/voice inline (+ new `deriving` status label, image
+row glyph, "Photo" placeholder); **search + chat source cards** get the glyph; the **capture screen**
+gains a photo file-input affordance (`POST /capture/image`) with **lazy client-side HEIC→JPEG**
+(`heic2any` **dynamic-imported** only when a HEIC/HEIF file is picked → synthetic `photo.jpg` per the
+upload contract; Vite splits it into its own ~1.35 MB chunk that never loads on the jpg/png path);
+**Settings → Models** renders the **Vision group** automatically (off `GET /settings`, which already
+carries it from T1) with the inline **Claude-route warning** when the active/fallback model's provider
+is `claude` (ADR-057 §4 — no vision path, images would silently drop). New wire types
+(`NodeMediaItem`/`CaptureMedia`/`media_kinds`, `CaptureView.media`, `MediaStatus`/`MediaKind`,
+`vision` in `ModelRoutingUpdate.group`, `deriving`/`image` on the capture enums) + `api.captureImage`
++ `mediaUrl(id)`. `NodeRefChips` **moved `features/capture/` → `ui/`** (a pure ui primitive — depends
+only on ui/ + api — so both the shared sheet and the capture feature use it with no cross-layer
+import). **New dependency:** `heic2any@0.0.4` (installed via `corepack pnpm@9.15.9` — the pinned
+9.15.0 shim hits a Node-24 `ERR_INVALID_THIS` fetch bug; the pin + lockfile are otherwise intact).
+**tsc + eslint (`--max-warnings 0`) clean, `vite build` green**; **independent review PASS** — one
+**must-fix** caught (`Lightbox` re-seeded its index off the parent-recreated `target` object's
+identity, snapping the viewer back to the tapped photo on any ancestor re-render mid-nav; fixed to
+seed only on the closed→open transition) + one minor simplification (`drag={!reduce}`) applied.
+Commit `4adab51`; **code not pushed** (user's call). The live migration 017+018 apply, the backfill
+run, and the real-device photo/voice/screenshot/re-derive drills are **T6**.
+
 *Decisions recorded (build-time pins the plan delegated):*
+- **HEIC decode needs a wasm lib (T5)** — browsers (Chrome/Android) can't decode HEIC, so a
+  pure-canvas convert is impossible; `heic2any` (libheif wasm) is the converter, **dynamically
+  imported** so it loads only on an actual HEIC pick (ADR-060 §8 "lazy-loaded converter" — verified
+  as its own build chunk). The converted JPEG *becomes* the raw; the camera-original HEIC is not kept.
+- **Voice now renders on every capture surface**, not just the node (Accept: "playable on its node +
+  capture"): `CaptureView.media` drives an inline `VoicePlayer` in Recent-captures rows + the capture
+  detail. A **legacy voice capture** (no `media` row until the T6 backfill) has `media = null` → it
+  degrades to the old "Voice note" text, never an error.
 - **`node_media` rebuild keyed on `media_id`** (ADR-060 §3 left the mechanism open): the derived-tier
   rebuild is *delete every link for this capture's media ids, re-insert the current content-node
   product* — keyed on the **stable raw-truth `media_id`**, not the churning `node_id`, so a
@@ -1412,22 +1453,22 @@ migration 018 apply + the backfill run are **T6**.
   (`POST /admin/connector/rederive`, M9.5). T6's "failure→placeholder→re-derive drill" exercises
   it end-to-end for **both kinds** (call the seam / the M9.5 endpoint). Until then, targeted
   re-derive alone recovers only `media.derived_text`; the node recovers when the seam is invoked.
-- **T5 — PWA media upload contract:** the server requires a **filename with a valid extension**
-  (jpg/png/webp/heic/heif) — mime is derived from it (client `content_type` is not trusted), matching
-  the voice contract. The PWA camera/file input must send a real filename (a bare `canvas.toBlob()`
-  needs a synthetic `photo.jpg` name), or the server 400s.
-- ~~**T4/T5 — HEIC→VLM**~~ **— DECIDED ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
-  §8): client-side HEIC→JPEG at capture (T5).** Lazy converter, PWA-path photos always
-  browser-renderable + VLM-safe; server stays image-library-free (still accepts HEIC on the raw
-  API — such files may degrade to placeholder, the designed path).
+- ~~**T5 — PWA media upload contract**~~ **— DONE in T5.** The file input sends the real filename;
+  a HEIC pick is converted to a synthetic `photo.jpg` before upload, so the server (which derives mime
+  from the extension, not the untrusted `content_type`) never 400s a PWA-path photo.
+- ~~**T4/T5 — HEIC→VLM**~~ **— DONE in T5** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+  §8): client-side HEIC→JPEG at capture via `heic2any`, **lazy dynamic import** (its own build chunk,
+  never on the jpg/png path). PWA-path photos are always browser-renderable + VLM-safe; server stays
+  image-library-free (still accepts HEIC on the raw API — such files may degrade to placeholder + show
+  the broken-media tile, the designed path).
 - **T3 — media-join SQL smoke (open before Accept):** `PgMediaStore.get_by_capture_id` + the
   `CaptureView.media` read-time join (`_MEDIA_REF_JOIN`) are unit-tested via fakes only (same CI
   boundary as `_node_refs`); verify against a real DB in the **T6** smoke pass (with the new
   `node_media` joins).
-- ~~**T4/settings guard**~~ **— DECIDED (ADR-060 / T5 scope): the Vision group renders an inline
-  Claude-route warning** (ADR-057 §4 — Claude has no vision path; images would silently drop).
-  VLMs also appear in the chat composer's model list (one shared catalog, ADR-045) — acceptable,
-  flagged for awareness.
+- ~~**T4/settings guard**~~ **— DONE in T5:** the Vision group renders automatically (off
+  `GET /settings`) with the inline **Claude-route warning** when the active/fallback model's provider
+  is `claude` (ADR-057 §4 — no vision path; images would silently drop). VLMs also appear in the chat
+  composer's model list (one shared catalog, ADR-045) — acceptable, flagged for awareness.
 
 ## M9.5 — Instagram DM connector ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) — GRILLED TO BUILD-READY 2026-07-18)
 
