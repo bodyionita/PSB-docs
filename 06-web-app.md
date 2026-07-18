@@ -49,6 +49,10 @@ login header; kept as a single config constant so it's changeable at zero cost.
   `POST /capture/voice` → optimistic "captured ✓" animation; transcript appears in the
   feed when the pipeline finishes.
 - Text input for quick typed capture (`POST /capture/text`).
+- **Photo capture (M9, [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §6):** an image
+  affordance (camera/file input) → `POST /capture/image` → the strip shows the thumbnail +
+  pipeline status (received → describing → … → indexed); the kept photo renders on the capture
+  detail + resulting node (`GET /media/{id}`). Video capture deliberately absent (ADR-057 §2).
 - Recent captures strip with live pipeline status (received → transcribing → … → indexed),
   animated state transitions; failed items expose retry.
 
@@ -109,7 +113,11 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   aging, missing `occurred`, alias-less entities, tombstone integrity, freshness) read from its run
   `details`; **read-only** in M8 (acting on flags → M10).
 - **Parameterized admin ops** — `reindex` (live counts), `backup now`, `reprocess` (confirm-gated),
-  `entities/merge` (pick two nodes), `tags`/`vocab` consolidate (two-step propose→apply): rehomed
+  `entities/merge` (pick two nodes), `tags`/`vocab` consolidate (two-step propose→apply)
+  — **M9.5 adds** the **connector backfill** card (confirm-gated start, live per-session progress
+  via `agent_runs`, resumable; optional model override + concurrency) and the **targeted
+  re-derive / re-distill** ops ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)
+  §8–§9): rehomed
   here with their **input controls** (they can't collapse to a bare Run), each showing live run
   status.
 
@@ -121,6 +129,13 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   - **dedup-proposal** — two node previews + **merge / keep / link** (survivor pick on merge).
 - **Batch actions:** multi-select → agree/disagree/maybe (or keep/dismiss) in one call
   (`POST /review/batch`). A weekly **maybe digest** keeps the parked pile from stalling silently.
+- **Kind filter chips (M9.5, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)
+  §11):** per-kind chips with counts (stance / entity-ambiguity / vocab / dedup /
+  occurred-enrichment / …) so a connector-backfill stance flood never buries the other kinds.
+- **Session transcript view (M9.5, ADR-058 §11):** from a distilled memory's capture/node,
+  "view source conversation" opens the rendered session (`GET /connector/sessions/{id}`) —
+  sender-attributed messages, day dividers, **photos inline + voice notes playable**
+  (`GET /media/{id}`). The memory→source traceability surface.
 
 ### 3c. The Map (M7 — [ADR-051](adr/051-m7-map-build-decisions.md); desktop-first, canvas on phone too; **at M8.1 the map is the constellation half of the Explore tab, no longer standalone** — screen 5)
 - **Neighborhood explorer** over `GET /nodes/{id}/neighbors` (the same `GraphService.neighbors`
@@ -156,17 +171,25 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
 - **Vocabulary (M3, [ADR-027](adr/027-typed-vocabulary-governance.md)):** node + edge type
   vocabularies with pending LLM proposals — approve/reject; approval queues the
   retro-consolidation job.
-- **Connectors (M9):** per-connector config incl. the lookback override (default 6 months).
+- **Connectors (M9.5 API path / M12):** per-connector config incl. the lookback override (default 6 months).
 - **Models section (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md) +
   [ADR-043](adr/043-quick-routing-tier-m4.md), [ADR-045](adr/045-provider-model-effort-separation.md)):**
-  **three** routing groups — **Chat**, **Conspect**, and **Quick** (trivial tasks, e.g. session titling;
-  default Sonnet-low / Nebius) — each an active-**model** dropdown + fallback dropdown + an **effort
+  routing groups — **Chat**, **Conspect**, **Quick** (trivial tasks, e.g. session titling;
+  default Sonnet-low / Nebius), **+ Vision at M9** ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md)
+  §4 — Groq-VLM primary / Nebius fallback, effort N/A; renders automatically once `GET /settings`
+  carries the group) — each an active-**model** dropdown + fallback dropdown + an **effort
   selector shown only for models that support it** (Claude yes, Nebius no). The dropdowns pick a **model**
   (ADR-045 — "Claude Opus 4.8" / "Claude Sonnet 4.6" / "Llama 3.3 70B"; the *provider* is derived, so both
   Claude models sit under the one `claude` provider and no `claude-max` id is shown); effort is keyed by
   model (`effort_by_model`). Choices + effort levels come from `GET /settings` (registry-sourced, never
   hardcoded); saved via `PUT /settings/models`. This is where the M0/M4 model-and-effort control lives;
   the chat composer picker is a per-conversation override of the Chat group's active model.
+- **Entity merge (M9.5, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §11):**
+  the manual counterpart to the nightly dedup sweep — **two searchable entity pickers**
+  (`GET /entities`, type-filtered, search-as-you-type), **side-by-side previews** (stacked
+  top-bottom on mobile) reusing `NodePreview` (profile, aliases, degree, recent edges),
+  **survivor choice**, confirm-gated apply over `POST /admin/entities/merge`, feed-visible;
+  the merge registers as a standing merge (ADR-042 caveat reporting).
 - **Providers status (M4 follow-up, [ADR-044](adr/044-provider-observability-surface.md);
   [ADR-045](adr/045-provider-model-effort-separation.md)):** a **read-only** card over
   `GET /admin/providers` — **one row per provider** (5: Claude, Nebius, Groq, OpenAI, Ollama) labeled by

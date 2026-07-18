@@ -201,8 +201,10 @@ the store: a plain reindex preserves them, a full DB wipe leaves profile-search 
 ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)) and interaction logging
 ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over. **M5 adds a
 `source` column** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — `web` default \|
-`mcp` \| later `telegram`/`slack`; distinct from `kind` = text/voice), threaded to the node
-frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible. **M6 task 1 adds
+`mcp` \| `chat` (M6) \| **`instagram` (M9.5)** \| later `slack`; distinct from `kind` =
+text/voice **\| `image` (M9, [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §6 —
+raw file kept under `/srv/data/media/captures/`, vision description derived)**), threaded to
+the node frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible. **M6 task 1 adds
 a nullable `source_ref` column** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §1, mirroring
 `nodes.source_ref`): an **endorsed** chat candidate materializes a `captures` row (`source=chat`) whose
 `source_ref` is the originating **chat-session id**, so the chat→capture→node chain is traceable for the
@@ -211,10 +213,29 @@ M6 audit/remove surfaces without embedding node ids in chat state (NULL for the 
 remove of a chat-distilled node tombstones its capture so `reprocess-all`/replay skips it (the node file
 is git-rm'd — history kept — and DB rows deleted); a non-null `removed_at` is replay-excluded.
 
-**`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). Used by the
-Slack/other connectors (M9). **The chat-distiller does NOT use it** — it needs *per-session*
-watermarks, so it uses the dedicated **`chat_distill_state`** table (above,
-[ADR-048](adr/048-m6-chat-distiller-build-decisions.md)), not a single connector cursor.
+**`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). Used by
+API-fetcher connectors (Instagram daily if the spike passes; Slack at M12). **The
+chat-distiller does NOT use it** — it needs *per-session* watermarks, so it uses the dedicated
+**`chat_distill_state`** table (above, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)),
+not a single connector cursor.
+
+**`connector_threads` / `connector_messages` / `connector_media`** (**M9/M9.5**,
+[ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §3 +
+[ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §3 — exact columns pinned at the
+build task, migration numbered then): the source-generic **conversation substrate**.
+`connector_threads` — `(source, thread_id)` unique, participants (+ the manifest's
+`name_override`), per-thread import state. `connector_messages` — **connector raw** (the
+replay source for re-sessionization/re-distillation): `(source, thread_id, message_id)` unique
+**upsert key** (idempotent import), sender, `sent_at` (ms precision), repaired text, reactions,
+share/link payload, edit marker. `connector_media` — one row per media item: message fk, kind
+(`photo`/`voice`/`video`), file path under `/srv/data/media/<source>/…` (**null for video** —
+summary-only, ADR-057 §2), **derivation status** (`pending`/`derived`/`unavailable` — the
+resumability + targeted-re-derive hinge) + derived text (photo description / voice transcript /
+video summary) + model used. Messages/threads are **operational raw** (not rebuildable —
+backed up with the DB; media *files* additionally R2-synced per ADR-014); derived text is
+derived-tier (recomputable from kept raw, except video summaries — the recorded ADR-057 §2
+exception). **Session distill state** (watermark per `(source, thread, session)` — the ADR-048
+pattern generalized) + candidate dedup keys land alongside at the build task.
 
 **`chat_auto_recorded`** (**M6 task 4**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)
 §11/§12) — the registry behind the chat-scoped **"recently auto-recorded"** audit list
@@ -298,7 +319,7 @@ registered clients (RFC 7591): `client_id` pk · metadata jsonb (redirect_uris, 
 codes may be a third short-lived table or in-memory (PKCE-bound, single-use — impl detail at
 build). **Revoke-all** = flag all rows. Single full-access scope in M5.
 
-**`app_settings`** — unchanged shape; keys grow (`model_routing` — jsonb, **3 groups** `chat`/`conspect`/`quick` each `{active, fallback, effort_by_model}` where `active`/`fallback` + the `effort_by_model` keys are **model ids** (vendor strings; [ADR-045](adr/045-provider-model-effort-separation.md) — was `effort_by_provider`/provider ids, **migrated in place** by an idempotent Alembic revision, vision P10), [ADR-025] + [ADR-043](adr/043-quick-routing-tier-m4.md); config seeds the default when unset), vocabulary,
+**`app_settings`** — unchanged shape; keys grow (`model_routing` — jsonb, groups `chat`/`conspect`/`quick` (**+ `vision` at M9**, [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §4) each `{active, fallback, effort_by_model}` where `active`/`fallback` + the `effort_by_model` keys are **model ids** (vendor strings; [ADR-045](adr/045-provider-model-effort-separation.md) — was `effort_by_provider`/provider ids, **migrated in place** by an idempotent Alembic revision, vision P10), [ADR-025] + [ADR-043](adr/043-quick-routing-tier-m4.md); config seeds the default when unset), vocabulary,
 connector lookback overrides — default **6 months** per connector, UI-overridable; **`identity_capsule`**
 — M5 [ADR-046](adr/046-m5-mcp-server-oauth-connectors.md)/[ADR-033](adr/033-external-inspirations-obsidian-second-brain.md)
 #1, a derived blob `{text (~300 tok), generated_at, source_refs}` distilled nightly from entity-profile

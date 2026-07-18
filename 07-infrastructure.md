@@ -52,7 +52,8 @@ deploy/docker-compose.yml
 ├── caddy      # :443 — serves web/dist statically, proxies /api → api:8000
 ├── api        # FastAPI + scheduler + agents (single app container, ADR-003)
 │              # volumes: /srv/graph-store (graph-store git repo — /srv/vault pre-M3),
-│              #          /srv/data (audio files),
+│              #          /srv/data (audio raw inputs; + /srv/data/media/… at M9 —
+│              #          connector photos/voice + ad-hoc capture images, ADR-057 §3),
 │              #          claude CLI credentials volume
 ├── ollama     # M2 — self-hosted embeddings (nomic-embed-text-v1.5), ADR-022
 │              # OpenAI-compatible /v1/embeddings on the internal network;
@@ -115,7 +116,9 @@ deploy/docker-compose.yml
 
 **Operational-state backup (second independent copy, not never-lose):**
 - Nightly `pg_dump` → R2 (versioned) so Supabase isn't a SPOF; restore-to-last-nightly.
-- Nightly sync of `/srv/data` raw inputs (audio) → R2 so un-transcribed input isn't VPS-disk-only.
+- Nightly sync of `/srv/data` raw inputs (audio; + `media/` photos/voice from M9 —
+  [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §3) → R2 so raw input isn't
+  VPS-disk-only.
 
 **Recovery:** `git clone` (GitHub or the R2 bundle) → mount → `POST /admin/reindex`
 (+ `pg_dump` restore for operational history). Occasional manual exploration/editing: clone the

@@ -1,6 +1,11 @@
 # Implementation Plan
 
-**Version:** 3.5 · **Status:** Approved 2026-07-13 (3.5 = [ADR-034](adr/034-external-inspirations-round-2-profile-tiering.md)
+**Version:** 3.6 · **Status:** Approved 2026-07-18 (3.6 = **the M9 restructure**
+([ADR-057](adr/057-multimodal-media-ingestion-substrate.md)/[058](adr/058-instagram-dm-connector-and-conversation-substrate.md)/[059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md)):
+the old M9 (Slack + Telegram) is replaced — **M9 = multi-modal ingestion foundation**, **M9.5 =
+Instagram DM connector** (export-first, conversation substrate, sessionized stance-gated
+distillation); **Slack → M12**; **Telegram removed entirely** (supersedes the 3.4 promotion below).
+3.5 = [ADR-034](adr/034-external-inspirations-round-2-profile-tiering.md)
 round-2 review (3 repos): **evidence-tiered profiles** adopted into the M3 profile job (stub/
 snapshot/full by graph degree — caps nightly LLM spend); awesome-second-brain + COG two-way-sync
 saved as grilling references; NicholasSpisak variant skipped outright.
@@ -1218,24 +1223,100 @@ reprocess backfills both dimensions (standing merges reported).
   `dateToken.ts` mirror faithful/import-free, reindex-rebuildable, idempotent). 3 minors logged (see
   [08-logs/m8.2.md](08-logs/m8.2.md) "Task 5"). **M8.2 CLOSED.** `depends-on:` T4
 
-## M9 — Connectors: Slack (stance-gated) + Telegram capture
+## M9 — Multi-modal ingestion foundation ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md) — GRILLED TO BUILD-READY 2026-07-18)
 
-**Scope.** (a) **Slack** connector ([05-connectors.md](05-connectors.md)): user-token
-fetch/normalize, shared stance-gated distillation into typed nodes (`conversation`/`person`
-edges), cursors, **6-month default lookback** (UI-overridable), volume guard.
-(b) **Telegram capture** ([ADR-033](adr/033-external-inspirations-obsidian-second-brain.md) #7 —
-**must-have ingestion surface**, user 2026-07-13): a private bot polled **from the VPS**;
-voice/text messages enter the **same capture pipeline** (STT chain, organizer, never-lose;
-`source: telegram`). **Small and independent — depends only on the M3 capture pipeline and may
-be pulled forward ahead of the rest of M9 at the user's call.** Open question for its grilling:
-**image capture** (vision-routed photos — new scope, decide there; ADR-033 references the
-prior-art implementation).
-**Accept (draft):** nightly run distills yesterday's Slack into plane-correct, entity-resolved
-nodes; unclear-stance items appear in Review; rerun after forced failure resumes from cursor
-without duplicates; feed shows the run; **a voice note sent to the Telegram bot from the phone
-becomes organized nodes with no PWA open**.
+*(Replaces the former "Slack + Telegram" M9 — [ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md):
+Telegram **removed entirely** (supersedes ADR-033 #7), Slack **→ M12**.)*
 
-- [ ] M9 grilled to build-ready detail · tasks defined there
+**Scope.** Media become first-class raw inputs (ADR-057): the **`vision` routing group** (4th
+UI-editable group — **Groq VLM primary / Nebius fallback**, ids config-scalar, verified against
+live catalogs at build; OpenAI-compatible provider gains `image_url` parts), **media storage**
+under `/srv/data/media/…` (R2-synced free via ADR-014) + the media table (02-data-model; serves
+ad-hoc captures now, connector media at M9.5), the **resumable derivation stage** (status-tracked;
+bounded retries → `unavailable` → explicit placeholder; targeted re-derive core), the **one
+description contract** (compact factual + verbatim legible text + the **two-layer
+screenshot-attribution rule**, ADR-057 §5 — binding), authenticated **`GET /media/{id}`**, and
+**PWA photo capture** end-to-end (`POST /capture/image`, kind `image`, describe → organize with
+fenced derived text, photo surfaced on capture/node). **Out:** PWA video capture, MCP image
+capture, any screenshot-conversation pipeline (backlog).
+
+**Accept.** A photo captured on the phone becomes a **described, organized, media-backed node**
+(photo visible on the node/capture); a **chat-screenshot** capture attributes contained messages
+to the screenshot's internal speakers, never to the user; the **Vision group** appears in
+Settings → Models (Groq-seeded, editable, forward-live); a forced derivation failure walks
+retry → `unavailable` → explicit placeholder without blocking the pipeline, and targeted
+re-derive then recovers it; media serve only behind the session gate.
+
+**Tasks** (parallel-eligibility per [09 §Parallel task batches](09-session-protocol.md)):
+- [ ] **T1 — vision routing group (server)**: provider `image_url` support, `vision` group +
+      seeds, registry catalog + `GET/PUT /settings` carry it. No migration. `batch-A,
+      parallel-with: T2`
+- [ ] **T2 — media substrate (server)**: media table (migration; exact columns pinned here) +
+      `/srv/data/media` layout + `GET /media/{id}` + resumable derivation job (+ description
+      contract prompt incl. screenshot attribution) + targeted re-derive core. `batch-A,
+      parallel-with: T1` (calls vision through the routing-service seam)
+- [ ] **T3 — image capture pipeline (server)**: `POST /capture/image` (kind `image`), raw kept,
+      describe → organize (fenced), retry/placeholder path. `depends-on: T1+T2`
+- [ ] **T4 — web**: capture-strip image affordance + thumbnail/status, photo on capture/node
+      (via `GET /media/{id}`), Settings Vision group verified (auto-renders from `GET /settings`).
+      `depends-on: T3`
+- [ ] **T5 — live M9 Accept**: deploy (migration applies), real-phone photo → node, screenshot
+      attribution, group edit forward-live, failure→placeholder→re-derive drill, independent
+      review. `depends-on: T4`
+
+## M9.5 — Instagram DM connector ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) — GRILLED TO BUILD-READY 2026-07-18)
+
+**Scope.** Export-first ingestion of **DMs only** (groups + `message_requests` excluded outright)
+through the **conversation substrate**: local prep tool (`tools/instagram-export/` — mojibake
+repair, **opt-in CSV triage manifest** local+gitignored with `name_override`, auto-skip
+<5-msg-one-sided tier, **local video→summary processing**, SQLite resume ledger, batched
+**idempotent upload**), server tables `connector_threads`/`connector_messages` (+ media wiring),
+**deterministic 6h-gap sessionization** (no summary-chaining; pathology guard only), the **M6
+distiller generalized** to source-agnostic sessions (stance gate unchanged; endorsed →
+`captures(source=instagram, source_ref=session, anchor_at=session time)` → organizer; backfill
+protections: **salience floor + per-run review cap**, skips logged + re-distillable), the
+**backfill campaign op** (reprocess-all shape; **parallel Claude distill** default 4 / serial
+organize; quota-pause; per-run model override), **targeted re-derive/re-distill**, the **session
+transcript view** (photos inline, voice playable), **Review kind-filter chips**, the **manual
+entity-merge UI** (+ `GET /entities` browse), and the **API feasibility spike** (business
+account; webhooks preferred) gating an optional daily fetcher. Full decisions: ADR-058 §1–§12.
+
+**Accept.** The user's curated thread selection is distilled into plane-correct, entity-resolved,
+stance-gated memories dated by **session time** (2016–2026, ADR-056 anchoring); the review queue
+never floods (floor/cap counts visible in the run summary); every distilled memory opens its
+**source transcript** with inline photos + playable voice notes; a **backfill killed mid-run
+resumes** without loss or duplicates; targeted re-derive/re-distill recover a degraded session
+end-to-end; the merge UI merges a real duplicate person pair (feed-visible, standing-merge
+reported); the **spike verdict is recorded** (+ daily fetcher live if it passed); a prod
+`reprocess-all-from-raw` **replays IG-distilled captures byte-stable** (P10); M6 chat-distiller
+tests stay green throughout.
+
+**Tasks:**
+- [ ] **T1 — conversation substrate (server)**: `connector_threads`/`connector_messages` (+
+      media fk wiring), **the milestone's one migration**, idempotent import endpoints
+      (threads/messages/media). `batch-B, parallel-with: T2`
+- [ ] **T2 — prep tool: parse + triage (local)**: export parser, mojibake repair, inventory →
+      **CSV manifest** (opt-in; overrides; auto-skip tier; excludes), SQLite ledger. Disjoint
+      tree (`tools/`). `batch-B, parallel-with: T1`
+- [ ] **T3 — prep tool: media + upload (local)**: local video processing (ffmpeg + STT + vision
+      → summary), photo/voice upload, batched resumable idempotent upload client.
+      `depends-on: T1+T2`
+- [ ] **T4 — sessionization + distiller generalization (server)**: 6h-gap sessionizer +
+      transcript renderer (ADR-058 §5 contract) + `ChatDistillerService` seam widening +
+      session distill state + captures materialization (`anchor_at`!) + review floor/cap +
+      transcript endpoint. M6 tests green. `depends-on: T1`
+- [ ] **T5 — backfill + re-runs (server)**: campaign op (single-flight, resumable, parallel
+      distill/serial organize, quota-pause, model override), `rederive`/`redistill`,
+      `GET /entities` browse. `depends-on: T4`
+- [ ] **T6 — web**: session transcript view (inline media), Review **kind chips**, **entity-merge
+      UI**, Ops backfill + re-run cards. `depends-on: T5`
+- [ ] **T7 — API spike (throwaway, local)**: own-DM read, history depth, echoes, media URLs,
+      **webhooks** vs polling → recorded verdict + gate decision. `parallel-with: any (no repo
+      code)`
+- [ ] **T8 — (gated on T7 pass) daily fetcher**: webhook receiver (preferred) or poller →
+      substrate upsert; `connector_cursors`; schedule. `depends-on: T1, T7`
+- [ ] **T9 — live M9.5 Accept**: deploy, real curated import, campaign run on prod, full Accept
+      block, independent review. `depends-on: all`
 
 ## M10 — Reflection agent (+ push notifications)
 
@@ -1264,6 +1345,19 @@ planning session:
 
 - [ ] M11 planning session (full grill) · everything else defined there
 
+## M12 — Connector: Slack (stance-gated) — deferred from the old M9 ([ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md))
+
+**Scope.** The Slack connector per [05-connectors.md](05-connectors.md) (spec intact): user-token
+fetch/normalize into the **M9.5 conversation substrate** (a fetcher + config — sessions,
+distillation, media, transcripts inherited), cursors, **6-month default lookback**
+(UI-overridable), volume guard. Sequenced **after M10/M11** — grilled to build-ready when it
+comes up.
+**Accept (draft):** nightly run distills yesterday's Slack into plane-correct, entity-resolved
+nodes; unclear-stance items appear in Review; rerun after forced failure resumes from cursor
+without duplicates; feed shows the run.
+
+- [ ] M12 grilled to build-ready detail · tasks defined there
+
 ## Backlog (do not build unprompted)
 
 **Chat/retrieval:** **graph-aware retrieval lite** — flat **1-hop canonical-edge neighbor injection
@@ -1291,8 +1385,14 @@ The broader theme: correcting mis-extracted facts, editing node body/title, fixi
 dates/planes/tags/edges, re-stancing a memory, and entity mis-split/merge fixes — the correction
 counterpart to the M6 auto-record/remove trust loop.
 **Sources:** LLM-chat exports connector (promoted by the pivot — stance-gated like the
-chat-distiller) · WhatsApp · Instagram spike ([ADR-009](adr/009-instagram-connector-deferred.md)) ·
-email · calendar.
+chat-distiller) · **WhatsApp** (next natural consumer of the M9.5 conversation substrate — its
+export tool + **group-chat support** get grilled there, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)
+§12) · Facebook Messenger · email · calendar. *(Instagram: resolved out of backlog into M9.5 —
+ADR-058; the ADR-009 spike became M9.5 T7.)*
+**Distiller enhancements:** **per-person context injection** (deferred at the M9.5 grill,
+ADR-058 §12 — profile summary alongside the session; re-distill makes retrofitting safe) ·
+**screenshot-conversation ingestion pipeline** (ADR-057 §6 — only if a source with no export
+ever matters; the vision attribution contract covers ad-hoc captures until then).
 **Map:** **auto-center map entry** ([ADR-051](adr/051-m7-map-build-decisions.md) backlog — user
 wants it *after* M7): open the map on your highest-degree hubs (or recent captures) instead of the
 search box; needs a **new top-degree / entry-nodes endpoint** · **in-app reduced-motion override**
@@ -1329,7 +1429,7 @@ The post-M8 batch was grilled decision-by-decision the same day. Where each item
   (tokens own sub-day); the **`occurred-enrichment`** backlog item was absorbed into M8.2 (its "own
   planning session" = this one — the *Data enrichment & correction* paragraph above stays for the
   broader non-date corrections: facts, titles, planes, tags, edges, re-stancing).
-- **Item 6 (v1 documentation suite)** → **the v1 capstone, after M9/M10/M11** (user-confirmed: docs
+- **Item 6 (v1 documentation suite)** → **the v1 capstone, after M9–M12** (user-confirmed: docs
   need the system feature-complete — connectors/reflection/life-manager change what's documented).
   Requirements pinned for its own later grill: short, self-contained, **non-technical audience**
   (friends/family; terminology explained; technicality only where the data algorithms demand it);

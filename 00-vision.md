@@ -29,9 +29,12 @@ compounding over time.
   with the same discipline as the app — one service layer, thin surfaces
   ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)).
 - **Conversations become memory**: in-app LLM chats are distilled — anchored on *my* stance,
-  not the model's words — and people-conversations (Slack first) flow in through connectors;
-  anything with unclear stance waits in a review queue for my agree/disagree
-  ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)).
+  not the model's words — and people-conversations (**Instagram DMs first** —
+  [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md); Slack at M12) flow in
+  through connectors; anything with unclear stance waits in a review queue for my agree/disagree
+  ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)). Media inside
+  conversations (photos, voice notes, videos) are understood, not dropped
+  ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md)).
 - **The map**: point-and-click visual exploration of the graph — start anywhere, expand
   outward, see the constellations around a person or an idea. Desktop-first.
 - **Background intelligence**: reflection over days/weeks/months/years (what went well, what to
@@ -69,8 +72,10 @@ Nodes carry **planes** — configurable life areas used for scoping, filtering a
 
 - Multi-user, collaboration, public sharing.
 - Native mobile apps (the PWA is the app).
-- Connectors beyond Slack in v1 ([ADR-009](adr/009-instagram-connector-deferred.md)) — the
-  contract anticipates WhatsApp, Instagram, LLM-chat exports, email, calendar.
+- Connectors beyond **Instagram (M9.5)** and Slack (M12) in v1 — the conversation substrate
+  ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)) anticipates WhatsApp,
+  LLM-chat exports, Facebook Messenger, email, calendar. (Telegram: removed —
+  [ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md).)
 - Editing node bodies from the web app (git covers manual editing for now).
 - Local/offline LLMs.
 

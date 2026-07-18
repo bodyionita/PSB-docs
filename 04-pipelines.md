@@ -90,15 +90,39 @@ profiles the reset truncated** (a profile-refresh over the replayed graph, so th
 The run reports per-heal totals (`coerced`/`accreted`/`profiles_refreshed`) for auditability.
 Idempotent; raw is never touched, so a bad reprocess is recovered by fixing code and re-running.
 
-## 2. Ingestion pipeline (connectors, scheduled)
+## 2. Ingestion pipeline (connectors — the conversation substrate, M9/M9.5 [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md))
 
-Contract + per-connector specs: [05-connectors.md](05-connectors.md). Unchanged shape: fetch
-since cursor → shared distiller → organizer-written nodes → advance cursor after materialization.
-Two pivot changes: **(a)** distillation output is typed nodes + edges through the organizer;
-**(b)** people-conversation distillation adopts the **stance gate** — the user's commitments/
-agreements/decisions are the anchor; stance-unclear candidates go to the **review queue**
-instead of being guessed ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)).
-Default lookback: **6 months**, per-connector UI override.
+Contract + per-connector specs: [05-connectors.md](05-connectors.md). v3 shape:
+
+```
+producer (API fetcher, scheduled | local import tool, batched)
+   │ upsert connector_threads / connector_messages / connector_media
+   │ by (source, thread_id, message_id) — idempotent, resumable
+   ▼
+MEDIA DERIVATION (ADR-057 §3 — status-tracked, resumable, skip-and-continue)
+   │ photo → vision description (vision group, screenshot-attribution contract §5)
+   │ voice → STT chain (groq→openai, ADR-020)     [video arrives pre-summarized — §2]
+   │ bounded retries → status=unavailable → explicit placeholder; targeted re-derive
+   ▼
+SESSIONIZE — deterministic code, no LLM (ADR-058 §4): chronological, split on >6h gap
+   │ (config); pathology guard splits at the largest internal gap past a token cap
+   ▼
+DISTILL per session — the generalized M6 loop (§3 below; ADR-048 → ADR-058 §6)
+   │ rendered transcript ([HH:MM] Name / day dividers / media placeholders / reactions)
+   │ stance gate (ADR-029) + backfill protections (salience floor + per-run review cap,
+   │ skips logged, re-distillable — ADR-058 §7)
+   ▼
+endorsed → captures row (source=<source>, source_ref=session, anchor_at=session time)
+   ▼ ORGANIZER (single writer, invariant 7) → nodes/edges → index
+```
+
+**Backfill campaign** (historic imports — ADR-058 §8): admin-triggered, confirm-gated,
+single-flight, chronological, **resumable** (per-session state; quota exhaustion ⇒ pause+backoff,
+not failure); **parallel distill workers** (config, default 4, ≤8) + **serial organize**
+(entity-mint races); optional per-run model override. Runs outside the agent window.
+**Targeted re-runs** (§9): re-derive `unavailable` media only; re-distill degraded sessions only.
+Default lookback for API fetchers: **6 months**, per-connector UI override (export imports are
+manifest-curated instead — 05).
 
 ## 3. Chat-distillation pipeline (M6, [ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md) · build decisions [ADR-048](adr/048-m6-chat-distiller-build-decisions.md))
 

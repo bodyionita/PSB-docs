@@ -27,7 +27,7 @@ ingestion + review queue, jobs-observability contract —
                                       │  ├─ ollama sidecar (nomic embeddings)    │  (self-hosted, no external call)
                                       │  ├─ Scheduler (03:00–05:00 agent window) │
                                       │  └─ Ingestion agents (chat-distiller,    │
-                                      │      Slack, …)  ─────────────────────────┼──▶ Slack API
+                                      │      Instagram, Slack, …) ───────────────┼──▶ source APIs / export imports
                                       │      │                                   │
                                       │      ▼                                   │
 ┌────────────────┐   git push        ┌┴──────────────────┐                       │
@@ -73,7 +73,8 @@ Single FastAPI process ([ADR-003](adr/003-single-service-on-vps.md)) hosting:
   embeddings self-hosted nomic via `ollama` ([ADR-022](adr/022-embeddings-self-hosted-nomic.md)).
 - **Scheduler + agents** — APScheduler, 03:00–05:00 window ([ADR-010](adr/010-agent-window-3-5am.md));
   chat-distiller ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)),
-  connectors (Slack, …), consolidation, reflection. **Jobs-observability contract:** every job
+  connectors (Instagram [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md),
+  Slack at M12, …), consolidation, reflection. **Jobs-observability contract:** every job
   is manually triggerable from the UI, live-observable while running (status + logs), and its
   schedule (cadence + next run) is inspectable — no cron-only ghosts.
 

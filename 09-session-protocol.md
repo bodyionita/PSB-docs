@@ -1,8 +1,11 @@
 # Session Protocol (working agreement)
 
-**Version:** 1.7 · **Status:** Approved 2026-07-16
+**Version:** 1.8 · **Status:** Approved 2026-07-18
 
-*(v1.7 — 2026-07-16: added **Parallel task batches**, a provisional, opt-in
+*(v1.8 — 2026-07-18: README restructure — the README's **Current status** is now a snapshot
+**updated in place** at every pause; the superseded entry moves **verbatim, append-only** to
+`08-logs/status-history.md`. The old grow-forever README log is archived there.
+v1.7 — 2026-07-16: added **Parallel task batches**, a provisional, opt-in
 implementation-session mechanism for fanning independent tasks out to ≤3 side-agents.)*
 
 How every session is run. This is binding process, not a suggestion — it exists so any
@@ -175,6 +178,11 @@ Before any pause, **the docs must record where we are and what's next** — prog
 relevant contract doc (e.g. a milestone's progress note in [08](08-implementation-plan.md)),
 decisions as ADRs — and be pushed. That, plus the README cold-start procedure, is what lets
 a fresh session continue. If it isn't written and pushed, a respawned session won't know it.
+
+**README snapshot discipline (v1.8):** the README's **Current status** section is updated **in
+place** at every pause (never appended to); the superseded snapshot entry is moved **verbatim**
+to [08-logs/status-history.md](08-logs/status-history.md) (append-only). Detail belongs in 08 +
+the milestone logs — the snapshot stays a snapshot.
 
 **Handoff prompt — ALWAYS emit one at every pause (mandatory, user preference 2026-07-12).**
 End every pause with a short respawn prompt — never skip it, never bury it. Keep it to ~2–3

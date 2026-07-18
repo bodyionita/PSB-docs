@@ -1,3 +1,5 @@
+<!-- Synced copy (2026-07-18) of the code monorepo's live CLAUDE.md — that file is authoritative;
+     this template exists for cold-start bootstrap and ADR references. Re-sync when the live file changes. -->
 # CLAUDE.md — Personal Second Brain (code monorepo)
 
 **Read `../second-brain-docs/` first** (order: README → 00…09 → adr/). The docs repo is
@@ -10,6 +12,12 @@ one in the docs repo.
 (no grilling), pausing between major tasks. Hit an unrecorded decision mid-implementation →
 stop and replan, don't decide inline. **Commit + push docs at every pause**; commit code
 freely while implementing but **push code only when the user asks**.
+
+> **Pivot history (2026-07-13, ADR-026–029; rename landed with M3, 2026-07-14):** the design
+> pivoted to a **typed mind graph** — graph store of nodes/edges, Obsidian removed, organizer
+> as single writer, MCP peer surface. The M3 code rename (vault→graph store, notes→nodes,
+> `VAULT_PATH`→`GRAPH_STORE_PATH`, `notes`/`note_links`→`nodes`/`edges`) is **done** —
+> never introduce "note"/"vault" in new work (superseded ADRs and old logs excepted).
 
 ## Hard rules
 
@@ -60,7 +68,8 @@ freely while implementing but **push code only when the user asks**.
 12. **LLMs classify, code computes** ([ADR-056](../second-brain-docs/adr/056-temporal-correctness-date-tokens.md)).
     No LLM-emitted arithmetic, date, or other numerical *derivation* is ever stored. The
     model emits symbolic classifications ("10 days ago" → `{kind: relative_days, offset:
-    -10}`); deterministic code (`datetime`/`dateutil`, plain Python) performs all
+    -10}`); deterministic code (stdlib `datetime`, plain Python — the temporal engine is
+    deliberately dependency-free so the web mirror stays byte-identical) performs all
     computation against stored anchors — never wall-clock in replayable paths (P10).
     Unresolvable input degrades (stays prose / files review), it is never guessed.
     Binding on all pipelines, connectors, and agents.
@@ -70,7 +79,7 @@ freely while implementing but **push code only when the user asks**.
 - Python 3.12, `pathlib`, store paths `/`-separated relative to `GRAPH_STORE_PATH`.
   UTC timestamps in DB; `TZ` only for scheduling and store-facing formatting.
 - **Vocabulary (ADR-026):** nodes, edges, the graph, the graph store — never "note"/"vault"
-  in new code, endpoints, or docs (superseded ADRs and old logs excepted).
+  in new code, endpoints, or docs once M3 lands (superseded ADRs and old logs excepted).
 - Web: React + Vite + TS strict, TanStack Query for server state, framer-motion for all
   motion (respect `prefers-reduced-motion`), feature-folder structure, design-system
   primitives in `ui/`.
