@@ -32,6 +32,13 @@ layer** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) — MCP tool 
 
 ## Capture
 
+> **M9.6 ([ADR-061](adr/061-composite-multi-part-capture.md)) reshapes this surface.** The three
+> one-shot `POST /capture/{text,voice,image}` rows below are **replaced** by a server-side **draft**
+> flow — `POST /capture/draft` → `POST /capture/{id}/part` → `DELETE …/part/{mediaId}` → text-body
+> edit → `POST /capture/{id}/submit` — so one capture can carry text + N photos + ≤1 voice, organized
+> in **one blended pass**. `CaptureView.media` becomes a **list** (+ `text_body`). MCP/chat internal
+> capture is unchanged. The single-part contract below stands until the M9.6 build lands (08 §M9.6).
+
 | | |
 |---|---|
 | `POST /capture/text` | `{ "text", "created_at"?: iso }` → `202 { capture_id, status: "received" }`; pipeline continues in background |

@@ -1300,12 +1300,18 @@ contract, T6 deploys both.)*
       Captures); list **glyphs** off `media_kinds`; **lazy HEIC→JPEG** at capture (synthetic
       filename); Settings **Vision group** verified + the **Claude-route warning**.
       `depends-on: T4`
-- [ ] **T6 — live M9 Accept**: deploy (migrations 017+018 apply, **backfill op run**),
-      real-phone photo → node with photo **inline**, voice capture → **playable on its node**
-      (+ Range/206 scrub check), screenshot attribution, group edit forward-live,
-      failure→placeholder→`rederive_capture` drill for **both kinds** (recovers the node),
-      merge-inherits-media check, media-join SQL smoke (the T3 follow-up), independent review.
-      `depends-on: T5`
+- [~] **T6 — live M9 Accept** — **SUPERSEDED-BY-M9.6 (2026-07-19, [ADR-061](adr/061-composite-multi-part-capture.md) §12)**:
+      deploy (migrations 017+018 apply, **backfill op run**), real-phone photo → node with photo
+      **inline**, voice capture → **playable on its node** (+ Range/206 scrub check), screenshot
+      attribution, group edit forward-live, failure→placeholder→`rederive_capture` drill for
+      **both kinds** (recovers the node), merge-inherits-media check, media-join SQL smoke (the T3
+      follow-up), independent review. `depends-on: T5`
+      · **Partially executed live 2026-07-18/19** then paused: deploy + migrations 017+018 + the
+      **voice-media-backfill** op all ran green on prod; **¶1 (photo → node inline)** verified live;
+      the session-gate (`GET /media/{id}` → 401 no-cookie) verified. The **remaining drills fold
+      into the M9.6 live Accept** (they're all exercised through the composite flow). A
+      capture-screen preview-centering bug found during ¶1 was fixed (portal overlays to `<body>`)
+      and shipped — code `8579974`, deployed.
 
 **Progress — batch-A complete (2026-07-18, implementation session).** T1 ∥ T2 built
 **sequentially by the coordinator** (not fanned out): `config.py`/`models.py`/`main.py`/
@@ -1508,6 +1514,24 @@ overstating "recovered"). **T6 is NOT done** — it's ticked only when every Acc
   is `claude` (ADR-057 §4 — no vision path; images would silently drop). VLMs also appear in the chat
   composer's model list (one shared catalog, ADR-045) — acceptable, flagged for awareness.
 
+**Progress — T6 live Accept started then paused for the M9.6 pivot (2026-07-19).** T6 ran live on
+prod: **push** (`8579974`) → CI green (server + web + deploy) → **migrations 017+018 applied**
+(`alembic current` = `018`) → the **`voice-media-backfill`** op ran (2 legacy dev recordings
+degraded — audio gone — minting `unavailable` rows, the designed never-lose path; `R relocated`
+otherwise). **Accept ¶1** (real-phone photo → described, organized, media-backed node, photo inline
+in NodePreview + lightbox + "see raw capture") verified live; the **session gate** verified
+independently (`GET /api/v1/media/{id}` → **401** without a cookie). A capture-screen
+**preview-centering bug** surfaced during ¶1 — the `Lightbox`/`CaptureDetailSheet` overlays are
+`position:fixed` but were mounted inside framer-motion-transformed capture rows (a transformed
+ancestor traps `fixed`); fixed by **portaling both overlays to `<body>`** (`createPortal`, in-pattern
+with `HoverTip`/`TokenizedBody`) — code `8579974`, tsc/eslint/build green, **pushed + deployed**.
+Then the user requested **composite multi-part capture** ([ADR-061](adr/061-composite-multi-part-capture.md)),
+an architecture change → per [09](09-session-protocol.md) the session **switched to a
+planning/grilling pass** and paused implementation. **T6 is superseded by M9.6** (below): its
+remaining single-part drills (voice Range/206, screenshot attribution, group-edit forward-live,
+`rederive` both-kinds, merge-inherits, media-join SQL smoke, independent review) **fold into the
+M9.6 live Accept**, exercised through the composite flow. M9 T1–T5 remain done + shipped.
+
 ## M9.5 — Instagram DM connector ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) — GRILLED TO BUILD-READY 2026-07-18)
 
 **Scope.** Export-first ingestion of **DMs only** (groups + `message_requests` excluded outright)
@@ -1565,6 +1589,70 @@ tests stay green throughout.
       substrate upsert; `connector_cursors`; schedule. `depends-on: T1, T7`
 - [ ] **T9 — live M9.5 Accept**: deploy, real curated import, campaign run on prod, full Accept
       block, independent review. `depends-on: all`
+
+## M9.6 — Composite multi-part capture ([ADR-061](adr/061-composite-multi-part-capture.md) — GRILLED TO BUILD-READY 2026-07-19)
+
+*(Supersedes the paused M9 **T6** — its remaining single-part live drills fold into this Accept.
+Builds on the M9 media substrate (T1–T5, shipped). Independent of M9.5; delivery order is the
+user's call.)*
+
+**Scope.** One capture carries an **optional typed text body + 0..N photos + ≤1 voice**, composed on
+a **server-side draft** and organized in **one blended pass** (ADR-061). Server: `captures.text_body`
++ a **part ordinal** + `status='draft'` + `kind='composite'` (one additive migration); the **draft
+lifecycle** (`POST /capture/draft` · `POST /capture/{id}/part` · `DELETE …/part/{mediaId}` · text-body
+edit · `POST /capture/{id}/submit`), one active draft (resume + discard), **≤1 voice enforced**,
+Send needs ≥1 part; the boot orphan-sweep **skips `draft`** + a **7-day draft GC**; a **blended
+`_process`** (deferred, **concurrent-bounded** derivation → assemble `raw_text` = `text_body` +
+ordinal-ordered **indexed part markers** → one organize), `raw_text` cached (reprocess byte-parity);
+**per-node media attribution** (organizer emits bounds-checked `parts:[…]`, `_link_node_media` links
+by ref, unattributed → capture-only, total-failure → all-to-all fallback) **superseding the
+`<photo: …>` fence format** (two-layer semantic preserved); `rederive-capture` over non-`derived`
+parts; **per-part `agent_runs` detail**; `CaptureView.media` **singular → list** + `text_body`; the
+three one-shot `POST /capture/text|voice|image` endpoints **removed** (MCP/chat/reprocess unchanged).
+Web: the **compose surface** (text + multi-photo attach + record-voice ≤1 + per-part 'x' + Send),
+draft resume/discard, capture list renders the media list, **deep-link to the capture's Activity
+run**. **Out:** PWA video part (substrate keeps the row type for later), MCP composite capture,
+eager/background derivation, per-part hub attribution.
+
+**Accept.** On the phone: **compose** a capture with **text + ≥2 photos + a voice note**, **remove**
+a part with 'x' and **re-add** it, confirm **Send is disabled at 0 parts** and a **2nd voice is
+refused**, then **Send** → **one capture**, one blended organize → node(s) that **cross-reference
+parts** (a node reflects both its photo and the voice narration); each node shows **only its
+attributed** media, an unattributed part stays **on the capture only**; the capture **deep-links to
+its Activity run** with **per-part** steps; the **draft resumes** after app-close (+ Discard drops
+it). **`reprocess-all` replays the composite byte-identically** (node set + `node_media` stable).
+Plus the **folded M9 T6 single-part drills**: voice **playable + Range/206**; **chat-screenshot**
+attributes messages to the screenshot's internal speakers, never the user; **Vision group** edit is
+forward-live + the **Claude-route warning**; a forced derivation failure — **image and voice** —
+→ placeholder → **`rederive-capture`** recovers the **node**; a **merged survivor inherits** the
+loser's media; **media-join SQL smoke** green; media serve only behind the **session gate**.
+Independent review.
+
+**Tasks** (strictly sequential — the pipeline + organizer contract is shared across T2/T3, so no
+fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequential is the default):
+- [ ] **T1 — draft lifecycle + schema (server)**: additive migration (`captures.text_body`,
+      `status` `draft`, media **part ordinal**, `kind` `composite`); the draft endpoints
+      (open/part/delete/text/submit), **one active draft** (resume + discard), **≤1 voice** +
+      **≥1-part Send** enforcement; orphan-sweep **skips `draft`**; **7-day draft GC**. Owns the
+      migration. `first, solo`
+- [ ] **T2 — blended `_process` + assembly + concurrent derivation (server)**: generalize `_process`
+      to N parts; **deferred concurrent-bounded** derivation (config cap); assemble `raw_text` =
+      `text_body` + ordinal-ordered **indexed part markers**, **cache** it (reprocess parity);
+      `rederive_capture` over non-`derived` parts; **per-part `agent_runs`** detail. `depends-on: T1`
+- [ ] **T3 — per-node attribution + organizer contract (server)**: indexed part markers in the
+      organize input; organizer prompt + output **`parts:[…]`** (bounds-checked like `arose_from`);
+      `_link_node_media` links by ref; **unattributed → capture-only**, **total-failure →
+      all-to-all**; supersede the `<photo: …>` fence **format** (semantic preserved). `depends-on: T2`
+- [ ] **T4 — API views + fold endpoints (server)**: `CaptureView.media` → **list** + `text_body`;
+      **remove** the three one-shot capture endpoints; the capture→Activity-run **deep-link** field
+      (store `run_id` on the capture, or expose the `capture_id`-filtered run). `depends-on: T3`
+- [ ] **T5 — compose surface (web)**: the draft-backed **compose** UI (text + multi-photo +
+      record-voice ≤1 + per-part 'x' + **Send**), **resume/discard**, capture list renders the media
+      list, **Activity-run deep-link**. Server files disjoint but consumes T4's contract.
+      `depends-on: T4`
+- [ ] **T6 — live M9.6 Accept**: deploy (migration applies), real-phone **composite** drills +
+      the **folded M9 T6 single-part drills** (above), reprocess byte-parity check, SQL smoke,
+      independent review. `depends-on: T5`
 
 ## M10 — Reflection agent (+ push notifications)
 

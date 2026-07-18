@@ -26,6 +26,15 @@ creates memory — capture, connectors, chat distillation, MCP — converges on 
 
 ## 1. Capture pipeline (user-initiated, immediate; surfaces: UI voice/text/image, MCP `capture`)
 
+> **M9.6 ([ADR-061](adr/061-composite-multi-part-capture.md)) generalizes the head of this pipeline
+> from one part to N.** The web capture becomes a **server-side draft** (attach text + N photos +
+> ≤1 voice, then Submit); `_process` derives all parts (deferred, concurrent-bounded), assembles
+> `raw_text` = `text_body` + ordinal-ordered **indexed part markers**, and runs **one blended
+> organize**. Per-node media attribution replaces all-to-all (organizer emits bounds-checked
+> `parts:[…]`), superseding the `<photo: …>` fence **format** (two-layer semantic preserved).
+> `reprocess-all` still replays the cached `raw_text` verbatim. The single-part flow below stands
+> until the M9.6 build lands (08 §M9.6).
+
 ```
 POST /capture/{voice,text,image}  |  MCP capture(text)
    │ persist raw input + captures row, return 202 instantly

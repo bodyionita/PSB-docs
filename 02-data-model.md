@@ -226,6 +226,12 @@ M6 audit/remove surfaces without embedding node ids in chat state (NULL for the 
 **M6 task 4 adds a `removed_at` column** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md)): one-tap
 remove of a chat-distilled node tombstones its capture so `reprocess-all`/replay skips it (the node file
 is git-rm'd — history kept — and DB rows deleted); a non-null `removed_at` is replay-excluded.
+**M9.6 adds `text_body`, `status='draft'`, `kind='composite'`, and a media part ordinal**
+([ADR-061](adr/061-composite-multi-part-capture.md) — composite multi-part capture): a capture
+becomes an optional typed **text body** + 0..N photos + ≤1 voice, composed on a **server-side
+draft** before submit. `raw_text` stays the **cached assembled** organizer input (reprocess
+byte-parity); `text_body` holds the person's typed words; the ordinal makes part assembly +
+attribution deterministic. Detailed schema lands alongside the M9.6 build (08 §M9.6).
 
 **`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). Used by
 API-fetcher connectors (Instagram daily if the spike passes; Slack at M12). **The

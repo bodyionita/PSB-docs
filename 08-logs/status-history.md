@@ -1239,3 +1239,25 @@ HEIC pick → synthetic `photo.jpg`). Search-result + chat-source cards get a **
 warning**. **tsc + eslint clean, `vite build` green**; **independent review PASS** — one must-fix
 (lightbox index reset on ancestor re-render) resolved + one minor simplification applied. Commit
 `4adab51` — **code not pushed** (user's call). **Next:** build **M9 T6 — live M9 Accept**.
+
+**Where we are (2026-07-18) — superseded by the M9.6-pivot snapshot (2026-07-19).** **M9 T6 tooling PREPARED; live drills PENDING** (implementation
+session). T5 is BUILT (the web surfacing package, commit `4adab51`; see
+[status-history](status-history.md)). **T6 is the live M9 Accept** — a deploy + real-device
+milestone gated on the operator (push is the user's call; the phone captures are physical), so this
+session prepared everything the single T6 deploy needs, then paused. Built: the re-derive drill's
+**live trigger** — a new **`rederive-capture <capture_id>` CLI verb** (the `rederive_capture` seam had
+no live path; the HTTP endpoint lands at M9.5) that re-runs the VLM/STT → refreshes `raw_text` →
+reorganizes so a recovered description reaches the **node**; `build_capture_pipeline` gained opt-in
+`wire_media_derivation` (default **off** — reprocess-all still replays stored text, no VLM/STT re-run).
+Plus the **media-join SQL smoke** (`deploy/smoke/m9_media_join_smoke.sql`, the open T3 follow-up — the
+real joins against the prod DB) and an **executable Accept runbook**
+([m9-t6-live-accept-runbook.md](m9-t6-live-accept-runbook.md)) covering every Accept ¶
+as operator steps + PASS checks (forced failure is config-only — point the Vision group at a bogus
+model, reversible). Commit `2629053` — **code not pushed** (user's call). Suite **1001 green**, ruff
+clean; **independent review PASS** (no must-fix; two minors applied). **T6 is NOT done** — it ticks
+only when every Accept ¶ is verified **live**.
+**Next:** run the live T6 Accept per the runbook — **push**
+(user's call) → CI deploy (migrations 017+018 auto-apply) → **`voice-media-backfill`** → real-phone
+photo/voice/screenshot drills → group-edit forward-live → the both-kinds failure→placeholder→
+`rederive-capture` drill → merge-inherits-media → SQL smoke → final independent review; then tick T6.
+Or respawn.

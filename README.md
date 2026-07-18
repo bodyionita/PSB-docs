@@ -4,7 +4,7 @@ This repository is the **single source of truth for product and architecture dec
 It lives outside the code on purpose: the code repo (`../second-brain/`) contains only
 implementation plus a `CLAUDE.md` that points here.
 
-## Current status (snapshot — 2026-07-18)
+## Current status (snapshot — 2026-07-19)
 
 > This section is a **snapshot, updated in place** each session. The full session-by-session
 > history lives in **[08-logs/status-history.md](08-logs/status-history.md)** (append-only —
@@ -30,27 +30,29 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-18):** **M9 T6 tooling PREPARED; live drills PENDING** (implementation
-session). T5 is BUILT (the web surfacing package, commit `4adab51`; see
-[status-history](08-logs/status-history.md)). **T6 is the live M9 Accept** — a deploy + real-device
-milestone gated on the operator (push is the user's call; the phone captures are physical), so this
-session prepared everything the single T6 deploy needs, then paused. Built: the re-derive drill's
-**live trigger** — a new **`rederive-capture <capture_id>` CLI verb** (the `rederive_capture` seam had
-no live path; the HTTP endpoint lands at M9.5) that re-runs the VLM/STT → refreshes `raw_text` →
-reorganizes so a recovered description reaches the **node**; `build_capture_pipeline` gained opt-in
-`wire_media_derivation` (default **off** — reprocess-all still replays stored text, no VLM/STT re-run).
-Plus the **media-join SQL smoke** (`deploy/smoke/m9_media_join_smoke.sql`, the open T3 follow-up — the
-real joins against the prod DB) and an **executable Accept runbook**
-([08-logs/m9-t6-live-accept-runbook.md](08-logs/m9-t6-live-accept-runbook.md)) covering every Accept ¶
-as operator steps + PASS checks (forced failure is config-only — point the Vision group at a bogus
-model, reversible). Commit `2629053` — **code not pushed** (user's call). Suite **1001 green**, ruff
-clean; **independent review PASS** (no must-fix; two minors applied). **T6 is NOT done** — it ticks
-only when every Accept ¶ is verified **live**.
-**Next:** run the live T6 Accept per the [runbook](08-logs/m9-t6-live-accept-runbook.md) — **push**
-(user's call) → CI deploy (migrations 017+018 auto-apply) → **`voice-media-backfill`** → real-phone
-photo/voice/screenshot drills → group-edit forward-live → the both-kinds failure→placeholder→
-`rederive-capture` drill → merge-inherits-media → SQL smoke → final independent review; then tick T6.
-Or respawn.
+**Where we are (2026-07-19):** **M9 T6 live Accept STARTED then paused for a planning pivot; M9.6
+composite capture GRILLED TO BUILD-READY.** The M9 media stack (T1–T5) is shipped and **live on
+prod**: this session pushed it (`2629053`), CI deployed it (migrations **017+018** applied), the
+**`voice-media-backfill`** op ran, and **Accept ¶1** (real-phone photo → described/organized
+media-backed node, inline in NodePreview + lightbox + "see raw capture") + the **session gate**
+(`GET /api/v1/media/{id}` → **401** without a cookie) verified live. A capture-screen
+**preview-centering bug** found during ¶1 — the `Lightbox`/`CaptureDetailSheet` overlays are
+`position:fixed` but were trapped inside framer-motion-transformed capture rows — was fixed by
+**portaling both overlays to `<body>`** and **shipped** (`8579974`, deployed). Then the user
+requested **composite multi-part capture** (one capture carrying text + several photos + a voice
+note, organized together) — an architecture change, so per [09](09-session-protocol.md) the session
+**switched to a grilling/planning pass** and recorded
+**[ADR-061](adr/061-composite-multi-part-capture.md)** + a new
+**[M9.6](08-implementation-plan.md)** milestone: server-side **draft** compose → **one blended
+organize**; capture = typed text + 0..N photos + ≤1 voice; **per-node media attribution**;
+`raw_text` stays the cached assembled replay source (reprocess byte-parity). **M9 T6 is superseded
+by M9.6** — its remaining single-part drills fold into the M9.6 live Accept. **No composite code
+written yet** (planning pause).
+**Next:** implement **M9.6** against the approved plan ([08 §M9.6](08-implementation-plan.md) +
+[ADR-061](adr/061-composite-multi-part-capture.md)) — **strictly sequential** T1 (draft lifecycle +
+schema) → T2 (blended `_process` + assembly + concurrent derivation) → T3 (per-node attribution +
+organizer contract) → T4 (API views + fold endpoints) → T5 (compose web) → T6 (live M9.6 Accept,
+folding the M9 T6 drills). Or respawn.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

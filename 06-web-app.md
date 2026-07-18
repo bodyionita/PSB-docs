@@ -45,6 +45,15 @@ login header; kept as a single config constant so it's changeable at zero cost.
 ## Screens
 
 ### 1. Capture (home)
+
+> **M9.6 ([ADR-061](adr/061-composite-multi-part-capture.md)) turns this into a compose surface.**
+> Instead of three fire-immediately affordances, the home screen builds a **draft**: type text,
+> **attach multiple photos**, record **≤1 voice** — each part removable with an 'x' (the record
+> button inserts once; remove + re-add allowed) — and **nothing captures until Send** (enabled at
+> ≥1 part). The draft is server-side and **resumes** after app-close (+ Discard). Processing steps
+> are followable via a **deep-link to the capture's Activity run**. The single-part surface below
+> stands until the M9.6 build lands (08 §M9.6).
+
 - Giant record button → hold-or-tap to record (MediaRecorder, m4a/webm) → upload to
   `POST /capture/voice` → optimistic "captured ✓" animation; transcript appears in the
   feed when the pipeline finishes.
