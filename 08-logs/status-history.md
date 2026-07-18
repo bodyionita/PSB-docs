@@ -1224,3 +1224,18 @@ migration 018 apply + the backfill run are **T6**.
 **Next:** build **M9 T5** (web: the surfacing package — capture-strip image affordance, NodePreview
 media strip + lightbox + "see raw capture" sheet, themed voice player, list glyphs, HEIC→JPEG,
 Settings Vision group + Claude-route warning; `depends-on: T4`), then T6 (live Accept); or respawn.
+
+**Where we are (2026-07-18) — superseded by the T6-tooling snapshot.** **M9 T5 BUILT
+(implementation session)** — the web **media surfacing package** ([ADR-060](../adr/060-node-media-linkage-and-voice-unification.md)
+§7–§8 + the original T4 web scope). A shared **`ui/media/`** package: the **NodePreview media strip**
+(lazy photo thumbnails, themed voice player, `pending` shimmer / `unavailable` broken tiles — never a
+silent gap), a full-screen **lightbox** (framer-motion zoom, swipe/Esc dismiss, left/right nav across
+a node's photos, reduced-motion aware), and the **"see raw capture" sheet** — a shared
+**`CaptureDetailBody`** (source badge, status, media, raw text, NodeChips) that the Activity ›
+Captures expanded row now renders too. The **capture screen** gains a photo affordance
+(`POST /capture/image`) with **lazy client-side HEIC→JPEG** (`heic2any` dynamic-imported only on a
+HEIC pick → synthetic `photo.jpg`). Search-result + chat-source cards get a **📷/🎙 glyph** off
+`media_kinds`. **Settings → Models** renders the **Vision group** with the inline **Claude-route
+warning**. **tsc + eslint clean, `vite build` green**; **independent review PASS** — one must-fix
+(lightbox index reset on ancestor re-render) resolved + one minor simplification applied. Commit
+`4adab51` — **code not pushed** (user's call). **Next:** build **M9 T6 — live M9 Accept**.

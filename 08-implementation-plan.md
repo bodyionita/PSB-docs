@@ -1396,7 +1396,45 @@ seed only on the closed→open transition) + one minor simplification (`drag={!r
 Commit `4adab51`; **code not pushed** (user's call). The live migration 017+018 apply, the backfill
 run, and the real-device photo/voice/screenshot/re-derive drills are **T6**.
 
+**Progress — T6 tooling prepared (2026-07-18, implementation session); live drills PENDING.** T6 is
+a **live** milestone — it needs a prod deploy, real-device captures, and a running DB, all gated on
+the operator (push is the user's call; the phone captures are physical). This session prepared
+everything the live pass needs so the single T6 deploy carries it, then paused for the operator:
+- **The re-derive drill's live trigger** — a new **`rederive-capture <capture_id>` CLI verb**
+  (`python -m app.cli rederive-capture …`). The `rederive_capture` seam (T4, ADR-060 §5) had **no
+  live path** — no HTTP endpoint until M9.5's `POST /admin/connector/rederive` — so the
+  failure→placeholder→re-derive drill couldn't run end-to-end. The verb re-runs the VLM/STT on an
+  `unavailable` image/voice capture, refreshes `raw_text`, reorganizes so the recovered text reaches
+  the **node** (not just `GET /media/{id}`). It parallels `reindex`/`reprocess-all` having a CLI verb
+  for the recovery drill "without going through the authenticated API" (cli.py's stated purpose) — an
+  in-pattern build pin, not new architecture; the M9.5 HTTP endpoint is still the connector-facing
+  trigger. **`build_capture_pipeline` gained opt-in `wire_media_derivation`** (default **off** — the
+  reprocess-all path keeps derivation UNwired so it replays stored `raw_text`, never re-running the
+  VLM/STT; the default path is byte-equal to before). Closes the **T6/M9.5 ad-hoc re-derive trigger**
+  follow-up for the ad-hoc (CLI) side; the connector HTTP side stays M9.5.
+- **The media-join SQL smoke** (the open **T3 follow-up**) — `deploy/smoke/m9_media_join_smoke.sql`,
+  a read-only 9-block script exercising the real joins against the prod DB (not fakes): `media` /
+  `node_media` tables + indexes, `get_node` `media[]` join, search/chat `media_kinds` array_agg,
+  `get_by_capture_id`, no dangling links / no tombstone strand (merge repoint), backfill verification.
+- **The executable Accept runbook** — [08-logs/m9-t6-live-accept-runbook.md](08-logs/m9-t6-live-accept-runbook.md):
+  every Accept ¶ as operator steps + a PASS/verify check (deploy → backfill → phone photo/voice/
+  screenshot → group-edit forward-live → the both-kinds failure drill → merge-inherits-media → SQL
+  smoke → independent review). Forced-failure needs **no code** — point the Vision group at a bogus
+  model (reversible, config-only), which also exercises group-edit-forward-live.
+
+Commit `2629053` (server) — **code not pushed** (user's call). Suite **1001 green**, ruff clean.
+**Independent review PASS** (no must-fix); two minors applied in-code (a wiring-flag regression test
+that locks reprocess's no-derivation invariant; honest "re-derive complete" log wording vs
+overstating "recovered"). **T6 is NOT done** — it's ticked only when every Accept ¶ is verified
+**live** per the runbook (needs the operator to push+deploy and drive the phone).
+
 *Decisions recorded (build-time pins the plan delegated):*
+- **The ad-hoc re-derive live trigger is a CLI verb, not an HTTP endpoint (T6)** — `rederive-capture
+  <capture_id>`. The follow-up left the mechanism open ("call the seam / the M9.5 endpoint"); a CLI
+  verb is the in-pattern choice for an operator-driven recovery drill (mirrors `voice-media-backfill`
+  + reindex/reprocess), keeps the drill off the yet-unbuilt M9.5 HTTP surface, and stays useful as an
+  operator recovery path after M9.5's connector endpoint lands (the reindex/reprocess CLI-∥-endpoint
+  duality). It re-runs the VLM/STT (derivation wired), unlike reprocess (replays stored text).
 - **HEIC decode needs a wasm lib (T5)** — browsers (Chrome/Android) can't decode HEIC, so a
   pure-canvas convert is impossible; `heic2any` (libheif wasm) is the converter, **dynamically
   imported** so it loads only on an actual HEIC pick (ADR-060 §8 "lazy-loaded converter" — verified

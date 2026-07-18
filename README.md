@@ -30,27 +30,27 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-18):** **M9 T5 BUILT** (implementation session) — the web **media surfacing
-package** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §7–§8 + the original T4
-web scope). A shared **`ui/media/`** package: the **NodePreview media strip** (lazy photo thumbnails,
-themed voice player, `pending` shimmer / `unavailable` broken tiles — never a silent gap), a
-full-screen **lightbox** (framer-motion zoom, swipe/Esc dismiss, left/right nav across a node's
-photos, reduced-motion aware), and the **"see raw capture" sheet** — a shared **`CaptureDetailBody`**
-(source badge, status, the capture's media, raw text, NodeChips) that the Activity › Captures
-expanded row now renders too (no new surface area). The **capture screen** gains a photo affordance
-(`POST /capture/image`) with **lazy client-side HEIC→JPEG** (`heic2any` dynamic-imported only on a
-HEIC pick → synthetic `photo.jpg`; its own build chunk, never on the jpg/png path); Recent-captures
-rows + Activity show the photo/voice inline. Search-result + chat-source cards get a tiny **📷/🎙
-glyph** off `media_kinds` (no thumbnails in lists). **Settings → Models** renders the **Vision group**
-(auto, off `GET /settings`) with the inline **Claude-route warning** (active/fallback on a `claude`
-provider → images silently dropped). Wire types added (`node_media`/`media_kinds`/`CaptureView.media`,
-`vision` routing group); `NodeRefChips` moved to `ui/`. **tsc + eslint clean, `vite build` green**;
-**independent review PASS** — one must-fix (lightbox index reset on ancestor re-render) resolved +
-one minor simplification applied. Commit `4adab51` — **code not pushed** (user's call).
-**Next:** build **M9 T6 — live M9 Accept**: deploy (migrations 017+018 apply, **backfill op run**),
-real-phone photo → node inline, voice **playable on its node** (+ Range/206 scrub), screenshot
-attribution, group-edit forward-live, failure→placeholder→`rederive_capture` drill for **both kinds**,
-merge-inherits-media check, media-join SQL smoke; independent review. `depends-on: T5`. Or respawn.
+**Where we are (2026-07-18):** **M9 T6 tooling PREPARED; live drills PENDING** (implementation
+session). T5 is BUILT (the web surfacing package, commit `4adab51`; see
+[status-history](08-logs/status-history.md)). **T6 is the live M9 Accept** — a deploy + real-device
+milestone gated on the operator (push is the user's call; the phone captures are physical), so this
+session prepared everything the single T6 deploy needs, then paused. Built: the re-derive drill's
+**live trigger** — a new **`rederive-capture <capture_id>` CLI verb** (the `rederive_capture` seam had
+no live path; the HTTP endpoint lands at M9.5) that re-runs the VLM/STT → refreshes `raw_text` →
+reorganizes so a recovered description reaches the **node**; `build_capture_pipeline` gained opt-in
+`wire_media_derivation` (default **off** — reprocess-all still replays stored text, no VLM/STT re-run).
+Plus the **media-join SQL smoke** (`deploy/smoke/m9_media_join_smoke.sql`, the open T3 follow-up — the
+real joins against the prod DB) and an **executable Accept runbook**
+([08-logs/m9-t6-live-accept-runbook.md](08-logs/m9-t6-live-accept-runbook.md)) covering every Accept ¶
+as operator steps + PASS checks (forced failure is config-only — point the Vision group at a bogus
+model, reversible). Commit `2629053` — **code not pushed** (user's call). Suite **1001 green**, ruff
+clean; **independent review PASS** (no must-fix; two minors applied). **T6 is NOT done** — it ticks
+only when every Accept ¶ is verified **live**.
+**Next:** run the live T6 Accept per the [runbook](08-logs/m9-t6-live-accept-runbook.md) — **push**
+(user's call) → CI deploy (migrations 017+018 auto-apply) → **`voice-media-backfill`** → real-phone
+photo/voice/screenshot drills → group-edit forward-live → the both-kinds failure→placeholder→
+`rederive-capture` drill → merge-inherits-media → SQL smoke → final independent review; then tick T6.
+Or respawn.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
