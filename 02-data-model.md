@@ -203,7 +203,9 @@ the store: a plain reindex preserves them, a full DB wipe leaves profile-search 
 `source` column** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — `web` default \|
 `mcp` \| `chat` (M6) \| **`instagram` (M9.5)** \| later `slack`; distinct from `kind` =
 text/voice **\| `image` (M9, [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §6 —
-raw file kept under `/srv/data/media/captures/`, vision description derived)**), threaded to
+raw file kept under `/srv/data/media/capture/` (the media `source`=`capture` layout — ADR-057 §3's
+`captures/` sketch reconciled to `<source>` here, as with the `media` table name), vision
+description derived; the fenced description becomes the capture's `raw_text`)**), threaded to
 the node frontmatter `source:` + `agent_runs` so MCP-driven captures are activity-visible. **M6 task 1 adds
 a nullable `source_ref` column** ([ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §1, mirroring
 `nodes.source_ref`): an **endorsed** chat candidate materializes a `captures` row (`source=chat`) whose

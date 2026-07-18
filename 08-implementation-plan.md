@@ -1257,8 +1257,10 @@ re-derive then recovers it; media serve only behind the session gate.
       (photo→`vision`, voice→STT; bounded retries → `unavailable` → placeholder) + targeted
       re-derive core (own `agent_runs` row) + the §5 screenshot-attribution description prompt.
       `batch-A, parallel-with: T1` (calls vision through the routing-service seam)
-- [ ] **T3 — image capture pipeline (server)**: `POST /capture/image` (kind `image`), raw kept,
-      describe → organize (fenced), retry/placeholder path. `depends-on: T1+T2`
+- [x] **T3 — image capture pipeline (server)** — done `0d63067`, independent review **PASS** (one
+      must-fix caught + resolved + re-reviewed PASS). `POST /capture/image` (kind `image`), raw kept,
+      describe → organize (fenced `<photo: …>`), driven failure→placeholder path, + the re-derive→node
+      recovery seam. `depends-on: T1+T2`
 - [ ] **T4 — web**: capture-strip image affordance + thumbnail/status, photo on capture/node
       (via `GET /media/{id}`), Settings Vision group verified (auto-renders from `GET /settings`).
       `depends-on: T3`
@@ -1275,6 +1277,27 @@ documented option, not a failure). Commits: `fff261d` (T1) · `b1d1aa5` (T2) · 
 config for the VLMs) · `d592cc4` (review hardenings). Full suite **977 green**, ruff clean; **code
 not pushed** (user's call). Live migration apply is T5.
 
+**Progress — T3 built (2026-07-18, implementation session).** `POST /capture/image` end-to-end,
+built **sequentially** (single task, no fan-out): the image leg mirrors voice — raw image kept
+under the media substrate, its vision description **derived** (`derive_until_settled` drives the
+per-invocation retries so a failure walks retry→`unavailable`→placeholder **without a human** — the
+recorded "T3/derivation trigger" follow-up, now closed), then **organized as fenced `<photo: …>`**
+text (the derived description is the organize/reprocess replay source, exactly as a transcript is
+for voice). The organizer prompt gained the **binding ADR-057 §5 screenshot-attribution rule**
+(content in a `<photo: …>` placeholder is shared material, never the person's words; prompt bumped
+**v7**). A new **`redescribe_image_capture`** capture-layer seam closes the re-derive→graph loop:
+re-derive the photo → refresh the capture's fenced `raw_text` → reorganize, so a recovered
+description reaches the **node**, not just `GET /media/{id}`. `CaptureView.media` (read-time
+`media.capture_id` join) gives the web the photo + status badge off the capture; new **`deriving`**
+capture status (image sibling of `transcribing`). **No migration** (captures.kind/status are plain
+text; the `media` table + fk + index exist from T2). Commit `0d63067`; full suite **991 green**,
+ruff + format clean; **code not pushed** (user's call). **Independent review PASS** — it caught one
+**must-fix** (targeted re-derive recovered only the `media` row, not the organized node — no wired
+path to the graph, plus a misleading test comment); resolved by `redescribe_image_capture` above and
+**re-reviewed PASS on the fresh diff**. Minors resolved in-code: mime derived from the validated
+extension (no client-`content_type` trust), organizer rule also names the `unavailable` placeholder
+form, deduped ext helper.
+
 *Decisions recorded (build-time pins the plan delegated):*
 - **Vision model seeds** (README §5 "ask the user when reached"): **Groq
   `meta-llama/llama-4-scout-17b-16e-instruct`** primary → **Nebius `Qwen/Qwen2.5-VL-72B-Instruct`**
@@ -1285,12 +1308,37 @@ not pushed** (user's call). Live migration apply is T5.
   in [02-data-model](02-data-model.md) + the M9.5 T1 bullet below (ADRs are immutable, so the pin
   lives in the data-model contract the ADR points to). Confirmed by the T2 independent review as a
   defensible build-time pin once the docs name it.
+- **Ad-hoc media folder = `capture`** (T3): the media `source` for an ad-hoc photo is **`capture`**,
+  so the on-disk layout is **`/srv/data/media/capture/<id>.<ext>`** (`MediaFiles.relative_path` uses
+  `<source>/<name>`). ADR-057 §3 sketched `captures/` (plural); reconciled to the `<source>` layout
+  in [02-data-model](02-data-model.md) — the same singular/plural reconciliation as the table name.
+- **An image capture's derived description is its `raw_text`** (T3): the fenced `<photo: …>` text is
+  stored as `captures.raw_text` (the organize/reprocess replay source), exactly as a voice transcript
+  is — so reprocess-all re-organizes the stored fence and does **not** re-run the VLM (parity with
+  voice not re-transcribing); `redescribe_image_capture` is the path that refreshes it after a
+  targeted re-derive.
 
 *Independent-review follow-ups (non-blocking, for the tasks noted):*
-- **T3/derivation trigger:** T2 ships the derivation *core*; nothing yet drives a `pending` item to
-  `unavailable` on a schedule (the no-arg `rederive` scans `unavailable` only). T3's capture
-  pipeline must re-invoke `derive_one` (or a drain) so the failure→placeholder path completes
-  without a human. ADR-057 §3 mentions retry *backoff* — **deferred**; retries are per-invocation.
+- ~~**T3/derivation trigger**~~ **— DONE in T3.** `derive_until_settled` drives the per-invocation
+  retries so failure→`unavailable`→placeholder completes without a human. ADR-057 §3 retry *backoff*
+  stays **deferred** (retries are back-to-back per invocation; a scheduled backoff is a later nicety).
+- **T5/M9.5 — ad-hoc re-derive trigger + live recovery drill:** the `redescribe_image_capture` seam
+  (re-derive → refresh fenced `raw_text` → reorganize the node) is built + unit-tested, but **no HTTP
+  trigger exposes it yet** — the ad-hoc re-derive endpoint lands with the connector re-derive surface
+  (`POST /admin/connector/rederive`, M9.5). T5's "failure→placeholder→re-derive drill" exercises it
+  end-to-end (call the seam / the M9.5 endpoint). Until then, targeted re-derive alone recovers only
+  `media.derived_text`; the node recovers when the seam is invoked.
+- **T4 — PWA image upload contract:** the server requires a **filename with a valid extension**
+  (jpg/png/webp/heic/heif) — mime is derived from it (client `content_type` is not trusted), matching
+  the voice contract. The PWA camera/file input must send a real filename (a bare `canvas.toBlob()`
+  needs a synthetic `photo.jpg` name), or the server 400s.
+- **T4/T5 — HEIC→VLM:** HEIC/HEIF are accepted + stored raw, but whether the current VLMs decode HEIC
+  is unverified; if not, a HEIC photo degrades to placeholder (the designed failure path). Fix is
+  **client-side HEIC→JPEG conversion at capture (T4)** or a server transcode — decide at T4/T5 (no
+  image lib in `server/pyproject.toml` today; adding one is the server-transcode cost).
+- **T3 — media-join SQL smoke (open before Accept):** `PgMediaStore.get_by_capture_id` + the
+  `CaptureView.media` read-time join (`_MEDIA_REF_JOIN`) are unit-tested via fakes only (same CI
+  boundary as `_node_refs`); verify against a real DB in the T5 smoke pass.
 - **T4/settings guard:** a user could manually route the `vision` group to a Claude model, which
   silently drops images (ADR-057 §4 — Claude has no vision path). Consider a Settings warning/guard
   when T4 renders the group. VLMs also appear in the chat composer's model list (one shared catalog,

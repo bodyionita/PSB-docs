@@ -30,22 +30,25 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-18):** **M9 batch-A BUILT** (implementation session) — **T1 vision routing
-group** + **T2 media substrate** ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md)). The
-4th UI-editable `vision` routing group (Groq VLM `llama-4-scout` primary → Nebius `Qwen2.5-VL-72B`
-fallback, effort N/A; OpenAI-compatible provider gains `image_url` parts + N-models-per-endpoint),
-the `media` table (migration 017; serves ad-hoc captures now via `capture_id`, connector media at
-M9.5), `/srv/data/media/<source>/…` storage (R2-synced free), the resumable status-tracked
-derivation stage (photo→`vision`, voice→STT; bounded retries → `unavailable` → placeholder;
-targeted re-derive core), the §5 screenshot-attribution description prompt, and session-gated
-`GET /media/{id}`. Both tasks passed a **fresh independent review** (PASS, no must-fix; two cheap
-hardenings applied). Full suite **977 green**, ruff clean; commits `fff261d`/`b1d1aa5`/`dac5a72`/
-`d592cc4` — **code not pushed** (user's call). Build-time pins recorded in
-[08 §M9](08-implementation-plan.md): vision model seeds + the **`media` table name** (was sketched
-`connector_media` in ADR-057 §3; reconciled in [02](02-data-model.md) + the M9.5 T1 bullet).
-**Next:** **M9 T3** (image capture pipeline: `POST /capture/image` → describe → organize; wires the
-derivation trigger — `depends-on: T1+T2`), then T4 (web) → T5 (live Accept incl. migration apply);
-or respawn.
+**Where we are (2026-07-18):** **M9 T3 BUILT** (implementation session) — **ad-hoc image capture**
+end-to-end ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §3/§5/§6). `POST /capture/image`
+(kind `image`) mirrors the voice leg: raw image kept under the media substrate → vision description
+**derived** (`derive_until_settled` drives the per-invocation retries so a failure walks
+retry→`unavailable`→placeholder **without a human** — closing the "T3/derivation trigger" follow-up)
+→ **organized as fenced `<photo: …>`** text (the derived description is the organize/reprocess replay
+source, like a voice transcript). The organizer prompt gained the **binding §5
+screenshot-attribution rule** (`<photo: …>` content is shared material, never the person's words;
+prompt bumped **v7**). New **`redescribe_image_capture`** seam closes the re-derive→graph loop
+(re-derive → refresh fenced `raw_text` → reorganize, so a recovered description reaches the **node**,
+not just `GET /media/{id}`); its HTTP trigger + live drill land at T5/M9.5. `CaptureView.media`
+(read-time join) surfaces the photo + status badge off the capture; new `deriving` capture status.
+**No migration** (captures.kind/status are plain text; the `media` table + fk exist from T2).
+Independent review **PASS** — one must-fix (re-derive recovered only the media row, not the node)
+caught, resolved by the recovery seam, **re-reviewed PASS**. Full suite **991 green**, ruff + format
+clean; commit `0d63067` — **code not pushed** (user's call).
+**Next:** **M9 T4** (web: capture-strip image affordance + thumbnail/status, photo on capture/node
+via `GET /media/{id}`, Settings Vision group verified + the Claude-route guard; `depends-on: T3`),
+then T5 (live Accept incl. migration apply + the re-derive drill); or respawn.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

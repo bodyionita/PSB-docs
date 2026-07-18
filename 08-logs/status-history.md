@@ -1146,3 +1146,20 @@ removed entirely**, **Slack → M12**). Contract docs 00–08 updated; task list
 parallel-eligibility live in [08 §M9/§M9.5](../08-implementation-plan.md). **Paused before
 implementation** per [09](../09-session-protocol.md) — **no code this session.**
 **Next:** build **M9 T1+T2** (batch-A: vision routing group ∥ media substrate), or respawn.
+
+**Where we are (2026-07-18):** **M9 batch-A BUILT** (implementation session) — **T1 vision routing
+group** + **T2 media substrate** ([ADR-057](../adr/057-multimodal-media-ingestion-substrate.md)). The
+4th UI-editable `vision` routing group (Groq VLM `llama-4-scout` primary → Nebius `Qwen2.5-VL-72B`
+fallback, effort N/A; OpenAI-compatible provider gains `image_url` parts + N-models-per-endpoint),
+the `media` table (migration 017; serves ad-hoc captures now via `capture_id`, connector media at
+M9.5), `/srv/data/media/<source>/…` storage (R2-synced free), the resumable status-tracked
+derivation stage (photo→`vision`, voice→STT; bounded retries → `unavailable` → placeholder;
+targeted re-derive core), the §5 screenshot-attribution description prompt, and session-gated
+`GET /media/{id}`. Both tasks passed a **fresh independent review** (PASS, no must-fix; two cheap
+hardenings applied). Full suite **977 green**, ruff clean; commits `fff261d`/`b1d1aa5`/`dac5a72`/
+`d592cc4` — **code not pushed** (user's call). Build-time pins recorded in
+[08 §M9](../08-implementation-plan.md): vision model seeds + the **`media` table name** (was sketched
+`connector_media` in ADR-057 §3; reconciled in [02](../02-data-model.md) + the M9.5 T1 bullet).
+**Next:** **M9 T3** (image capture pipeline: `POST /capture/image` → describe → organize; wires the
+derivation trigger — `depends-on: T1+T2`), then T4 (web) → T5 (live Accept incl. migration apply);
+or respawn.

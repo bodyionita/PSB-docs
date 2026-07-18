@@ -36,7 +36,7 @@ layer** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) — MCP tool 
 |---|---|
 | `POST /capture/text` | `{ "text", "created_at"?: iso }` → `202 { capture_id, status: "received" }`; pipeline continues in background |
 | `POST /capture/voice` | multipart `file` (m4a/webm/ogg/mp3/wav, ≤25 MB) → same `202` |
-| `GET /captures?limit=20` | recent captures, newest first: `[{ capture_id, kind, status, raw_text, node_paths[], node_refs[], source, follow_up_question, follow_up_answer, error, created_at, updated_at }]` (`node_refs`/`source` added M8.1 T4 — see the addendum below) |
+| `GET /captures?limit=20` | recent captures, newest first: `[{ capture_id, kind, status, raw_text, node_paths[], node_refs[], source, media, follow_up_question, follow_up_answer, error, created_at, updated_at }]` (`node_refs`/`source` added M8.1 T4 — see the addendum below). **M9 T3:** `kind` gains **`image`**, `status` gains **`deriving`** (photo→description phase, sibling of `transcribing`), and `media` = the backing media item `{ id, kind, status }` for an image capture (the web renders the photo via `GET /media/{id}` + a derivation-status badge), **null** otherwise |
 | `GET /captures/{id}` | pipeline state (same shape as above) |
 | `POST /captures/{id}/retry` | re-run from first incomplete step; `409` unless `failed` |
 | `POST /captures/{id}/follow-up` | `{ "answer" }` → Pass-2 re-organize, replaces the capture's nodes ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)); `202`; `409` if no nudge pending |
