@@ -30,29 +30,21 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9 T6 live Accept STARTED then paused for a planning pivot; M9.6
-composite capture GRILLED TO BUILD-READY.** The M9 media stack (T1–T5) is shipped and **live on
-prod**: this session pushed it (`2629053`), CI deployed it (migrations **017+018** applied), the
-**`voice-media-backfill`** op ran, and **Accept ¶1** (real-phone photo → described/organized
-media-backed node, inline in NodePreview + lightbox + "see raw capture") + the **session gate**
-(`GET /api/v1/media/{id}` → **401** without a cookie) verified live. A capture-screen
-**preview-centering bug** found during ¶1 — the `Lightbox`/`CaptureDetailSheet` overlays are
-`position:fixed` but were trapped inside framer-motion-transformed capture rows — was fixed by
-**portaling both overlays to `<body>`** and **shipped** (`8579974`, deployed). Then the user
-requested **composite multi-part capture** (one capture carrying text + several photos + a voice
-note, organized together) — an architecture change, so per [09](09-session-protocol.md) the session
-**switched to a grilling/planning pass** and recorded
-**[ADR-061](adr/061-composite-multi-part-capture.md)** + a new
-**[M9.6](08-implementation-plan.md)** milestone: server-side **draft** compose → **one blended
-organize**; capture = typed text + 0..N photos + ≤1 voice; **per-node media attribution**;
-`raw_text` stays the cached assembled replay source (reprocess byte-parity). **M9 T6 is superseded
-by M9.6** — its remaining single-part drills fold into the M9.6 live Accept. **No composite code
-written yet** (planning pause).
-**Next:** implement **M9.6** against the approved plan ([08 §M9.6](08-implementation-plan.md) +
-[ADR-061](adr/061-composite-multi-part-capture.md)) — **strictly sequential** T1 (draft lifecycle +
-schema) → T2 (blended `_process` + assembly + concurrent derivation) → T3 (per-node attribution +
-organizer contract) → T4 (API views + fold endpoints) → T5 (compose web) → T6 (live M9.6 Accept,
-folding the M9 T6 drills). Or respawn.
+**Where we are (2026-07-19):** **M9.6 composite capture — IMPLEMENTATION IN PROGRESS (T1 done).**
+A single-session build against the approved plan ([08 §M9.6](08-implementation-plan.md) +
+[ADR-061](adr/061-composite-multi-part-capture.md)); the user directed all M9.6 tasks in one pass
+(no per-task pause), agreeing to pushes + postponing manual/live drills to T6. **T1 (draft lifecycle
++ schema) is committed** (`e785554`, code repo — **not yet deployed**; M9.6 deploys once at T6):
+migration **019** (`captures.text_body`, `media.part_ordinal`, `captures_single_active_draft` partial
+unique index), the server draft surface (open/resume · part add/remove with ≤1-voice + ordinals ·
+text edit · submit ≥1-part gate · discard · 7-day GC; orphan-sweep skips drafts), draft endpoints +
+`DraftView`, and a **baseline sequential composite `_process`** so submit works end-to-end. Full
+suite **1026 pass**, ruff clean. See the **T1 progress note** in [08 §M9.6](08-implementation-plan.md).
+**Next:** continue the sequential M9.6 build — **T2** (concurrent-bounded derivation + cached indexed
+part markers + per-part `agent_runs`) → **T3** (per-node attribution + organizer `parts:[…]`) →
+**T4** (CaptureView media→list + fold the one-shot endpoints + Activity deep-link) → **T5** (compose
+web) → **T6** (deploy + live Accept, folding the M9 T6 drills). Independent review runs as a
+server-diff `/code-review` pass after T4.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

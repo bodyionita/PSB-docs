@@ -1630,11 +1630,11 @@ Independent review.
 
 **Tasks** (strictly sequential — the pipeline + organizer contract is shared across T2/T3, so no
 fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequential is the default):
-- [ ] **T1 — draft lifecycle + schema (server)**: additive migration (`captures.text_body`,
-      `status` `draft`, media **part ordinal**, `kind` `composite`); the draft endpoints
-      (open/part/delete/text/submit), **one active draft** (resume + discard), **≤1 voice** +
-      **≥1-part Send** enforcement; orphan-sweep **skips `draft`**; **7-day draft GC**. Owns the
-      migration. `first, solo`
+- [x] **T1 — draft lifecycle + schema (server)** — **DONE (2026-07-19)**: additive migration
+      (`captures.text_body`, `status` `draft`, media **part ordinal**, `kind` `composite`); the draft
+      endpoints (open/part/delete/text/submit), **one active draft** (resume + discard), **≤1 voice**
+      + **≥1-part Send** enforcement; orphan-sweep **skips `draft`**; **7-day draft GC**. Owns the
+      migration. `first, solo` (see T1 progress note below)
 - [ ] **T2 — blended `_process` + assembly + concurrent derivation (server)**: generalize `_process`
       to N parts; **deferred concurrent-bounded** derivation (config cap); assemble `raw_text` =
       `text_body` + ordinal-ordered **indexed part markers**, **cache** it (reprocess parity);
@@ -1653,6 +1653,30 @@ fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequenti
 - [ ] **T6 — live M9.6 Accept**: deploy (migration applies), real-phone **composite** drills +
       the **folded M9 T6 single-part drills** (above), reprocess byte-parity check, SQL smoke,
       independent review. `depends-on: T5`
+
+**Progress — T1 done (2026-07-19).** Migration **019** (`captures.text_body`, `media.part_ordinal`,
++ the `captures_single_active_draft` **partial unique index** = the DB backstop for one-active-draft)
+is additive + reversible; `compute_head → 019`. Server: `capture_store` gains `text_body`, the
+`DRAFT`/`KIND_COMPOSITE` constants, `NON_SWEEPABLE = terminal ∪ {draft}` (orphan-sweep **skips
+drafts**), and `get_active_draft`/`set_text_body`/`delete`/`list_drafts_created_before`;
+`media_store` gains `part_ordinal` (ordered `part_ordinal NULLS LAST, created_at`), `delete`, and
+`MediaFiles.delete`. `CapturePipeline` adds the full draft surface —
+`open_or_resume_draft` (mints `kind=composite`, `status=draft`, node `source=web`; **resumes** the
+one open draft), `add_draft_part` (raw-first, `pending`, ordinal = max+1, **≤1 voice** server-side),
+`draft_parts`, `remove_draft_part` (hard-removes file+row; ordinals **not** renumbered),
+`set_draft_text`, `submit_draft` (**≥1 non-empty part** or `EmptyDraft`; flips `draft→received`,
+spawns `_process`; idempotent — `DraftNotOpen` on a non-draft), `discard_draft`, and
+`gc_stale_drafts` (7-day, boot-run in `main.py` after `sweep_orphans`). New exceptions
+`DraftNotOpen`/`VoicePartLimit`/`EmptyDraft` → 409/409/400 in the router (`POST /capture/draft`,
+`POST …/part`, `DELETE …/part/{id}`, `PUT …/text`, `POST …/submit`, `DELETE …/draft`); new models
+`DraftView`/`DraftPartView`/`DraftTextRequest`. Config `draft_gc_max_age_days=7`. A **baseline
+composite `_process`** landed (sequential derive → assemble `text_body` + rendered parts → organize,
+all-to-all media link) so submit works end-to-end now; **T2 makes derivation concurrent + adds the
+cached indexed part markers + per-part `agent_runs`, T3 adds per-node attribution.** Tests: new
+`test_composite_draft.py` (14, lifecycle/enforcement/sweep/GC end-to-end on fakes) + 11 router tests;
+full suite **1026 pass**, ruff clean. **Not yet deployed** (M9.6 deploys once at T6). Independent
+review deferred to a server-diff `/code-review` pass after T4 (per the user's one-session directive
++ [09] Reversal clause); manual/live drills postponed to T6.
 
 ## M10 — Reflection agent (+ push notifications)
 
