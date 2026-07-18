@@ -30,24 +30,27 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-18):** **M9 REPLANNED — [ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
-recorded** (planning session, grilled decision-by-decision). The ask — *see the images/media a node
-references, in-app and inline, + a "see raw capture" affordance, voice included* — exceeded the
-approved T4 (whose "photo on the node" accept line was unbuildable: media hung off captures with no
-node→capture reverse path), so it was grilled + recorded, **not built**. **ADR-060 decisions:**
-first-class **`node_media`** link (migration 018; content-nodes-only policy, `MergeCore` repoint,
-derived-tier — rebuilt by organize/retry/reorganize/rederive/reprocess), **voice unification**
-(voice mints `media`, STT through the T2 derivation engine, **symmetric placeholder-degrade** —
-`failed` = infra only; kind-aware **`rederive_capture`**; legacy-voice **relocate+backfill op**),
-`GET /nodes/{id}.media[]` + `media_kinds` list glyphs, the **surfacing UX package** (NodePreview
-media strip + lightbox + shared capture-detail sheet, themed voice player, glyphs-only lists,
-nothing on the Map), client-side **HEIC→JPEG** at capture, video = summary + **1–2 representative
-keyframe thumbnails** (M9.5 refinement of ADR-057 §2); MCP media exposure = backlog. **M9
-restructured:** open T4/T5 superseded by **T4 (server: substrate + voice) → T5 (web: surfacing) →
-T6 (live Accept: deploy + backfill + both-kind re-derive drill)** — strictly sequential; contracts
-updated (02 / 03 / 04 / 06 / 08). **No code this session.**
-**Next:** build **M9 T4** (server: media–node substrate + voice unification; `depends-on: T3`),
-then T5 (web) → T6 (live Accept); or respawn.
+**Where we are (2026-07-18):** **M9 T4 BUILT** (implementation session) — server **media–node
+substrate + voice unification** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+§1–§6). The first-class **`node_media`** link (migration 018) makes a node's media visible:
+derived-tier, rebuilt on **every** content-node write (organize/retry/reorganize/`rederive_capture`/
+reprocess) keyed on the raw-truth `media_id`, **content-nodes-only** (§2), and **repointed
+loser→survivor** by `MergeCore` so a merged survivor inherits the loser's media. **Voice unified onto
+the T2 derivation engine**: `create_voice_capture` mints a `voice` `media` row under the uniform
+`/srv/data/media/capture/…` layout, STT runs through `derive_until_settled`, the transcript mirrors
+**plain** to `captures.raw_text` (the person's words, unlike the `<photo: …>` fence); **symmetric
+placeholder-degrade** (§6) — a persistent STT failure walks retry → `unavailable` → the
+`<voice note — transcript unavailable>` placeholder and organizes anyway (**never `failed`**;
+`failed` = true infra only). `redescribe_image_capture` → kind-aware **`rederive_capture`**. Read
+side: **`GET /nodes/{id}.media[]`** + **`media_kinds`** glyphs on search results & chat sources.
+An **idempotent, degrading voice-media backfill op** (CLI `voice-media-backfill`) relocates legacy
+voice audio → mints rows → links `node_media`; wired into `build_capture_pipeline` so a CLI
+reprocess-all re-links too. Full suite **999 green**, ruff + format clean; **independent review PASS**
+(no must-fix; two minors resolved). Commit `1a1528d` — **code not pushed** (user's call). Live
+migration 018 apply + the backfill run are **T6**.
+**Next:** build **M9 T5** (web: the surfacing package — capture-strip image affordance, NodePreview
+media strip + lightbox + "see raw capture" sheet, themed voice player, list glyphs, HEIC→JPEG,
+Settings Vision group + Claude-route warning; `depends-on: T4`), then T6 (live Accept); or respawn.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

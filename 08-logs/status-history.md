@@ -1183,3 +1183,22 @@ clean; commit `0d63067` — **code not pushed** (user's call).
 **Next:** **M9 T4** (web: capture-strip image affordance + thumbnail/status, photo on capture/node
 via `GET /media/{id}`, Settings Vision group verified + the Claude-route guard; `depends-on: T3`),
 then T5 (live Accept incl. migration apply + the re-derive drill); or respawn.
+
+**Where we are (2026-07-18):** **M9 REPLANNED — ADR-060 recorded** (planning session, grilled
+decision-by-decision). The ask — *see the images/media a node references, in-app and inline, + a
+"see raw capture" affordance, voice included* — exceeded the approved T4 (whose "photo on the node"
+accept line was unbuildable: media hung off captures with no node→capture reverse path), so it was
+grilled + recorded, **not built**. **ADR-060 decisions:** first-class **`node_media`** link
+(migration 018; content-nodes-only policy, `MergeCore` repoint, derived-tier — rebuilt by
+organize/retry/reorganize/rederive/reprocess), **voice unification** (voice mints `media`, STT
+through the T2 derivation engine, **symmetric placeholder-degrade** — `failed` = infra only;
+kind-aware **`rederive_capture`**; legacy-voice **relocate+backfill op**), `GET /nodes/{id}.media[]` +
+`media_kinds` list glyphs, the **surfacing UX package** (NodePreview media strip + lightbox + shared
+capture-detail sheet, themed voice player, glyphs-only lists, nothing on the Map), client-side
+**HEIC→JPEG** at capture, video = summary + **1–2 representative keyframe thumbnails** (M9.5
+refinement of ADR-057 §2); MCP media exposure = backlog. **M9 restructured:** open T4/T5 superseded
+by **T4 (server: substrate + voice) → T5 (web: surfacing) → T6 (live Accept: deploy + backfill +
+both-kind re-derive drill)** — strictly sequential; contracts updated (02 / 03 / 04 / 06 / 08). **No
+code this session.**
+**Next:** build **M9 T4** (server: media–node substrate + voice unification; `depends-on: T3`),
+then T5 (web) → T6 (live Accept); or respawn.

@@ -1280,7 +1280,8 @@ was unbuildable as approved — media hung off captures with no node→capture r
 `node_media` is what makes it real. Strictly sequential — no fan-out batch: T5 consumes T4's
 contract, T6 deploys both.)*
 
-- [ ] **T4 — server: media–node substrate + voice unification** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+- [x] **T4 — server: media–node substrate + voice unification** — done `1a1528d`, independent
+      review **PASS** (no must-fix; two minors resolved). ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
       §1–§6) — migration 018 **`node_media`** (fk `nodes.id` cascade, unique pair); link-write at
       every content-node write (organize/retry/reorganize/rederive/reprocess); **`MergeCore`
       repoint** (loser→survivor, `ON CONFLICT DO NOTHING`); `GET /nodes/{id}` gains `media[]`
@@ -1335,7 +1336,53 @@ path to the graph, plus a misleading test comment); resolved by `redescribe_imag
 extension (no client-`content_type` trust), organizer rule also names the `unavailable` placeholder
 form, deduped ext helper.
 
+**Progress — T4 built (2026-07-18, implementation session).** Server media–node substrate + voice
+unification, built **sequentially** (single task, no fan-out). **`node_media`** link (migration 018,
+`node_id`→`nodes` cascade / `media_id`→`media` cascade / unique pair) with a **new `PgNodeMediaStore`**
+(`rebuild_for_media`, `repoint`). The derived-tier link (ADR-060 §3) is rebuilt on **every**
+content-node write — `_process`, the shared reorganize core, and `reprocess_capture` each call a
+best-effort `_link_node_media` **after** indexing (the fk needs the `nodes` row); `_resolve_and_write`
+now returns the **content-node ids** so the link attaches to content nodes only (§2, minted entity
+hubs excluded). **Merges** repoint loser→survivor in `MergeCore` (`ON CONFLICT DO NOTHING`, before the
+reindex so the kept tombstone never strands media). **Voice** re-routed onto the T2 derivation engine:
+`create_voice_capture` mints a `voice` `media` row under the uniform `/srv/data/media/capture/…`
+layout, STT runs through `derive_until_settled`, the transcript lands as `media.derived_text` mirrored
+**plain** to `captures.raw_text`; the `_process` voice+image branches are unified into
+`_derive_capture_media` + `_render_media_text` (photo → fenced, voice → plain). **Symmetric
+placeholder-degrade** (ADR-060 §6): the old voice STT-down → `mark_failed` branch is **gone** — a
+persistent STT failure now walks retry → `unavailable` → the `<voice note — transcript unavailable>`
+placeholder and organizes anyway (never `failed`). `redescribe_image_capture` → kind-aware
+**`rederive_capture`**. Read side: **`GET /nodes/{id}.media[]`** (inline `node_media` join in
+`PgSearchStore.get_node`) + **`media_kinds`** on `POST /search` and chat sources (persisted history
+back-compat defaults `[]`). **Backfill**: a new idempotent, degrading `VoiceMediaBackfillService`
+(CLI verb `voice-media-backfill`) relocates legacy voice audio → mints `voice` rows (`derived_text` =
+existing transcript) → links `node_media`; wired into `build_capture_pipeline` so a **CLI reprocess-all
+re-links** `node_media` too (reset's `TRUNCATE nodes CASCADE` reaps the stale links). Commit `1a1528d`;
+full suite **999 green**, ruff + format clean. **Independent review PASS** — no must-fix; two minors
+resolved in-code (dropped the unused `NodeMediaStore.media_for_node`; refreshed stale `capture_store`
+media-ref comments now that voice carries a media row). **Code not pushed** (user's call). Live
+migration 018 apply + the backfill run are **T6**.
+
 *Decisions recorded (build-time pins the plan delegated):*
+- **`node_media` rebuild keyed on `media_id`** (ADR-060 §3 left the mechanism open): the derived-tier
+  rebuild is *delete every link for this capture's media ids, re-insert the current content-node
+  product* — keyed on the **stable raw-truth `media_id`**, not the churning `node_id`, so a
+  reorganize's fresh content-node ids re-attach cleanly. Idempotent (rule 6).
+- **Legacy voice retry is NOT handled inline** — the **backfill op is the sole legacy-voice→media
+  path** (runs at deploy, T6). The `_process` voice branch requires a `media` row (like image); a
+  legacy `failed` voice retried *before* backfill just re-fails retryably (audio kept), then works
+  once backfilled. Chosen over a defensive inline relocate to avoid duplicating the backfill logic.
+- **Backfill copies (never deletes) the legacy audio** (rule 2 — never lose raw): the media-layout
+  file becomes the raw; the old `DATA_PATH/<name>` copy is left in place (a harmless orphan a later
+  sweep can reap), never unlinked by the op.
+- **Voice `media` rows carry a container→mime map** (`m4a`→`audio/mp4`, …) so `GET /media/{id}`
+  streams the themed player's `<audio>` with the right header; an unmapped ext leaves `mime_type`
+  NULL (served as `application/octet-stream`).
+- **`GET /nodes/{id}.media[]` is an inline `node_media` join in `PgSearchStore.get_node`** (rides the
+  same fetch as the node's edges), not a separate `NodeMediaStore` read — so `NodeMediaStore` owns
+  only the writes (rebuild/repoint); the unused read method was dropped.
+
+*Vision-group build-time pins (M9 T3 — unchanged):*
 - **Vision model seeds** (README §5 "ask the user when reached"): **Groq
   `meta-llama/llama-4-scout-17b-16e-instruct`** primary → **Nebius `Qwen/Qwen2.5-VL-72B-Instruct`**
   fallback (user-confirmed 2026-07-18; Scout over Maverick for speed/cost on bulk description).
