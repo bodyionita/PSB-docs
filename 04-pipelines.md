@@ -24,14 +24,24 @@ STT walks Groq→OpenAI ([ADR-020](adr/020-stt-fallback-chain-groq-primary.md)).
 **The organizer is the single writer of graph structure** (01 invariant 7): every pipeline that
 creates memory — capture, connectors, chat distillation, MCP — converges on it.
 
-## 1. Capture pipeline (user-initiated, immediate; surfaces: UI voice/text, MCP `capture`)
+## 1. Capture pipeline (user-initiated, immediate; surfaces: UI voice/text/image, MCP `capture`)
 
 ```
-POST /capture/{voice,text}  |  MCP capture(text)
+POST /capture/{voice,text,image}  |  MCP capture(text)
    │ persist raw input + captures row, return 202 instantly
+   │   voice/image (M9 T3/T4 — ADR-057 §6 / ADR-060 §5): raw file kept under
+   │   /srv/data/media/capture/… + a `media` row minted (kind voice|photo, status pending)
    │ open agent_runs row (agent="capture", running)          ← ADR-021
    ▼
-[voice] TRANSCRIBE (STT chain groq→openai)          status=transcribing
+[voice] TRANSCRIBE — derivation engine → STT chain groq→openai   status=transcribing
+[image] DESCRIBE   — derivation engine → `vision` group          status=deriving
+   │ one derivation contract (ADR-057 §3 + ADR-060 §5/§6): derive_until_settled walks
+   │ bounded retries → status=unavailable → explicit placeholder, and the capture
+   │ ORGANIZES ANYWAY (`failed` = infrastructure only). The result lands as
+   │ media.derived_text, mirrored to captures.raw_text — voice PLAIN (the person's own
+   │ words), photo FENCED `<photo: …>` (shared material — §5 attribution). raw_text is
+   │ the organize/reprocess replay source: replay never re-runs STT/VLM. Recovery:
+   │ kind-aware `rederive_capture` = re-derive → refresh raw_text → reorganize.
    ▼
 ORGANIZE — LLM, JSON out (synchronous-full, ADR-031; MCP surface burst-queued)   status=organizing
    │ { nodes: [ { title, type, occurred?, plane, planes[], tags[], body, edges[] } ] }
@@ -62,14 +72,21 @@ ORGANIZE — LLM, JSON out (synchronous-full, ADR-031; MCP surface burst-queued)
    │ • "don't know" → inbox/ node, never guessed; organizer_version stamped
    ▼
 WRITE NODES to the graph store (frontmatter contract, 02 §2)   status=written
+   │ + link `node_media` (M9 T4, ADR-060 §1–§3): the capture's media × its CONTENT nodes
+   │   (hubs never own media); recomputed on every content-node rewrite (retry /
+   │   reorganize / rederive / reprocess) — derived-tier by construction
    ▼
 INDEX each node + enqueue store git backup          status=indexed
    │ close agent_runs (model_used, fallback_used, details incl. entity
    │ resolutions + edges created)
 ```
 
-Failure ⇒ `status=failed` + retry from first incomplete step. Organizer failure fallback: single
-node in `inbox/`, title = first 8 words — a capture is never lost to a model error. The follow-up
+Failure ⇒ `status=failed` + retry from first incomplete step — **infrastructure failures only**
+from M9 T4 ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §6): a persistent
+STT/VLM *derivation* failure is not `failed` — it degrades to the explicit placeholder and
+organizes (audio/photo kept + servable; `rederive_capture` recovers the node later). Organizer
+failure fallback: single node in `inbox/`, title = first 8 words — a capture is never lost to a
+model error. The follow-up
 nudge ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)) and interaction logging
 ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over unchanged; Pass-2
 re-organize replaces the capture's **content** nodes (soft-delete via `git rm`) but **never its
@@ -79,8 +96,10 @@ hubs are shared substrate; the fresh pass re-links to the live hub, orphans tole
 **Reprocess-all-from-raw** (`POST /admin/reprocess`, [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md),
 the vision-P10 data-survival op). Confirm-gated + single-flight; runs in the background with an
 `agent_runs` row. **Reset** the derived state — every node file, the DB index
-(`nodes`/`chunks`/`edges`/`node_profiles`), the alias index, the `review_queue`, and
-`captures.node_paths` — while **preserving** raw `captures`, the store git history, and approved
+(`nodes`/`chunks`/`edges`/`node_profiles`), the alias index, the `review_queue`,
+`captures.node_paths`, and **`node_media`** (M9 T4 — relinked as each replayed capture's content
+nodes land, [ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §3) — while
+**preserving** raw `captures`, `media` rows + files, the store git history, and approved
 vocabulary (`app_settings`); standing merges are **reported, not dropped**. Then **replay every
 capture's raw input chronologically** (combined text where a follow-up was answered) through the
 current pipeline — each replay is a normal organize→resolve→write→index, so it inherits every fix

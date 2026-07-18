@@ -1163,3 +1163,23 @@ hardenings applied). Full suite **977 green**, ruff clean; commits `fff261d`/`b1
 **Next:** **M9 T3** (image capture pipeline: `POST /capture/image` → describe → organize; wires the
 derivation trigger — `depends-on: T1+T2`), then T4 (web) → T5 (live Accept incl. migration apply);
 or respawn.
+
+**Where we are (2026-07-18):** **M9 T3 BUILT** (implementation session) — **ad-hoc image capture**
+end-to-end ([ADR-057](../adr/057-multimodal-media-ingestion-substrate.md) §3/§5/§6). `POST /capture/image`
+(kind `image`) mirrors the voice leg: raw image kept under the media substrate → vision description
+**derived** (`derive_until_settled` drives the per-invocation retries so a failure walks
+retry→`unavailable`→placeholder **without a human** — closing the "T3/derivation trigger" follow-up)
+→ **organized as fenced `<photo: …>`** text (the derived description is the organize/reprocess replay
+source, like a voice transcript). The organizer prompt gained the **binding §5
+screenshot-attribution rule** (`<photo: …>` content is shared material, never the person's words;
+prompt bumped **v7**). New **`redescribe_image_capture`** seam closes the re-derive→graph loop
+(re-derive → refresh fenced `raw_text` → reorganize, so a recovered description reaches the **node**,
+not just `GET /media/{id}`); its HTTP trigger + live drill land at T5/M9.5. `CaptureView.media`
+(read-time join) surfaces the photo + status badge off the capture; new `deriving` capture status.
+**No migration** (captures.kind/status are plain text; the `media` table + fk exist from T2).
+Independent review **PASS** — one must-fix (re-derive recovered only the media row, not the node)
+caught, resolved by the recovery seam, **re-reviewed PASS**. Full suite **991 green**, ruff + format
+clean; commit `0d63067` — **code not pushed** (user's call).
+**Next:** **M9 T4** (web: capture-strip image affordance + thumbnail/status, photo on capture/node
+via `GET /media/{id}`, Settings Vision group verified + the Claude-route guard; `depends-on: T3`),
+then T5 (live Accept incl. migration apply + the re-derive drill); or respawn.

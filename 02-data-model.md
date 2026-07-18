@@ -195,6 +195,18 @@ the store: a plain reindex preserves them, a full DB wipe leaves profile-search 
 | since / until | date null | canonical validity window ([ADR-030](adr/030-entity-substrate-and-lifecycle.md)/[032](adr/032-prior-art-adoptions.md)) — `until` closes a superseded relation; invalidate, never delete |
 | | | pk `(src_id, dst_id, rel, origin)`. Both origins rebuildable: canonical from files, derived from vectors — the whole table is derived-tier |
 
+**`node_media`** (**M9 T4**, migration 018 — [ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+§1–§4) — the first-class **node → media attachment** link (NOT a graph edge: absent from `edges`,
+traverse, the Map, MCP): `node_id` (uuid fk → `nodes`, `ON DELETE CASCADE`) + `media_id` (uuid fk
+→ `media`), **unique `(node_id, media_id)`**, many-to-many. **Written by the capture pipeline**
+when a capture's **content** nodes land (entity hubs never own media — ADR-060 §2; hub-linking is
+a future write-policy change, no migration): each of the capture's media items links to each of
+its written content nodes. **Derived-tier by composition** (raw `media.capture_id` × the
+organize-decided `node_paths`): recomputed on organize, retry, reorganize, `rederive_capture`,
+and `reprocess-all-from-raw` — never independently durable. **Merges repoint it** in the shared
+`MergeCore` (loser→survivor, `ON CONFLICT DO NOTHING` — ADR-060 §4) so media never strands on a
+tombstone. Feeds `GET /nodes/{id}.media[]` + the `media_kinds` list glyphs (03-api).
+
 ### Operational state (not rebuildable — why the DB is managed/backed up)
 
 **`captures`** — unchanged except `note_paths → node_paths`; follow-up columns
@@ -239,10 +251,17 @@ the `/srv/data/media/<source>/…` layout), a **nullable `capture_id` fk → `ca
 `file_path` **relative to the media root** (**null for video** — summary-only, ADR-057 §2),
 `thumb_path`, `mime_type`, **derivation `status`** (`pending`/`derived`/`unavailable` — the
 resumability + targeted-re-derive hinge) + `derived_text` (photo description / voice transcript /
-video summary) + `model_used` + `attempts` + `error`. Messages/threads are **operational raw** (not rebuildable —
+video summary) + `model_used` + `attempts` + `error`. **M9 T4 ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+§5): ad-hoc voice captures mint `media` rows too** (kind `voice`, source `capture`, audio under
+the same `/srv/data/media/capture/…` layout; transcript = `derived_text`, mirrored plain/unfenced
+to `captures.raw_text` as the replay source) — the STT leg runs through the derivation engine
+(bounded retries → `unavailable` → placeholder, symmetric with photos — ADR-060 §6). Legacy voice
+audio is **relocated + backfilled** into this layout by an idempotent deploy op (missing file
+degrades, never fails). Messages/threads are **operational raw** (not rebuildable —
 backed up with the DB; media *files* additionally R2-synced per ADR-014); derived text is
 derived-tier (recomputable from kept raw, except video summaries — the recorded ADR-057 §2
-exception). **Session distill state** (watermark per `(source, thread, session)` — the ADR-048
+exception, refined by ADR-060 §9: summary + **1–2 representative keyframe thumbnails** as
+servable media). **Session distill state** (watermark per `(source, thread, session)` — the ADR-048
 pattern generalized) + candidate dedup keys land alongside at the build task.
 
 **`chat_auto_recorded`** (**M6 task 4**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)

@@ -30,25 +30,24 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-18):** **M9 T3 BUILT** (implementation session) — **ad-hoc image capture**
-end-to-end ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §3/§5/§6). `POST /capture/image`
-(kind `image`) mirrors the voice leg: raw image kept under the media substrate → vision description
-**derived** (`derive_until_settled` drives the per-invocation retries so a failure walks
-retry→`unavailable`→placeholder **without a human** — closing the "T3/derivation trigger" follow-up)
-→ **organized as fenced `<photo: …>`** text (the derived description is the organize/reprocess replay
-source, like a voice transcript). The organizer prompt gained the **binding §5
-screenshot-attribution rule** (`<photo: …>` content is shared material, never the person's words;
-prompt bumped **v7**). New **`redescribe_image_capture`** seam closes the re-derive→graph loop
-(re-derive → refresh fenced `raw_text` → reorganize, so a recovered description reaches the **node**,
-not just `GET /media/{id}`); its HTTP trigger + live drill land at T5/M9.5. `CaptureView.media`
-(read-time join) surfaces the photo + status badge off the capture; new `deriving` capture status.
-**No migration** (captures.kind/status are plain text; the `media` table + fk exist from T2).
-Independent review **PASS** — one must-fix (re-derive recovered only the media row, not the node)
-caught, resolved by the recovery seam, **re-reviewed PASS**. Full suite **991 green**, ruff + format
-clean; commit `0d63067` — **code not pushed** (user's call).
-**Next:** **M9 T4** (web: capture-strip image affordance + thumbnail/status, photo on capture/node
-via `GET /media/{id}`, Settings Vision group verified + the Claude-route guard; `depends-on: T3`),
-then T5 (live Accept incl. migration apply + the re-derive drill); or respawn.
+**Where we are (2026-07-18):** **M9 REPLANNED — [ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+recorded** (planning session, grilled decision-by-decision). The ask — *see the images/media a node
+references, in-app and inline, + a "see raw capture" affordance, voice included* — exceeded the
+approved T4 (whose "photo on the node" accept line was unbuildable: media hung off captures with no
+node→capture reverse path), so it was grilled + recorded, **not built**. **ADR-060 decisions:**
+first-class **`node_media`** link (migration 018; content-nodes-only policy, `MergeCore` repoint,
+derived-tier — rebuilt by organize/retry/reorganize/rederive/reprocess), **voice unification**
+(voice mints `media`, STT through the T2 derivation engine, **symmetric placeholder-degrade** —
+`failed` = infra only; kind-aware **`rederive_capture`**; legacy-voice **relocate+backfill op**),
+`GET /nodes/{id}.media[]` + `media_kinds` list glyphs, the **surfacing UX package** (NodePreview
+media strip + lightbox + shared capture-detail sheet, themed voice player, glyphs-only lists,
+nothing on the Map), client-side **HEIC→JPEG** at capture, video = summary + **1–2 representative
+keyframe thumbnails** (M9.5 refinement of ADR-057 §2); MCP media exposure = backlog. **M9
+restructured:** open T4/T5 superseded by **T4 (server: substrate + voice) → T5 (web: surfacing) →
+T6 (live Accept: deploy + backfill + both-kind re-derive drill)** — strictly sequential; contracts
+updated (02 / 03 / 04 / 06 / 08). **No code this session.**
+**Next:** build **M9 T4** (server: media–node substrate + voice unification; `depends-on: T3`),
+then T5 (web) → T6 (live Accept); or respawn.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

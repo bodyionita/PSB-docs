@@ -53,6 +53,10 @@ login header; kept as a single config constant so it's changeable at zero cost.
   affordance (camera/file input) → `POST /capture/image` → the strip shows the thumbnail +
   pipeline status (received → describing → … → indexed); the kept photo renders on the capture
   detail + resulting node (`GET /media/{id}`). Video capture deliberately absent (ADR-057 §2).
+  **HEIC is converted client-side** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+  §8): a lazy-loaded HEIC→JPEG converter runs only when a HEIC file is picked (synthetic
+  `photo.jpg` filename per the upload contract — the server 400s a bare extensionless blob), so
+  every stored photo is browser-renderable + VLM-safe; the server stays image-library-free.
 - Recent captures strip with live pipeline status (received → transcribing → … → indexed),
   animated state transitions; failed items expose retry.
 
@@ -100,6 +104,9 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   (`text`/`voice`/`mcp`/`chat`), keyset-paginated; each row expands to full detail
   (`GET /captures/{id}`: raw text, clickable **node chips** via `node_refs`, status, source badge);
   chat-sourced rows keep the M6 **one-tap remove**. Absorbs the M6 "recently auto-recorded" surface.
+  **M9 T5:** the expanded row is the shared **capture detail sheet** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+  §7) — image captures show the photo + derivation badge, voice captures play their audio
+  (`CaptureView.media`, kind-generic from M9 T4).
 
 **Ops** — the console (invariant 4; the M2 Admin panel is absorbed here):
 - **Pipelines** (`GET /pipelines`): each with schedule + next-run + its ordered steps + a
@@ -177,7 +184,9 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   routing groups — **Chat**, **Conspect**, **Quick** (trivial tasks, e.g. session titling;
   default Sonnet-low / Nebius), **+ Vision at M9** ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md)
   §4 — Groq-VLM primary / Nebius fallback, effort N/A; renders automatically once `GET /settings`
-  carries the group) — each an active-**model** dropdown + fallback dropdown + an **effort
+  carries the group; **M9 T5 guard:** routing the `vision` group to a **Claude** model shows an
+  inline warning — Claude has no vision path here (ADR-057 §4), images would silently drop) —
+  each an active-**model** dropdown + fallback dropdown + an **effort
   selector shown only for models that support it** (Claude yes, Nebius no). The dropdowns pick a **model**
   (ADR-045 — "Claude Opus 4.8" / "Claude Sonnet 4.6" / "Llama 3.3 70B"; the *provider* is derived, so both
   Claude models sit under the one `claude` provider and no `claude-max` id is shown); effort is keyed by
@@ -223,6 +232,19 @@ the shared `useSearch`/`mapNav` hooks still sit under `features/search/` — a r
   tab is now **Captures** (all sources, expandable, paginated; Capture-tab Recents → ~5 + "see all"
   link), and pipeline runs collapse to one row with a depth-indented early→late step tree on expand
   (§2/§4).
+- **Node media (M9 T5, [ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §7) —
+  NodePreview is where media lives:** a **media strip** between title and body renders the node's
+  attached media (`GET /nodes/{id}.media[]` → `GET /media/{id}`): photo thumbnails (lazy-loaded,
+  browser-scaled — no server thumbnailing, backlog), voice as a compact themed **audio player**
+  (native `<audio>` shell; Range/206 scrubbing). `pending` = shimmer tile, `unavailable` = an
+  explicit broken-media tile — never a silent gap. **Tap a photo → full-screen lightbox**
+  (framer-motion zoom from the thumbnail, swipe/tap dismiss, left/right nav across the node's
+  photos; respects `prefers-reduced-motion`). The strip's overflow row — **"see raw capture"** —
+  opens a **capture detail sheet** (`GET /captures/{id}`: raw text, status, source badge, its
+  media, NodeChips to every node it produced) — the **same shared component** the Activity ›
+  Captures expanded row uses. Lists stay lean: search result cards + chat source cards show at
+  most a tiny 📷/🎙 glyph (the `media_kinds` field); **no thumbnails in lists, nothing on the Map
+  canvas**.
 
 ### 6. Admin (M2 panel — **absorbed into the M8 ops console**, screen 3 › Ops)
 The M2 lightweight operations panel (Reindex `POST /admin/reindex` with live

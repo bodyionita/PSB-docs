@@ -1237,15 +1237,28 @@ bounded retries → `unavailable` → explicit placeholder; targeted re-derive c
 description contract** (compact factual + verbatim legible text + the **two-layer
 screenshot-attribution rule**, ADR-057 §5 — binding), authenticated **`GET /media/{id}`**, and
 **PWA photo capture** end-to-end (`POST /capture/image`, kind `image`, describe → organize with
-fenced derived text, photo surfaced on capture/node). **Out:** PWA video capture, MCP image
-capture, any screenshot-conversation pipeline (backlog).
+fenced derived text, photo surfaced on capture/node). **Extended 2026-07-18 by the
+[ADR-060](adr/060-node-media-linkage-and-voice-unification.md) replan** (grilled; supersedes the
+original open T4/T5): the **first-class `node_media` link** (migration 018; content-node-only
+policy, merge repoint in `MergeCore`, derived-tier rebuild), **voice unification** (voice mints
+`media`, STT through the derivation engine, symmetric placeholder-degrade, kind-aware
+`rederive_capture`, legacy-voice relocate+backfill op), `GET /nodes/{id}.media[]` +
+`media_kinds` glyphs, and the **surfacing UX package** (NodePreview media strip + lightbox +
+shared capture-detail sheet, voice player, client-side HEIC→JPEG). **Out:** PWA video capture,
+MCP image capture (+ MCP media exposure — ADR-060 §10), any screenshot-conversation pipeline
+(backlog).
 
 **Accept.** A photo captured on the phone becomes a **described, organized, media-backed node**
-(photo visible on the node/capture); a **chat-screenshot** capture attributes contained messages
-to the screenshot's internal speakers, never to the user; the **Vision group** appears in
-Settings → Models (Groq-seeded, editable, forward-live); a forced derivation failure walks
-retry → `unavailable` → explicit placeholder without blocking the pipeline, and targeted
-re-derive then recovers it; media serve only behind the session gate.
+whose photo renders **inline in `NodePreview`** (strip + lightbox) and on the capture; a **voice
+capture's audio is playable** on its node + capture (Range/206 scrubbing verified on the phone);
+**"see raw capture"** opens the capture detail sheet from a node's media; a **chat-screenshot**
+capture attributes contained messages to the screenshot's internal speakers, never to the user;
+the **Vision group** appears in Settings → Models (Groq-seeded, editable, forward-live) **with
+the Claude-route warning**; a forced derivation failure — **image and voice** — walks retry →
+`unavailable` → explicit placeholder without blocking the pipeline, and `rederive_capture` then
+recovers the **node** (not just the media row); a **merged survivor inherits the loser's media**;
+the **backfill op** leaves legacy voice captures playable + node-linked; media serve only behind
+the session gate.
 
 **Tasks** (parallel-eligibility per [09 §Parallel task batches](09-session-protocol.md)):
 - [x] **T1 — vision routing group (server)** — done `fff261d`, independent review **PASS**
@@ -1261,12 +1274,36 @@ re-derive then recovers it; media serve only behind the session gate.
       must-fix caught + resolved + re-reviewed PASS). `POST /capture/image` (kind `image`), raw kept,
       describe → organize (fenced `<photo: …>`), driven failure→placeholder path, + the re-derive→node
       recovery seam. `depends-on: T1+T2`
-- [ ] **T4 — web**: capture-strip image affordance + thumbnail/status, photo on capture/node
-      (via `GET /media/{id}`), Settings Vision group verified (auto-renders from `GET /settings`).
-      `depends-on: T3`
-- [ ] **T5 — live M9 Accept**: deploy (migration applies), real-phone photo → node, screenshot
-      attribution, group edit forward-live, failure→placeholder→re-derive drill, independent
-      review. `depends-on: T4`
+*(Replan 2026-07-18 — [ADR-060](adr/060-node-media-linkage-and-voice-unification.md): the
+original T4/T5 are **superseded** by T4/T5/T6 below. The old T4's "photo on the node" accept line
+was unbuildable as approved — media hung off captures with no node→capture reverse path;
+`node_media` is what makes it real. Strictly sequential — no fan-out batch: T5 consumes T4's
+contract, T6 deploys both.)*
+
+- [ ] **T4 — server: media–node substrate + voice unification** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+      §1–§6) — migration 018 **`node_media`** (fk `nodes.id` cascade, unique pair); link-write at
+      every content-node write (organize/retry/reorganize/rederive/reprocess); **`MergeCore`
+      repoint** (loser→survivor, `ON CONFLICT DO NOTHING`); `GET /nodes/{id}` gains `media[]`
+      (id, kind, status, capture_id); **`media_kinds`** on search results + chat sources;
+      **voice reroute** onto the derivation engine (mints `media` kind `voice`, uniform layout,
+      transcript = `derived_text` mirrored plain to `raw_text`, symmetric placeholder-degrade —
+      `failed` = infra only); `redescribe_image_capture` → kind-aware **`rederive_capture`**;
+      **idempotent voice backfill op** (relocate audio → mint rows with `derived_text` =
+      existing transcript → link `node_media`; missing file degrades). `CaptureView.media` goes
+      kind-generic. `depends-on: T3`
+- [ ] **T5 — web: the surfacing package** ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+      §7–§8 + the original T4 scope) — capture-strip **image affordance** + thumbnail/status;
+      **NodePreview media strip** (photos lazy, voice player, shimmer/broken tiles) +
+      **lightbox** + **"see raw capture" capture-detail sheet** (shared with Activity ›
+      Captures); list **glyphs** off `media_kinds`; **lazy HEIC→JPEG** at capture (synthetic
+      filename); Settings **Vision group** verified + the **Claude-route warning**.
+      `depends-on: T4`
+- [ ] **T6 — live M9 Accept**: deploy (migrations 017+018 apply, **backfill op run**),
+      real-phone photo → node with photo **inline**, voice capture → **playable on its node**
+      (+ Range/206 scrub check), screenshot attribution, group edit forward-live,
+      failure→placeholder→`rederive_capture` drill for **both kinds** (recovers the node),
+      merge-inherits-media check, media-join SQL smoke (the T3 follow-up), independent review.
+      `depends-on: T5`
 
 **Progress — batch-A complete (2026-07-18, implementation session).** T1 ∥ T2 built
 **sequentially by the coordinator** (not fanned out): `config.py`/`models.py`/`main.py`/
@@ -1322,27 +1359,28 @@ form, deduped ext helper.
 - ~~**T3/derivation trigger**~~ **— DONE in T3.** `derive_until_settled` drives the per-invocation
   retries so failure→`unavailable`→placeholder completes without a human. ADR-057 §3 retry *backoff*
   stays **deferred** (retries are back-to-back per invocation; a scheduled backoff is a later nicety).
-- **T5/M9.5 — ad-hoc re-derive trigger + live recovery drill:** the `redescribe_image_capture` seam
-  (re-derive → refresh fenced `raw_text` → reorganize the node) is built + unit-tested, but **no HTTP
-  trigger exposes it yet** — the ad-hoc re-derive endpoint lands with the connector re-derive surface
-  (`POST /admin/connector/rederive`, M9.5). T5's "failure→placeholder→re-derive drill" exercises it
-  end-to-end (call the seam / the M9.5 endpoint). Until then, targeted re-derive alone recovers only
-  `media.derived_text`; the node recovers when the seam is invoked.
-- **T4 — PWA image upload contract:** the server requires a **filename with a valid extension**
+- **T6/M9.5 — ad-hoc re-derive trigger + live recovery drill:** the seam (now generalized to the
+  kind-aware **`rederive_capture`** at T4 — ADR-060 §5) is unit-tested, but **no HTTP trigger
+  exposes it yet** — the ad-hoc endpoint lands with the connector re-derive surface
+  (`POST /admin/connector/rederive`, M9.5). T6's "failure→placeholder→re-derive drill" exercises
+  it end-to-end for **both kinds** (call the seam / the M9.5 endpoint). Until then, targeted
+  re-derive alone recovers only `media.derived_text`; the node recovers when the seam is invoked.
+- **T5 — PWA media upload contract:** the server requires a **filename with a valid extension**
   (jpg/png/webp/heic/heif) — mime is derived from it (client `content_type` is not trusted), matching
   the voice contract. The PWA camera/file input must send a real filename (a bare `canvas.toBlob()`
   needs a synthetic `photo.jpg` name), or the server 400s.
-- **T4/T5 — HEIC→VLM:** HEIC/HEIF are accepted + stored raw, but whether the current VLMs decode HEIC
-  is unverified; if not, a HEIC photo degrades to placeholder (the designed failure path). Fix is
-  **client-side HEIC→JPEG conversion at capture (T4)** or a server transcode — decide at T4/T5 (no
-  image lib in `server/pyproject.toml` today; adding one is the server-transcode cost).
+- ~~**T4/T5 — HEIC→VLM**~~ **— DECIDED ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+  §8): client-side HEIC→JPEG at capture (T5).** Lazy converter, PWA-path photos always
+  browser-renderable + VLM-safe; server stays image-library-free (still accepts HEIC on the raw
+  API — such files may degrade to placeholder, the designed path).
 - **T3 — media-join SQL smoke (open before Accept):** `PgMediaStore.get_by_capture_id` + the
   `CaptureView.media` read-time join (`_MEDIA_REF_JOIN`) are unit-tested via fakes only (same CI
-  boundary as `_node_refs`); verify against a real DB in the T5 smoke pass.
-- **T4/settings guard:** a user could manually route the `vision` group to a Claude model, which
-  silently drops images (ADR-057 §4 — Claude has no vision path). Consider a Settings warning/guard
-  when T4 renders the group. VLMs also appear in the chat composer's model list (one shared catalog,
-  ADR-045) — acceptable, flagged for awareness.
+  boundary as `_node_refs`); verify against a real DB in the **T6** smoke pass (with the new
+  `node_media` joins).
+- ~~**T4/settings guard**~~ **— DECIDED (ADR-060 / T5 scope): the Vision group renders an inline
+  Claude-route warning** (ADR-057 §4 — Claude has no vision path; images would silently drop).
+  VLMs also appear in the chat composer's model list (one shared catalog, ADR-045) — acceptable,
+  flagged for awareness.
 
 ## M9.5 — Instagram DM connector ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) — GRILLED TO BUILD-READY 2026-07-18)
 
@@ -1381,8 +1419,10 @@ tests stay green throughout.
       **CSV manifest** (opt-in; overrides; auto-skip tier; excludes), SQLite ledger. Disjoint
       tree (`tools/`). `batch-B, parallel-with: T1`
 - [ ] **T3 — prep tool: media + upload (local)**: local video processing (ffmpeg + STT + vision
-      → summary), photo/voice upload, batched resumable idempotent upload client.
-      `depends-on: T1+T2`
+      → summary **+ 1–2 *representative* keyframe thumbnails**, uploaded as servable media so a
+      video-derived node shows its frame(s) inline — [ADR-060](adr/060-node-media-linkage-and-voice-unification.md)
+      §9, refining ADR-057 §2's singular "optional small thumbnail"), photo/voice upload, batched
+      resumable idempotent upload client. `depends-on: T1+T2`
 - [ ] **T4 — sessionization + distiller generalization (server)**: 6h-gap sessionizer +
       transcript renderer (ADR-058 §5 contract) + `ChatDistillerService` seam widening +
       session distill state + captures materialization (`anchor_at`!) + review floor/cap +
