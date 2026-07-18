@@ -1652,9 +1652,10 @@ fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequenti
 - [x] **T5 — compose surface (web)** — **DONE (2026-07-19)**: the draft-backed **compose** UI (text
       + multi-photo + record-voice ≤1 + per-part 'x' + **Send**), **resume/discard**, capture list
       renders the media list, **Activity-run deep-link**. `depends-on: T4` (see T5 note below)
-- [ ] **T6 — live M9.6 Accept**: deploy (migration applies), real-phone **composite** drills +
-      the **folded M9 T6 single-part drills** (above), reprocess byte-parity check, SQL smoke,
-      independent review. `depends-on: T5`
+- [~] **T6 — live M9.6 Accept** — **DEPLOY TRIGGERED (2026-07-19); manual drills PENDING the user**:
+      deploy (migrations 019+020 apply), real-phone **composite** drills + the **folded M9 T6
+      single-part drills** (above), reprocess byte-parity check, SQL smoke, independent review.
+      `depends-on: T5` (see T6 note + Accept checklist below)
 
 **Progress — T1 done (2026-07-19).** Migration **019** (`captures.text_body`, `media.part_ordinal`,
 + the `captures_single_active_draft` **partial unique index** = the DB backstop for one-active-draft)
@@ -1725,8 +1726,39 @@ on window focus). `CaptureView.media` **singular → list** threaded through `Re
 gained optional **`openRun`** and the capture row shows a **"See processing →"** deep-link when
 `run_id` is present (degrades until AppShell wires `openRun` — same convention as the existing,
 still-unwired `openCaptures`). `tsc --noEmit` + `eslint --max-warnings 0` + `vite build` all green.
-**Still not deployed** (T6). **Next: T6** — deploy (migrations 019+020 apply), real-phone composite
-drills + the folded M9 T6 single-part drills, reprocess byte-parity, SQL smoke.
+
+**Progress — T6 DEPLOYED; live manual drills pending the user (2026-07-19).** M9.6 (T1–T5, commit
+range `e785554..6ada4f4`) was **pushed to the code repo and CI-deployed to prod** (`braindan.cc`).
+**Automated deploy verification (this session):** `/health` → `{status:ok, db:true, store:true,
+git_remote:true, backups:true}` (a healthy boot means **migrations 019+020 applied** — the container
+runs `alembic upgrade head` at start; `db:true`); the **endpoint fold is live** — `POST
+/capture/{text,image}` → **404** (removed), `POST /capture/draft` + `POST /capture/{id}/submit` →
+**401** (new routes, session-gated). **Independent review posture:** the server T1–T4 diff got a
+high-effort `/code-review` pass (4 findings, all fixed — `ba9d465`); T5 (web) got typecheck + eslint
++ `vite build` + a self-review (fixed a window-focus re-POST). Full server suite **1027 pass**.
+
+**The remaining Accept is manual (real-phone + VPS-CLI) — the user runs it** (postponed per the
+one-session directive). Checklist:
+- **Composite compose:** on the phone, compose **text + ≥2 photos + a voice note**; **remove** a part
+  with 'x' and **re-add** it; confirm **Send disabled at 0 parts** and a **2nd voice refused**; then
+  **Send** → **one capture**, one blended organize → node(s) that **cross-reference parts** (a node
+  reflects both its photo and the voice narration); each node shows **only its attributed** media, an
+  **unattributed** part stays **on the capture only**.
+- **Draft resume:** attach parts, close the app, reopen → the draft **resumes** (text + parts); the
+  **Discard** action drops it.
+- **Deep-link:** the capture **"See processing →"** opens its **Activity run** with **per-part**
+  derivation steps — note the `activityNav.openRun` provider wiring in AppShell is the one UI hop
+  still to land (the `run_id` field + the row affordance ship now; wire `openRun` if the drill wants
+  the click live).
+- **reprocess-all byte-parity:** run `reprocess-all` (VPS CLI) → the composite **replays
+  byte-identically** (node set + `node_media` stable).
+- **Folded M9 T6 single-part drills** (now exercised through the composite/media flow): voice
+  **playable + Range/206**; **chat-screenshot** attributes messages to the screenshot's speakers,
+  never the user; **Vision group** edit is forward-live + the **Claude-route warning**; a forced
+  derivation failure — **image and voice** — → placeholder → **`rederive-capture`** recovers the
+  **node**; a **merged survivor inherits** the loser's media; **media-join SQL smoke** green; media
+  serve only behind the **session gate**.
+- **Final independent review** of the live behavior + sign-off, then flip T6 to done.
 
 ## M10 — Reflection agent (+ push notifications)
 
