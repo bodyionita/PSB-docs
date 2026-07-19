@@ -103,6 +103,16 @@ and ChatGPT connectors off one server. Claude Code CLI (static-header capable) i
      existing M4 chat system prompt in M5** — the capsule is only *built* here, so M5 is where
      in-app chat finally consumes it (the compounding payoff lands the same day for internal
      chat and external LLMs).
+   - **Output hygiene** (added 2026-07-19 — sibling of the [ADR-063](063-groq-vision-model-scout-decommissioned.md)
+     derived-text-leak class, different model path): the whole `conspect` reply is stored verbatim
+     as the capsule, so a chat-tuned model that ignores "output ONLY the capsule" and opens with a
+     conversational preamble ("I'll help you distill this identity capsule. Let me write it…") would
+     leak that preamble into the L0 capsule. Fixed prompt-side (an explicit "your first word must be
+     the capsule; do not reply to me" instruction, prompt bumped `identity-capsule-v2`) **plus** a
+     conservative defensive strip in `clean_capsule_text` that drops a leading run of meta
+     sentences before storage — anchored to the start and limited to unambiguous openers so real
+     second/third-person capsule prose is never touched; a reply that is *nothing but* preamble
+     collapses to empty and is skipped (rule 7 — the last good capsule is kept).
 
 6. **Accept gate = a real Claude connector** (mobile app / claude.ai web) live against
    `braindan.cc/mcp`: OAuth approve → `capture` → organized node; `search`/`get_node`/
