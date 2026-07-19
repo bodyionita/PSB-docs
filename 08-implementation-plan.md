@@ -1940,6 +1940,20 @@ the 72B (paid) via the Settings vision-group flip — note a **saved Settings ov
 pass currently pins the 72B**, so the new Groq primary only applies once the vision group is re-set
 in Settings. Remaining T7 (A/B pick · migration · §C.2/§E.2 re-drill · remove-drill) unchanged.
 
+**Progress — qwen3.6 reasoning-preamble suppression (`5cf5e35`).** First qwen3.6-27b screenshot
+capture confirmed the ADR-063 watch-item: the Qwen3 **thinking preamble leaked into the derived
+media text**. Verified against what's reachable locally — the **organized** output is *clean* (the
+graph-store clone + graph MCP show the screenshot organized as `conversation/…cake…` with correct
+v9 self-attribution: own side = own words, Diana = named entity, no phantom sender — an **§E.2
+PASS**; a full-store sweep found zero preamble bleed), so the organizer strips it; the pollution is
+confined to `media.derived_text` / `captures.raw_text` (Postgres-only — the store tracks nodes
+only; **no Supabase MCP** in-session, so `derived_text` wasn't read directly). Fix: a provider-static
+`extra_body` seam on `OpenAICompatibleProvider`, set **`reasoning_format: "hidden"` on the Groq
+provider only** (Nebius fallback untouched — no 400 risk, unlike `reasoning_effort: none`). Full
+gate green (1039 pytest, +2 tests). After redeploy, re-capture and confirm `derived_text` is clean
+prose. **Follow-up (out of scope):** the identity capsule (L0) leaks its own generator preamble
+("I'll help you distill this identity capsule…") — a different model path, flagged separately.
+
 > **T4 version note (reconciliation):** ADR-062 §3 / the T4 bullet say "prompt v8", but the code's
 > `ORGANIZER_PROMPT_VERSION` is **already `organizer-v8`** (bumped in M9.6 for the composite
 > `[[part N · kind]]` markers). So the ADR-062 §3 self-attribution mapping lands as
