@@ -1619,3 +1619,14 @@ fixed + tested. Reprocess-survival verified (`orphan_keeps` has no FK to `nodes`
 hub offender + a collapsible **"Kept (N)"** strip + the new **duplicate-candidates** section (T4's
 `high_confidence` feed). Then **T7 live Accept**. *(Separate background task in flight: the
 identity-capsule L0 generator-preamble leak.)*
+
+---
+
+**Superseded snapshot (README "Where we are" + "Next", 2026-07-19 — before the T7.0 pre-flight
+fixes).** *Where we are (2026-07-19):* **M9.8 T6 BUILT — inline-actionable graph-health (web) done**
+(`29c15a2` on `main`, not yet pushed). [full T6 summary retained in the README history / the 08 T6
+As-built note.] *Next:* run **T7 — live M9.8 Accept** (`depends-on: T1–T6`, all now built): merge
+Diana via the picker (no ids) and confirm it survives a `reprocess-all`; a detected dupe merges
+inline while Diana Wren stays separate; an orphan hub deletes and doesn't resurrect; a kept hub
+stays suppressed across a reprocess. *(This entry was superseded when the live T7 drive surfaced
+three web defects — recorded as T7.0 in [08](../08-implementation-plan.md#m98--graph-hygiene--durable-merges--visualactionable-dedup--gc-adr-064).)*

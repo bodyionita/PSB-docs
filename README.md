@@ -30,8 +30,25 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.8 T6 BUILT — inline-actionable graph-health (web) done**
-(`29c15a2` on `main`, not yet pushed). The graph-health card's **orphan-nodes** check is now
+**Where we are (2026-07-19):** **M9.8 T7 live Accept STARTED — T7.0 pre-flight fixes done, awaiting
+deploy.** T1–T6 are **pushed** (`main` == `origin/main` == `29c15a2`); the live T7 drive then
+surfaced **three defects in the built T6/T4 web surfaces** a dev-mount review couldn't catch, now
+**fixed (T7.0, web-only, ADR-006-clean, no server change)**: ① graph-health Delete/Keep/Merge only
+"settled" in ephemeral state → re-appeared on any remount ("shows up again unless I re-run graph
+health") — now **durable** (`useResolvedRunItems`, `localStorage` keyed by `runId`, + live-keeps
+reconciliation; same fix on the Duplicate-candidates card; `MergeIntoPanel` gained `onMerged`); ②
+the **merge picker was unreachable** inside the bottom-sheet drawer (absolute `top:100%` dropdown
+clipped off the sheet edge) → now **in-flow** so it rides the sheet scroll; ③ **`entity-dedup` in
+Review wasn't actionable** (no card for the kind → badge-only) → new **`EntityDedupCard`**
+(survivor-pick Merge / keep, calling the existing resolver). Gate green (tsc + eslint + vite build);
+independent diff review **no must-fix**. **Not yet committed→pushed** — needs a deploy before the
+**T7.1 live drills**. All four drill fixtures confirmed live (`entity_merges`/`orphan_keeps` = 0):
+the **Diana Vance** dup (`0bd6f214`) vs the **Diana** hub (`8e874e52`), **Diana Wren** (`f1ad15ee`,
+the negative control), zero-degree orphan hubs (`gluten-free baking` …), and **Father** (`db99f269`)
+for the keep drill. *(T6, now superseded here, is archived in [status history](08-logs/status-history.md).)*
+
+<!-- superseded T6 snapshot retained below for the As-built detail; see 08 for the authoritative state -->
+The graph-health card's **orphan-nodes** check is now
 inline-actionable ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §3/§5): each **hub** offender
 gets **Delete** (`POST /admin/nodes/{id}/delete`, T5 — confirm-gated + run-poll; `409`→Merge,
 `400`→content-note, `404`→gone), **Merge** (reuses the shared **`MergeIntoPanel`** picker
@@ -58,12 +75,15 @@ pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git con
 **`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
 ⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
 
-**Next:** run **T7 — live M9.8 Accept** (`depends-on: T1–T6`, all now built — needs the live stack):
-merge **Diana** via the picker (no ids) and confirm it **survives a `reprocess-all`**; a detected dupe
-merges inline while **Diana Wren** stays separate; an orphan **hub** deletes and doesn't resurrect; a
-**kept** hub stays suppressed across a reprocess. **Code is committed on `main` but not pushed**
-(pushing code is the operator's call). *(Separate background task in flight: the identity-capsule L0
-generator-preamble leak.)*
+**Next:** **deploy T7.0** (commit the web fixes → push → CI deploys), then run **T7.1 — the live
+drills** on the deployed stack, in this order (all actions **before** a single `reprocess-all`): ①
+run `entity-dedup` + `graph-health` so the ops cards populate (do **not** reprocess first); ② merge
+the **Diana Vance → Diana** pair via the picker (no ids) + inline-merge a *second* detected pair,
+confirming **Diana Wren** is never proposed; ③ delete an orphan **hub**; ④ **Keep** `Father`; ⑤ **one**
+`reprocess-all`, then verify against the DB that the merge replayed (`entity_merges`=1, `Diana Vance`
+still tombstoned), the deleted orphan didn't resurrect, and `Father`/`orphan_keeps` survived. The
+**T7.0 web fixes are committed locally but not pushed** (pushing code is the operator's call).
+*(Separate background task in flight: the identity-capsule L0 generator-preamble leak.)*
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

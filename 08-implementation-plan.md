@@ -2170,12 +2170,69 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       `reprocess-all`**; a detected dupe merges inline while Diana Wren stays separate; an orphan
       hub deletes and doesn't resurrect; a **kept** hub stays suppressed across a reprocess.
       `depends-on: T1–T6`
+      - [x] **T7.0 — pre-flight fixes (web):** the live drive surfaced **three T6/T4 defects a
+            dev-server mount review couldn't catch** (all web, ADR-006-clean; server contracts from
+            T4/T5/T5.5 unchanged) — fixed before the destructive drills. See the **T7.0** progress
+            note below. Gate green (tsc + eslint --max-warnings 0 + vite build).
+      - [ ] **T7.1 — the live drills** (the four Accept checks) — pending a deploy of T7.0, then the
+            operator runs merge/detect/delete/keep + one `reprocess-all`, verified against the DB.
 
 **Accept (draft).** A profile "Merge into…" folds Diana Vance → Diana by name (no UUID); after a
 full `reprocess-all` the merge **persists** (no manual re-merge). Graph-health shows the dupe +
 orphan sections with working inline Merge/Delete/Keep; Diana Wren is never proposed. An orphan hub
 deleted from graph-health stays gone across reprocess; a **kept hub (Father) is suppressed from the
 orphan check and stays kept across a `reprocess-all`**.
+
+**Progress — T7.0 pre-flight fixes (2026-07-19, implementation session).** The live T7 drive
+surfaced **three defects in the built T6/T4 web surfaces** that a dev-server mount review didn't
+catch — fixed (web only, ADR-006-clean; no server change — the T4/T5/T5.5 endpoints + resolvers
+were already correct). Gate green (**tsc --noEmit + eslint --max-warnings 0 + vite build**);
+independent review of the diff — **no must-fix** (two cosmetic nits left). Committed **`62f9d04` on
+`main`, not yet pushed**; **needs a deploy before the T7.1 live drills**.
+1. **Graph-health actions didn't stick** — the card renders a *frozen past-run snapshot*, and T6
+   settled an acted (Delete/Keep/Merge) offender only in **ephemeral local state**, so any
+   remount/refetch reset it and the row re-showed its buttons ("shows up again unless I re-run
+   graph-health"). Even a **Keep** — which *is* server-durable (`orphan_keeps`) — wasn't reconciled
+   against the sample. **Fix:** a new `useResolvedRunItems(scope, runId)` persists resolutions in
+   `localStorage` **keyed by `runId`** (survives remount/reload; auto-clears when a fresh run
+   replaces the snapshot) + the orphan section reconciles the sample against the **live keeps list**;
+   `MergeIntoPanel` gained an `onMerged` callback so a merged orphan also settles. Same durability
+   applied to the sibling **Duplicate candidates** card (`useResolvedRunItems('dedup-candidates')`).
+2. **Merge picker unusable in the drawer** — `EntityPicker`'s dropdown was an **absolutely-positioned
+   overlay** (`top:100%`); inside the `NodePreviewDrawer` bottom-sheet (`maxHeight 85dvh;
+   overflow:auto`) it clipped off the sheet's bottom edge — unreachable + unscrollable. **Fix:**
+   render the results **in-flow** so they push content down and ride the sheet's own scroll (fixes it
+   on the profile "Merge into…", the graph-health inline Merge, and the AdminOps card alike).
+3. **`entity-dedup` in Review wasn't actionable** — T4 files lower-confidence hub pairs as an
+   `entity-dedup` review kind and T6 links there, but `ReviewScreen` had **no card** for that kind,
+   so items hit the unknown-kind fallback (badge + excerpt, no buttons — "only shows possible things,
+   not one-button-actionable"). **Fix:** a new `EntityDedupCard` (survivor-pick **Merge** / **Not a
+   duplicate** = keep) calling the existing resolver (`{action:'merge',survivor}` / `{action:'keep'}`
+   — merge folds with the alias union + records a **durable** decision, §1/§4), plus a batch
+   keep-dismiss. Files: `useResolvedRunItems.ts` (new), `GraphHealthCard.tsx`,
+   `DuplicateCandidatesCard.tsx`, `EntityPicker.tsx`, `MergeIntoPanel.tsx`, `ReviewScreen.tsx`.
+
+**Live fixture state confirmed (read-only, prod DB + graph MCP, 2026-07-19).** All four T7.1 drill
+fixtures exist and the durability mechanisms are **unexercised** (`entity_merges` = 0, `orphan_keeps`
+= 0 rows): the **Diana Vance** duplicate (`0bd6f214`, a 4-edge full-name split) is live and
+un-tombstoned against the **Diana** hub (`8e874e52`, ~54 edges); **Diana Wren** (`f1ad15ee`) is a
+distinct person (the detector's negative control); genuine zero-degree orphan **hubs** exist
+(`gluten-free baking` `b63f41b7`, `stand-up`, `personal second brain` `45b94365`, …); and **Father**
+(`db99f269`) + **Mother** (`10145cd3`) are zero-degree hubs for the keep drill. Two more first-name↔
+full-name dup pairs exist for the detector-inline drill (**Alex**/**Alex Dragu**, **Horia**/**Horia
+Stanciu**). *(Real surnames redacted per the public-repo rule — mapped to the docs' fabricated
+`Diana Vance`/`Diana Wren`; node ids match the M9.8 motivating case above.)*
+
+**Recommended T7.1 order (actions all precede a single `reprocess-all`).** ① run `entity-dedup` +
+`graph-health` (or one `nightly`) so the ops cards populate — do **not** reprocess first (nothing to
+survive yet; the first-name↔full-name auto-resolver is deferred §6, so it'd just re-split). ② merge
+the Diana pair (manual "Merge into…" picker) + inline-merge a *second* detected pair, confirming
+**Diana Wren is never proposed**. ③ delete one orphan hub. ④ Keep **Father**. ⑤ **one**
+`reprocess-all`, then verify via DB: merge replayed (`entity_merges`=1, `Diana Vance` still
+tombstoned), deleted orphan absent, `orphan_keeps` intact + Father suppressed. *(Ops has separate
+"merge entities" = manual action and "dedupe entities" = the conservative finder that pre-fills it —
+both hit the same propose→apply seam; the finder is deliberately conservative so it never mis-merges
+Diana Wren.)*
 
 **Progress — T6 built (2026-07-19, implementation session).** Inline-actionable graph-health is
 **DONE** (`29c15a2` on `main`, not yet pushed) — see the T6 **As built** note above. All web
