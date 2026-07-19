@@ -1,0 +1,33 @@
+#!/bin/sh
+# PSB-docs pre-commit PII guard. This repo is PUBLIC (README: "no personal data"). Real contacts'
+# FULL names (first + last) must never be committed — the graph's real people are referred to by
+# placeholder (P1/P2) or first-name only. Only full-name combos are blocked; a lone first or last
+# name is fine (a bare surname like "Soare" also means "sun" in Romanian). Fabricated illustrative
+# names (Diana Vance, Horia Fenwick, Madalina Fairfax, …) are the intended stand-ins (ADR-064).
+#
+# The denylist is stored as SHA-256 of the diacritic-folded, lower-cased name, so the real names
+# themselves NEVER appear in this public repo (a plaintext denylist would re-leak them).
+#
+# Wire once:  git config core.hooksPath .githooks
+red()  { printf '\033[31m%s\033[0m\n' "$1" >&2; }
+yell() { printf '\033[33m%s\033[0m\n' "$1" >&2; }
+
+if command -v python >/dev/null 2>&1; then _py=python
+elif command -v python3 >/dev/null 2>&1; then _py=python3
+else
+  yell "PII name-guard skipped: no python on PATH (install python to enable)."
+  exit 0
+fi
+
+# Pipe the staged additions to the hashed scanner (.githooks/pii_scan.py holds only SHA-256
+# digests, never the names). Exclude the hook dir itself from the scan.
+names=$(git diff --cached -U0 --no-color -- . ':!.githooks/' \
+  | grep -E '^\+' | grep -Ev '^\+\+\+' | "$_py" .githooks/pii_scan.py)
+if [ -n "$names" ]; then
+  red "BLOCKED (real contact full name — this repo is public; use a placeholder/first-name only):"
+  printf '%s\n' "$names" >&2
+  red ""
+  red "Redact to a placeholder (P1/P2) or a fabricated name before committing (ADR-064)."
+  exit 1
+fi
+exit 0
