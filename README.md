@@ -30,32 +30,33 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.6 T6 drill partially run — the composite core VERIFIED live;
-two FAILs replanned into M9.7 (GRILLED TO BUILD-READY, [ADR-062](adr/062-chat-screenshot-self-attribution.md)).**
-The `openRun` deploy went live first (`6786bb6`), then the user worked the
-[drill](08-logs/m9.6-accept-drill.md): **§A all 7 + §B all 3 PASSED** (ordinals, blended organize,
-**per-node attribution**, resume/discard — the first real multi-part composite in prod), §C.1/.3 +
-§E.1/.3 passed; still to run: §A DB check, §D, §E.4–6, §F, §G. The two failures, root-caused in
-code and grilled into **[08 §M9.7](08-implementation-plan.md)**:
-- **§C.2 — no live "inner running bits"** on the run deep-link: `agent_runs.details` land only at
-  finish, the pipeline emits no per-part progress lines, and RunDetail renders neither the existing
-  `RunLogTail` nor a parts block. → **M9.7 C**: finish ADR-061 §10 *by reuse* — milestone
-  `logger.info` lines (stream via the M8 run-log tail, zero new schema) + RunDetail renders the
-  live tail + a structured `derive.parts[]` block.
-- **§E.2 — own-chat screenshot misattribution**: the user's own conversation organized as "P1 + an
-  unnamed *sender*" (the ADR-057 §5 / organizer-v7 "never you" rule is wrong for the own-chat
-  case; no identity signal exists at ingest). → **ADR-062**: vision emits disciplined per-message
-  lines (side + sender + reply-quote insets), organizer v8 maps right→the user's own words (no
-  self-entity, phantom-sender ban), default own-chat; **A/B** `llama-4-scout-17b` vs
-  `qwen2.5-vl-72b` before any routing change; **migration** = rederive+reorganize existing photos.
-- **Scope add — general capture remove** (`DELETE /captures/{id}` + double-confirmed UI),
-  reversing ADR-048 §11's "backlog": entirely deletes a capture (nodes, media files, everywhere-
-  visibility; hubs preserved, tombstone replay-excluded) — needed for A/B hygiene and as product.
+**Where we are (2026-07-19):** **M9.7 code COMPLETE — Batch A + B built, reviewed, committed
+locally; only T7 (deploy + live Accept) remains, and it's the user's.** The two M9.6-drill FAILs
++ the general-remove scope-add ([ADR-062](adr/062-chat-screenshot-self-attribution.md), grilled
+to build-ready) were implemented this session against the approved [08 §M9.7](08-implementation-plan.md):
+- **Batch A {T1,T2,T3}** (`e91d1cb`/`1a8a809`/`ab173db`): **T1** vision emits disciplined
+  per-message chat-screenshot lines (`[side · sender]` + `quoting` insets, identity-agnostic —
+  ADR-062 §2); **T2** the capture pipeline streams milestone `logger.info` lines (per-part derive +
+  stage transitions) live through the M8 run-log tail, **zero new schema**; **T3** the openRun
+  RunDetail renders the live `RunLogTail` + a structured `derive.parts[]` block (ADR-061 §10, *by
+  reuse* — the §C.2 fix).
+- **Batch B {T4,T5,T6}** (`8ec8de6`/`dcefee7`/`f83268e`): **T4** organizer **v9** maps `[right]`→the
+  user's own words (no self-entity, phantom-sender ban), `[left · Name]`→named person, `quoting`→the
+  quoted party, own-chat default + "not mine" override (the §E.2 fix, ADR-062 §3); **T5** general
+  capture remove `DELETE /captures/{id}` (shared hub-preserving core, media purge, tombstone-last —
+  ADR-062 §R); **T6** the double-confirm Remove affordance on the capture card.
+- **Every task independently reviewed — no must-fix** anywhere. Integration gate green: server
+  ruff+format + **1037 pytest**; web `tsc` + whole-project `eslint` + `vite build`. **No migrations**
+  (no schema changes). Commits are **local on `main`, not pushed** — a code push auto-deploys to prod
+  (= T7's deploy), which is the user's call.
 
-**Next:** implement **M9.7** (implementation session, no grilling): **Batch A {T1 vision format,
-T2 pipeline logging, T3 RunDetail tail+parts}** → **Batch B {T4 organizer v8, T5 remove server,
-T6 remove web}** → **T7 live Accept** (deploy; A/B on the real screenshot; migration rederive;
-re-drill §C.2/§E.2 + the remaining drill steps; flip **M9.6 T6 + M9.7** done together).
+**Next:** **T7 — deploy + live Accept (the user, agent-guided):** push/deploy; **A/B** the real
+screenshot on `llama-4-scout-17b` vs `qwen2.5-vl-72b` (Settings flip; pick primary on evidence —
+ADR-062 §4); **migration** rederive+reorganize existing photo captures (§5) and confirm the drill's
+misattributed capture reads correctly; **re-drill** m9.6-accept-drill §C.2 (live per-part lines now
+stream) + §E.2 (attribution under v9); **remove-drill** a junk capture (double-confirm → gone from
+Recents/search/chat, nodes + media gone, hubs preserved, `reprocess-all` doesn't resurrect it);
+then flip **M9.6 T6 + M9.7** done together and update this snapshot.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

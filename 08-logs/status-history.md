@@ -1314,3 +1314,32 @@ fresh agent, so it did the automatable slice and left the manual Accept staged f
 
 **Next (the user runs it):** work the drill script → then flip **T6 done** + update this snapshot.
 Optionally push the web change first so the deep-link click is live during the drill.
+
+---
+
+**Where we are (2026-07-19, superseded by the M9.7 implementation session — Batch A + B built):** **M9.6 T6 drill partially run — the composite core VERIFIED live;
+two FAILs replanned into M9.7 (GRILLED TO BUILD-READY, [ADR-062](../adr/062-chat-screenshot-self-attribution.md)).**
+The `openRun` deploy went live first (`6786bb6`), then the user worked the
+[drill](m9.6-accept-drill.md): **§A all 7 + §B all 3 PASSED** (ordinals, blended organize,
+**per-node attribution**, resume/discard — the first real multi-part composite in prod), §C.1/.3 +
+§E.1/.3 passed; still to run: §A DB check, §D, §E.4–6, §F, §G. The two failures, root-caused in
+code and grilled into **[08 §M9.7](../08-implementation-plan.md)**:
+- **§C.2 — no live "inner running bits"** on the run deep-link: `agent_runs.details` land only at
+  finish, the pipeline emits no per-part progress lines, and RunDetail renders neither the existing
+  `RunLogTail` nor a parts block. → **M9.7 C**: finish ADR-061 §10 *by reuse* — milestone
+  `logger.info` lines (stream via the M8 run-log tail, zero new schema) + RunDetail renders the
+  live tail + a structured `derive.parts[]` block.
+- **§E.2 — own-chat screenshot misattribution**: the user's own conversation organized as "P1 + an
+  unnamed *sender*" (the ADR-057 §5 / organizer-v7 "never you" rule is wrong for the own-chat
+  case; no identity signal exists at ingest). → **ADR-062**: vision emits disciplined per-message
+  lines (side + sender + reply-quote insets), organizer v8 maps right→the user's own words (no
+  self-entity, phantom-sender ban), default own-chat; **A/B** `llama-4-scout-17b` vs
+  `qwen2.5-vl-72b` before any routing change; **migration** = rederive+reorganize existing photos.
+- **Scope add — general capture remove** (`DELETE /captures/{id}` + double-confirmed UI),
+  reversing ADR-048 §11's "backlog": entirely deletes a capture (nodes, media files, everywhere-
+  visibility; hubs preserved, tombstone replay-excluded) — needed for A/B hygiene and as product.
+
+**Next:** implement **M9.7** (implementation session, no grilling): **Batch A {T1 vision format,
+T2 pipeline logging, T3 RunDetail tail+parts}** → **Batch B {T4 organizer v8, T5 remove server,
+T6 remove web}** → **T7 live Accept** (deploy; A/B on the real screenshot; migration rederive;
+re-drill §C.2/§E.2 + the remaining drill steps; flip **M9.6 T6 + M9.7** done together).

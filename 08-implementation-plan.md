@@ -1873,15 +1873,21 @@ contract recorded at this planning pass, so it has no build-time dependency on T
       block (kind, ordinal, status, model, attempts, error) when present.
       `parallel-with: T1, T2 (batch A)` — **done `ab173db`** (independent review pass; latch mirrors
       OpsView's drain-safe pattern; `details` narrowed defensively; new `RunDerivePart` type).
-- [ ] **T4 — organizer v8 self-attribution mapping** (`organizer.py`): ADR-062 §3 — right→own
+- [x] **T4 — organizer v9 self-attribution mapping** (`organizer.py`): ADR-062 §3 — right→own
       words / left→named entity / quote→quoted party / phantom-sender ban / "not mine" text
-      override; prompt version bump. `depends-on: T1` `parallel-with: T5, T6 (batch B)`
-- [ ] **T5 — remove server** (`DELETE /captures/{id}`): extract/generalize the
+      override; prompt version bump. `depends-on: T1` `parallel-with: T5, T6 (batch B)` — **done
+      `8ec8de6`** (independent review pass; bumped **organizer-v8 → v9** — the code was already v8
+      from M9.6, see the T4 version note above; screenshot test updated to the new contract).
+- [x] **T5 — remove server** (`DELETE /captures/{id}`): extract/generalize the
       `auto_recorded.remove` core into a shared service; add media purge; wire Recents/audit/search
-      exclusions for `removed_at`; 03-api contract below. `parallel-with: T4, T6 (batch B)`
-- [ ] **T6 — remove web** (capture feature): Remove affordance on the capture card/detail +
+      exclusions for `removed_at`; 03-api contract (03-api.md line 59, recorded at planning).
+      `parallel-with: T4, T6 (batch B)` — **done `dcefee7`** (independent review pass; shared
+      `remove_content_nodes` core, hub-preserving; `list_recent` gained the missing `removed_at`
+      filter; `CaptureStore.tombstone` added; `auto_recorded` refactored behavior-preserved).
+- [x] **T6 — remove web** (capture feature): Remove affordance on the capture card/detail +
       **double confirmation**, calls T5's contract; removed capture animates out of Recents.
-      `parallel-with: T4, T5 (batch B)`
+      `parallel-with: T4, T5 (batch B)` — **done `f83268e`** (independent review pass; two-step
+      confirm on the settled-capture card; `useDeleteCapture` invalidates captures + activity).
 - [ ] **T7 — deploy + live Accept (the user, agent-guided):** deploy; **A/B** the real screenshot
       on both VLMs (Settings flip; pick primary on evidence — ADR-062 §4); **migration** rederive+
       reorganize existing photo captures (§5) and verify the drill's misattributed capture is
@@ -1908,8 +1914,18 @@ per-task commits (`e91d1cb`/`1a8a809`/`ab173db`) on `main`, **not pushed** (code
 prod-deploy = T7, the user's). Each passed a **fresh independent review** (no must-fix; minor
 reviewer notes applied). Integration gate on the merged tree is **green**: server `ruff check` +
 `ruff format --check` clean, **full pytest 1027 passed**; web `tsc --noEmit` + `vite build` pass.
-No migrations (as planned). **Next: Batch B {T4,T5,T6}**, then pause for the user's T7 (deploy +
-A/B + migration + re-drill).
+No migrations (as planned).
+
+**Progress — Batch B {T4,T5,T6} done (same session).** Per-task commits `8ec8de6`/`dcefee7`/
+`f83268e` on `main`, **not pushed** (same reason). Each passed a **fresh independent review** — all
+**no must-fix**; minor/out-of-scope notes only (organizer prompt-version not recorded in run
+details — pre-existing, spun off as a follow-up; `GET /captures/{id}` still returns a tombstoned
+row by design for the idempotency check; `thumb_path` unused, mirrors discard). Final integration
+gate on the merged tree **green**: server ruff+format clean, **full pytest 1037 passed**; web
+`tsc --noEmit` + whole-project `eslint --max-warnings 0` + `vite build` pass. No migrations.
+**All code + docs are done; the only thing left in M9.7 is T7 — deploy + live Accept, which is the
+user's** (code push auto-deploys to prod, so it is held for the user per [09](09-session-protocol.md)
+commit-discipline + the ADR-062 §4 A/B / §5 migration / re-drill all being the user's calls).
 
 > **T4 version note (reconciliation):** ADR-062 §3 / the T4 bullet say "prompt v8", but the code's
 > `ORGANIZER_PROMPT_VERSION` is **already `organizer-v8`** (bumped in M9.6 for the composite
