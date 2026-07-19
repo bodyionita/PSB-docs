@@ -68,6 +68,10 @@ login header; kept as a single config constant so it's changeable at zero cost.
   every stored photo is browser-renderable + VLM-safe; the server stays image-library-free.
 - Recent captures strip with live pipeline status (received → transcribing → … → indexed),
   animated state transitions; failed items expose retry.
+- **Remove (M9.7, 08 §M9.7 R):** a capture card/detail exposes **Remove** behind a **double
+  confirmation** (explicit two-step confirm — it entirely deletes the capture: derived nodes,
+  media files, everywhere-visibility; entity hubs survive). Calls `DELETE /captures/{id}`
+  ([03-api](03-api.md)); the removed capture animates out of the strip.
 
 ### 2. Chat (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
 - Conversation list (newest first, `GET /chat/sessions`) + thread view. **List / open / new**
@@ -109,6 +113,11 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
 - **Pipeline runs (M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md); M8.1 subtree):** the
   feed shows **one parentless row per run**; expanding fetches the recursive `children[]` and renders
   a **depth-indented tree, early→late at every level** (nested `capture` runs visibly deeper).
+- **openRun pinned detail (M9.6/M9.7, [ADR-061](adr/061-composite-multi-part-capture.md) §10):** a
+  capture's "See processing →" deep-link pins that run's detail atop the Feed, expanded. **M9.7**
+  makes it genuinely live: it renders the **`RunLogTail`** (streaming per-part derive milestone
+  lines while the run is live — the M8 log-tail reused) plus a **structured per-part block** off
+  `details.derive.parts[]` (kind, ordinal, status, model, attempts) once the run finishes.
 - **Captures tab (M8.1, was Conversations)** — **all** captures regardless of source
   (`text`/`voice`/`mcp`/`chat`), keyset-paginated; each row expands to full detail
   (`GET /captures/{id}`: raw text, clickable **node chips** via `node_refs`, status, source badge);

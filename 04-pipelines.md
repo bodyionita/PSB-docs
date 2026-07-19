@@ -34,6 +34,14 @@ creates memory — capture, connectors, chat distillation, MCP — converges on 
 > `parts:[…]`), superseding the `<photo: …>` fence **format** (two-layer semantic preserved).
 > `reprocess-all` still replays the cached `raw_text` verbatim. The single-part flow below stands
 > until the M9.6 build lands (08 §M9.6).
+>
+> **M9.7 ([ADR-062](adr/062-chat-screenshot-self-attribution.md)) upgrades the chat-screenshot
+> leg of the vision contract:** the vision layer emits **disciplined per-message lines** (side +
+> sender label + quote-inset attribution, still identity-agnostic plain text) and the **organizer
+> maps identity** — `[right]` → the user's own words (own-chat default, phantom-sender ban),
+> `[left · Name]` → that person, `quoting Name` → the quoted party. The pipeline also emits
+> **per-part milestone log lines** streamed live via the M8 run-log tail (ADR-061 §10 finished by
+> reuse — 08 §M9.7).
 
 ```
 POST /capture/{voice,text,image}  |  MCP capture(text)
@@ -128,7 +136,8 @@ producer (API fetcher, scheduled | local import tool, batched)
    │ by (source, thread_id, message_id) — idempotent, resumable
    ▼
 MEDIA DERIVATION (ADR-057 §3 — status-tracked, resumable, skip-and-continue)
-   │ photo → vision description (vision group, screenshot-attribution contract §5)
+   │ photo → vision description (vision group, screenshot-attribution contract ADR-057 §5,
+   │   per-message format + own-chat mapping upgraded by ADR-062)
    │ voice → STT chain (groq→openai, ADR-020)     [video arrives pre-summarized — §2]
    │ bounded retries → status=unavailable → explicit placeholder; targeted re-derive
    ▼

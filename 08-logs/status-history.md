@@ -1292,3 +1292,25 @@ referencing nodes, per-node attribution, unattributed→capture-only), draft res
 Activity-run deep-link, `reprocess-all` byte-parity, the folded M9 T6 single-part drills, media-join
 SQL smoke — then flip T6 done. One UI follow-up: wire `activityNav.openRun` in AppShell so the "See
 processing →" link navigates (the field + affordance already ship).
+
+**Where we are (2026-07-19, superseded by the drill-run + M9.7 replanning session):** **M9.6 composite capture — SHIPPED TO PROD (T1–T5 done + deployed); only the manual live Accept (T6) remains, and it's the user's to run.**
+The full T1–T5 build + T6 deploy is recorded in [08 §M9.6](../08-implementation-plan.md) and
+[status-history](status-history.md) (migrations **019+020** applied live, endpoint fold
+verified). **This session was drill prep + the one UI follow-up** — no phone/VPS is drivable from a
+fresh agent, so it did the automatable slice and left the manual Accept staged for the user:
+- **`activityNav.openRun` wired in AppShell** (the "one UI hop still to land"): the capture "See
+  processing →" link now pins that run's `RunDetail` atop Activity→Feed (pagination-proof, reuses the
+  existing by-id fetch; ADR-061 §10). Committed to the code working tree, **not pushed** — rides the
+  next deploy. `tsc`+`eslint`+`vite build` green; **independent review — no must-fix** (one minor
+  dismiss-stickiness gap found + fixed).
+- **media-join SQL smoke pre-run via Supabase MCP** — migrations 019+020 confirmed, integrity all
+  green (no dangling `node_media`/`media`/`run_id`, 0 tombstone-stranded links, voice backfill
+  complete). Caveat: no multi-part composite exists in prod yet (the one indexed composite is
+  text-only), so **part-ordinals + per-node `parts:[…]` attribution are first exercised by the phone
+  drill**.
+- **Runnable drill script written:** [m9.6-accept-drill.md](m9.6-accept-drill.md) —
+  step-by-step phone/VPS/SQL commands for the composite compose, resume/discard, deep-link,
+  `reprocess-all` byte-parity, folded M9 T6 single-part drills, and SQL smoke.
+
+**Next (the user runs it):** work the drill script → then flip **T6 done** + update this snapshot.
+Optionally push the web change first so the deep-link click is live during the drill.

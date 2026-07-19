@@ -1791,6 +1791,114 @@ support session ahead of the manual Accept (the user can't be driven from here �
   device drills are the user's to run (drill script above); flip to done only after they pass + a final
   live review.
 
+**Progress — T6 drill partially run by the user (2026-07-19): two live failures → replanned into
+M9.7 ([ADR-062](adr/062-chat-screenshot-self-attribution.md)).** The `openRun` deploy was pushed
+first (`6786bb6`, CI-deployed), then the user worked part of the drill and hit:
+- **§C (deep-link) — no live "inner running bits":** the pinned RunDetail lands but shows nothing
+  while the composite processes. Root cause (code-confirmed): `agent_runs.details` (incl. the
+  per-part `derive.parts[]`) is written **only at run finish**; the capture pipeline **emits no
+  per-part progress log lines** (the M8 live run-log tail + `current_run_id` contextvar exist and
+  would stream them for free); and the openRun RunDetail **renders neither** the `RunLogTail` nor a
+  per-part block (scalar detail pills only). [ADR-061](adr/061-composite-multi-part-capture.md) §10
+  was half-delivered: the data rides the run row post-hoc, but nothing is followable live.
+- **§E.2 (chat-screenshot attribution) — fails on the user's own chat:** a screenshot of the user's
+  own conversation organized as "P1 + an unnamed *sender*" (the user's side became a phantom third
+  party), and left/right bubble reading was unreliable. Root cause: the ADR-057 §5 / organizer-v7
+  "NEVER the sharer / never 'you'" rule is exactly wrong for the own-chat case, there is no
+  identity signal at ingest, and the vision layer emits loose prose off a small primary VLM.
+  Grilled + recorded as **[ADR-062](adr/062-chat-screenshot-self-attribution.md)**.
+
+**Passed in the same run** (ticked in the drill file): **§0, §A all 7 — the composite core
+(ordinals, blended organize, per-node attribution) verified live on a real multi-part capture —
+§B all 3**, §C.1/.3, §E.1/.3. Still to run: §A DB check, §D, §E.4–6, §F, §G.
+
+Both fixes + a scope addition (general capture remove — see M9.7) were **grilled to build-ready**
+the same session. **T6 stays `[~]`**: the remaining drill steps are unaffected, but §C.2 and §E.2
+re-drill through the **M9.7 T7 Accept**; flip T6 done alongside it.
+
+## M9.7 — Drill fixes: screenshot self-attribution, live run observability, capture remove ([ADR-062](adr/062-chat-screenshot-self-attribution.md) — GRILLED TO BUILD-READY 2026-07-19)
+
+*(Replanned out of the M9.6 T6 live drill per [09](09-session-protocol.md) — implementation found
+recorded design wrong/incomplete, so the session switched to a grilling pass and recorded before
+building. Three fronts: **E** = chat-screenshot self-attribution (ADR-062); **C** = finish
+[ADR-061](adr/061-composite-multi-part-capture.md) §10 "follow the processing live" by reuse;
+**R** = general capture remove — a deliberate scope reversal of [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)
+§11's "general node removal = backlog", triggered by the A/B-testing need to delete drill captures
+cleanly.)*
+
+**Scope.**
+- **E — attribution (ADR-062):** vision layer emits disciplined per-message chat-screenshot text
+  (side + sender label + quote-inset lines, §2); organizer prompt v8 maps `[right]` → the user's
+  own first-person words (no self-entity, phantom-sender ban), `[left · Name]` → named person,
+  `quoting Name` → the quoted party (§3); default own-chat, text-note "not mine" override (§1);
+  A/B `llama-4-scout-17b` vs `qwen2.5-vl-72b` on the real screenshot before any routing change
+  (§4); migration = targeted rederive+reorganize of existing photo captures (§5).
+- **C — live observability (ADR-061 §10, by reuse):** the capture pipeline emits **milestone
+  `logger.info` lines** — per-part `deriving photo k/N → derived via <model> (Xms)` /
+  `unavailable`, plus derive→organize→index→link stage transitions — for **all media captures**
+  (composite per-part; single image/voice their one derive line). They stream through the existing
+  M8 run-log capture (`current_run_id` contextvar → `GET /activity/runs/{id}/logs`) with **zero new
+  schema/endpoints**. The openRun-pinned RunDetail renders **both** the live `RunLogTail`
+  (already-built component) and a **structured per-part block** off `details.derive.parts[]`
+  post-finish.
+- **R — general capture remove (API + UI, double-confirmed):** `DELETE /captures/{id}` generalizes
+  the one-tap-remove core (ADR-048 §11 semantics kept): git-rm **content** nodes + DB-delete
+  (`nodes` cascades `chunks`/`edges`/`node_media`), **entity hubs preserved** (ADR-038), capture
+  row **tombstoned** (`removed_at` — the replay-exclusion guard + audit trail; also what keeps a
+  chat re-distill from resurrecting a removed memory), **plus** (new, beyond the chat case) the
+  capture's `media` rows + raw files are **purged** ("entirely delete" — the user-initiated
+  carve-out to rule 2, same as draft discard, extended post-submit). Removed captures disappear
+  from Recents/Captures/search/chat/audit-list; `409` for an open draft (that's Discard's job);
+  `404` unknown/already-removed; idempotent + self-healing ordering exactly like the chat remove
+  (tombstone stamped **last**). The web UI gets a Remove affordance on the capture card with a
+  **double confirmation** (explicit two-step confirm — destructive-action UX, user requirement).
+
+### Tasks (execution shape: **Batch A {T1,T2,T3}** → **Batch B {T4,T5,T6}** → T7 live Accept)
+
+*(Batch eligibility per [09](09-session-protocol.md) §Parallel task batches — disjoint files, **0
+migrations** anywhere (no schema changes), no intra-batch dependency. T6 builds against the 03-api
+contract recorded at this planning pass, so it has no build-time dependency on T5.)*
+
+- [ ] **T1 — vision per-message screenshot format** (`media_derivation.py`
+      `MEDIA_DESCRIPTION_SYSTEM_PROMPT`): ADR-062 §2 — header line + `[side · sender]` per-message
+      lines + quote-inset attribution; non-chat images unchanged. `parallel-with: T2, T3 (batch A)`
+- [ ] **T2 — pipeline milestone logging** (`capture_pipeline.py`): the C-scope `logger.info` lines
+      (per-part + stage transitions, all media kinds), auto-tagged to the run by the existing
+      contextvar. `parallel-with: T1, T3 (batch A)`
+- [ ] **T3 — openRun RunDetail: live tail + per-part block** (`FeedView.tsx`): render
+      `<RunLogTail runId>` while the pinned run lives + a structured `details.derive.parts[]`
+      block (kind, ordinal, status, model, attempts, error) when present.
+      `parallel-with: T1, T2 (batch A)`
+- [ ] **T4 — organizer v8 self-attribution mapping** (`organizer.py`): ADR-062 §3 — right→own
+      words / left→named entity / quote→quoted party / phantom-sender ban / "not mine" text
+      override; prompt version bump. `depends-on: T1` `parallel-with: T5, T6 (batch B)`
+- [ ] **T5 — remove server** (`DELETE /captures/{id}`): extract/generalize the
+      `auto_recorded.remove` core into a shared service; add media purge; wire Recents/audit/search
+      exclusions for `removed_at`; 03-api contract below. `parallel-with: T4, T6 (batch B)`
+- [ ] **T6 — remove web** (capture feature): Remove affordance on the capture card/detail +
+      **double confirmation**, calls T5's contract; removed capture animates out of Recents.
+      `parallel-with: T4, T5 (batch B)`
+- [ ] **T7 — deploy + live Accept (the user, agent-guided):** deploy; **A/B** the real screenshot
+      on both VLMs (Settings flip; pick primary on evidence — ADR-062 §4); **migration** rederive+
+      reorganize existing photo captures (§5) and verify the drill's misattributed capture is
+      corrected; **re-drill** m9.6-accept-drill §C (live inner steps now stream) + §E.2 (attribution
+      under the new semantics); **remove-drill**: double-confirm remove a junk capture → gone from
+      Recents/search/chat, nodes + media gone, hubs preserved, `reprocess-all` does **not**
+      resurrect it; then flip **M9.6 T6 → done** together with this Accept. `depends-on: T1–T6`
+
+### Accept (T7 checklist)
+
+- [ ] Own-chat screenshot → user's side organized as **their own words** (no phantom sender/no
+      self-entity), other party a **named person entity**, reply-quotes attributed to the
+      **quoted** party; A/B outcome recorded + vision primary confirmed/changed on evidence.
+- [ ] During a composite capture, the capture's "See processing →" deep-link shows **live streaming
+      per-part lines** while deriving, and the **structured per-part block** after finish; single
+      image/voice captures show their derive milestone lines too.
+- [ ] Remove: double-confirm on the phone → capture + nodes + media **entirely gone** everywhere
+      (Recents/Captures/search/chat), entity hubs intact, tombstone excluded from `reprocess-all`.
+- [ ] Existing screenshot captures migrated (rederive+reorganize) — the P1 capture reads correctly.
+- [ ] M9.6 T6 flipped done alongside; README snapshot updated.
+
 ## M10 — Reflection agent (+ push notifications)
 
 **Scope.** The "therapist": scheduled (≥ daily) + on-demand reflection over 1d/1w/1m/1y windows

@@ -30,27 +30,32 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.6 composite capture — SHIPPED TO PROD (T1–T5 done + deployed); only the manual live Accept (T6) remains, and it's the user's to run.**
-The full T1–T5 build + T6 deploy is recorded in [08 §M9.6](08-implementation-plan.md) and
-[status-history](08-logs/status-history.md) (migrations **019+020** applied live, endpoint fold
-verified). **This session was drill prep + the one UI follow-up** — no phone/VPS is drivable from a
-fresh agent, so it did the automatable slice and left the manual Accept staged for the user:
-- **`activityNav.openRun` wired in AppShell** (the "one UI hop still to land"): the capture "See
-  processing →" link now pins that run's `RunDetail` atop Activity→Feed (pagination-proof, reuses the
-  existing by-id fetch; ADR-061 §10). Committed to the code working tree, **not pushed** — rides the
-  next deploy. `tsc`+`eslint`+`vite build` green; **independent review — no must-fix** (one minor
-  dismiss-stickiness gap found + fixed).
-- **media-join SQL smoke pre-run via Supabase MCP** — migrations 019+020 confirmed, integrity all
-  green (no dangling `node_media`/`media`/`run_id`, 0 tombstone-stranded links, voice backfill
-  complete). Caveat: no multi-part composite exists in prod yet (the one indexed composite is
-  text-only), so **part-ordinals + per-node `parts:[…]` attribution are first exercised by the phone
-  drill**.
-- **Runnable drill script written:** [08-logs/m9.6-accept-drill.md](08-logs/m9.6-accept-drill.md) —
-  step-by-step phone/VPS/SQL commands for the composite compose, resume/discard, deep-link,
-  `reprocess-all` byte-parity, folded M9 T6 single-part drills, and SQL smoke.
+**Where we are (2026-07-19):** **M9.6 T6 drill partially run — the composite core VERIFIED live;
+two FAILs replanned into M9.7 (GRILLED TO BUILD-READY, [ADR-062](adr/062-chat-screenshot-self-attribution.md)).**
+The `openRun` deploy went live first (`6786bb6`), then the user worked the
+[drill](08-logs/m9.6-accept-drill.md): **§A all 7 + §B all 3 PASSED** (ordinals, blended organize,
+**per-node attribution**, resume/discard — the first real multi-part composite in prod), §C.1/.3 +
+§E.1/.3 passed; still to run: §A DB check, §D, §E.4–6, §F, §G. The two failures, root-caused in
+code and grilled into **[08 §M9.7](08-implementation-plan.md)**:
+- **§C.2 — no live "inner running bits"** on the run deep-link: `agent_runs.details` land only at
+  finish, the pipeline emits no per-part progress lines, and RunDetail renders neither the existing
+  `RunLogTail` nor a parts block. → **M9.7 C**: finish ADR-061 §10 *by reuse* — milestone
+  `logger.info` lines (stream via the M8 run-log tail, zero new schema) + RunDetail renders the
+  live tail + a structured `derive.parts[]` block.
+- **§E.2 — own-chat screenshot misattribution**: the user's own conversation organized as "P1 + an
+  unnamed *sender*" (the ADR-057 §5 / organizer-v7 "never you" rule is wrong for the own-chat
+  case; no identity signal exists at ingest). → **ADR-062**: vision emits disciplined per-message
+  lines (side + sender + reply-quote insets), organizer v8 maps right→the user's own words (no
+  self-entity, phantom-sender ban), default own-chat; **A/B** `llama-4-scout-17b` vs
+  `qwen2.5-vl-72b` before any routing change; **migration** = rederive+reorganize existing photos.
+- **Scope add — general capture remove** (`DELETE /captures/{id}` + double-confirmed UI),
+  reversing ADR-048 §11's "backlog": entirely deletes a capture (nodes, media files, everywhere-
+  visibility; hubs preserved, tombstone replay-excluded) — needed for A/B hygiene and as product.
 
-**Next (the user runs it):** work the drill script → then flip **T6 done** + update this snapshot.
-Optionally push the web change first so the deep-link click is live during the drill.
+**Next:** implement **M9.7** (implementation session, no grilling): **Batch A {T1 vision format,
+T2 pipeline logging, T3 RunDetail tail+parts}** → **Batch B {T4 organizer v8, T5 remove server,
+T6 remove web}** → **T7 live Accept** (deploy; A/B on the real screenshot; migration rederive;
+re-drill §C.2/§E.2 + the remaining drill steps; flip **M9.6 T6 + M9.7** done together).
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
