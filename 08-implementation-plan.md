@@ -2017,8 +2017,17 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       `depends-on: T2`
 - [ ] **T4 — entity-hub dedup detector** (server): the §4 conservative detector → inline feed +
       `review_queue` for low-confidence. `parallel-with: T1`
-- [ ] **T5 — node-delete path** (server): delete a zero-degree orphan hub (git-rm + index prune);
-      content orphans route to capture-remove. `parallel-with: T1, T4`
+- [x] **T5 — node-delete path** (server) — **DONE**: new `NodeDeleteService` +
+      `POST /admin/nodes/{id}/delete` deletes a genuinely **zero-degree** entity hub via git-rm
+      (`NodeWriter.remove_nodes`) + index prune (`NodeDeleteStore.delete_nodes`) + force-commit,
+      under an `agent_runs` row (P8). Validation is synchronous — `404` unknown/tombstone; `400` a
+      content node (routed to `DELETE /captures/{id}` capture-remove, so a reprocess can't replay
+      the raw + resurrect it); `409` a still-referenced node (routed to Merge) — then the mutation
+      runs in the background answering `202 {run_id}` (mirrors the entity-merge apply). Zero-degree =
+      empty canonical `neighborhood` either direction (tombstoned endpoints excluded); a reprocess
+      won't recreate an unreferenced hub, so the bare git-rm is never-lose-safe (ADR-064 §5). +10
+      tests (service routing/git-rm/self-heal/commit-failure + admin router 202/404/400/409); gate
+      green (1058 pytest). `parallel-with: T1, T4`. Docs: 03 §Admin (new endpoint).
 - [ ] **T6 — inline-actionable graph-health** (web): per-section Merge/Delete/Keep buttons wired to
       T3's picker + T5 delete + capture-remove; dupe candidates from T4. `depends-on: T3, T4, T5`
 - [ ] **T7 — live Accept:** merge Diana via the picker (no ids); confirm it **survives a

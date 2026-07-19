@@ -30,16 +30,19 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.8 T1 DONE + DEPLOYED TO PROD.** **Durable, replayable merges**
-([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1, migration 021): each merge is recorded in
-`entity_merges` keyed on **surface form + type** (not node id); merge apply upserts the decision, and
-`reprocess-all` re-applies them after the raw rebuild (new `MergeReplayService`, wired into the in-app
-`ReprocessService` + the CLI) — matched by surface form, title-form ranked first so a survivor/loser
-sharing a short alias never cross; unresolvable/ambiguous → skipped (never-lose). Fixes ADR-042 §4's
-silent drop (a name-merge now survives a reprocess). Gate green (1049 pytest, +10); shipped via CI
-(migration 021 applied on prod, app live). Docs: 02 §3, 03 §Admin, 08 §M9.8 T1.
-*(M9.7 + M9.6 T6 closed just prior — see [status history](08-logs/status-history.md); M9.8 was grilled
-to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md).)*
+**Where we are (2026-07-19):** **M9.8 T5 DONE (committed, not yet pushed).** T1 remains DONE + DEPLOYED.
+**Node-delete path for orphan hubs** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §5): a new
+`NodeDeleteService` + `POST /admin/nodes/{id}/delete` deletes a genuinely **zero-degree entity hub** via
+git-rm (`NodeWriter.remove_nodes`) + index prune (`NodeDeleteStore.delete_nodes`) + force-commit, under
+an `agent_runs` row (P8) → `202 {run_id}`. Synchronous validation: `404` unknown/tombstone; `400` a
+content node (routed to `DELETE /captures/{id}` capture-remove, so a reprocess can't replay the raw +
+resurrect it); `409` a still-referenced node (routed to Merge). Zero-degree = empty canonical
+`neighborhood` either direction (tombstoned endpoints excluded); a reprocess won't recreate an
+unreferenced hub, so the bare git-rm is never-lose-safe. Independent review: no must-fix. Gate green
+(1058 pytest, +10, ruff clean). Docs: 03 §Admin, 08 §M9.8 T5.
+*(M9.7 + M9.6 T6 + M9.8 T1 closed prior — see [status history](08-logs/status-history.md); M9.8 grilled
+to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md). T5 was built parallel-eligible
+with T1/T4 per the tracker.)*
 
 **Repo hygiene (2026-07-19):** a **PII history-rewrite** (`git filter-repo` + force-push) of **both
 public repos** replaced every real contact's full name with a fabricated stand-in (real first name
@@ -49,11 +52,12 @@ pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git con
 **`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
 ⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
 
-**Next:** continue **M9.8** server foundation — **T4** (conservative entity-hub dedup detector →
-inline feed + Review for low-confidence; suppresses the genuinely-different dupe) and **T5**
-(node-delete path for orphan hubs); then the shared picker + merge surfaces (T2/T3), then
+**Next:** finish the **M9.8** server foundation — **T4** (conservative entity-hub dedup detector →
+inline feed + Review for low-confidence; suppresses the genuinely-different dupe; the last server
+task, paused-for-review before build); then the shared picker + merge surfaces (T2/T3), then
 inline-actionable graph-health (T6); T7 live Accept = merge the duplicated hub by name and confirm it
-survives a `reprocess-all`. *(Separate background task in flight: the identity-capsule L0
+survives a `reprocess-all`, a detected dupe merges inline while Diana Wren stays separate, an orphan
+hub deletes and doesn't resurrect. *(Separate background task in flight: the identity-capsule L0
 generator-preamble leak.)*
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build

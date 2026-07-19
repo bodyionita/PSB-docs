@@ -1384,3 +1384,20 @@ unresolvable/ambiguous → skipped. Gate green (1049 pytest, +10). *(What happen
 + deployed to prod; a PII history-rewrite of both public repos + a hashed pre-commit guard landed; the
 deploy job was hardened from `git pull --ff-only` to fetch+reset for force-push resilience. See the
 current README snapshot.)*
+
+---
+
+**Superseded README snapshot (moved verbatim at the M9.8 T5 pause, 2026-07-19):**
+
+> **Where we are (2026-07-19):** **M9.8 T1 DONE + DEPLOYED TO PROD.** **Durable, replayable merges**
+> ([ADR-064](../adr/064-durable-merges-visual-dedup-gc.md) §1, migration 021): each merge is recorded in
+> `entity_merges` keyed on **surface form + type** (not node id); merge apply upserts the decision, and
+> `reprocess-all` re-applies them after the raw rebuild (new `MergeReplayService`, wired into the in-app
+> `ReprocessService` + the CLI) — matched by surface form, title-form ranked first so a survivor/loser
+> sharing a short alias never cross; unresolvable/ambiguous → skipped (never-lose). Fixes ADR-042 §4's
+> silent drop (a name-merge now survives a reprocess). Gate green (1049 pytest, +10); shipped via CI
+> (migration 021 applied on prod, app live). Docs: 02 §3, 03 §Admin, 08 §M9.8 T1.
+>
+> **Next:** continue **M9.8** server foundation — **T4** (conservative entity-hub dedup detector) and
+> **T5** (node-delete path); then the shared picker + merge surfaces (T2/T3), inline graph-health (T6);
+> T7 live Accept.
