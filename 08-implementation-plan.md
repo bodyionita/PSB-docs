@@ -2015,8 +2015,28 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       component. `parallel-with: T1`
 - [ ] **T3 — merge surfaces** (web): profile "Merge into…" + AdminOps upgrade, using T2.
       `depends-on: T2`
-- [ ] **T4 — entity-hub dedup detector** (server): the §4 conservative detector → inline feed +
-      `review_queue` for low-confidence. `parallel-with: T1`
+- [x] **T4 — entity-hub dedup detector** (server) — **DONE**: new nightly `EntityDedupService`
+      (`app/entities/entity_dedup.py`) proposes duplicate **same-type** hubs gated by a **strict AND**
+      — a **name gate** (normalized surface-form **containment** OR high **fuzzy** match via stdlib
+      `difflib`, with a low-entropy token guard) **AND** a **shared-neighborhood gate** (≥
+      `entity_dedup_min_shared` common canonical neighbours). The AND leg suppresses the named false
+      positive: **"Diana Wren"** (same first name, different neighbourhood → 0 shared) is never
+      proposed. Powers **both** surfaces (§4): **high-confidence** pairs (containment/strong-fuzzy AND
+      ≥ `entity_dedup_high_min_shared` shared) land **inline** in the run's
+      `agent_runs.details.high_confidence` (read off the latest `entity-dedup` run like the
+      graph-health card → one-click Merge via the existing `POST /admin/entities/merge`, pre-filled
+      from the higher-degree survivor); **lower-confidence** pairs file a new **`entity-dedup`** review
+      kind. **Never auto-merges** (rule 2); a **re-file guard** (skip any pair with an `entity-dedup`
+      review item in any status) makes a re-scan idempotent + honours a prior "keep". Mirrors the
+      dedup-sweep pattern (watermark-free — O(n²) over the personal-scale hub set). The **merge**
+      resolution (`ReviewService._resolve_entity_dedup`) folds the loser hub into the survivor **with
+      the entity alias union** (the shared `fold_entities`) **and records a durable `entity_merges`
+      decision** (survives a reprocess, §1) — distinct from the content-only `dedup-proposal` merge;
+      **keep** discards. Wired into the nightly pipeline (read-mostly, after dedup-sweep) + roster +
+      CLI (`entity-dedup` verb); reprocess already truncates the new kind (all-but-`stance-candidate`).
+      +19 tests (detector pure gates/service + entity-dedup resolution); gate green (1077 pytest,
+      +19; ruff clean). Docs: 02 §3, 03 §Review + §API-addendum, 04 §3b + §Scheduling.
+      `parallel-with: T1` (foundation).
 - [x] **T5 — node-delete path** (server) — **DONE**: new `NodeDeleteService` +
       `POST /admin/nodes/{id}/delete` deletes a genuinely **zero-degree** entity hub via git-rm
       (`NodeWriter.remove_nodes`) + index prune (`NodeDeleteStore.delete_nodes`) + force-commit,

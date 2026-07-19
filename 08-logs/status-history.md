@@ -1401,3 +1401,25 @@ current README snapshot.)*
 > **Next:** continue **M9.8** server foundation — **T4** (conservative entity-hub dedup detector) and
 > **T5** (node-delete path); then the shared picker + merge surfaces (T2/T3), inline graph-health (T6);
 > T7 live Accept.
+
+---
+
+**Superseded README snapshot (moved verbatim at the M9.8 T4 pause, 2026-07-19):**
+
+> **Where we are (2026-07-19):** **M9.8 T5 DONE (committed, not yet pushed).** T1 remains DONE + DEPLOYED.
+> **Node-delete path for orphan hubs** ([ADR-064](../adr/064-durable-merges-visual-dedup-gc.md) §5): a new
+> `NodeDeleteService` + `POST /admin/nodes/{id}/delete` deletes a genuinely **zero-degree entity hub** via
+> git-rm (`NodeWriter.remove_nodes`) + index prune (`NodeDeleteStore.delete_nodes`) + force-commit, under
+> an `agent_runs` row (P8) → `202 {run_id}`. Synchronous validation: `404` unknown/tombstone; `400` a
+> content node (routed to `DELETE /captures/{id}` capture-remove, so a reprocess can't replay the raw +
+> resurrect it); `409` a still-referenced node (routed to Merge). Zero-degree = empty canonical
+> `neighborhood` either direction (tombstoned endpoints excluded); a reprocess won't recreate an
+> unreferenced hub, so the bare git-rm is never-lose-safe. Independent review: no must-fix. Gate green
+> (1058 pytest, +10, ruff clean). Docs: 03 §Admin, 08 §M9.8 T5.
+> *(M9.7 + M9.6 T6 + M9.8 T1 closed prior — see status history; M9.8 grilled to build-ready in ADR-064.
+> T5 was built parallel-eligible with T1/T4 per the tracker.)*
+>
+> **Next:** finish the **M9.8** server foundation — **T4** (conservative entity-hub dedup detector →
+> inline feed + Review for low-confidence; suppresses the genuinely-different dupe; the last server
+> task, paused-for-review before build); then the shared picker + merge surfaces (T2/T3), then
+> inline-actionable graph-health (T6); T7 live Accept.

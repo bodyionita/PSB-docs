@@ -30,19 +30,25 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.8 T5 DONE (committed, not yet pushed).** T1 remains DONE + DEPLOYED.
-**Node-delete path for orphan hubs** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §5): a new
-`NodeDeleteService` + `POST /admin/nodes/{id}/delete` deletes a genuinely **zero-degree entity hub** via
-git-rm (`NodeWriter.remove_nodes`) + index prune (`NodeDeleteStore.delete_nodes`) + force-commit, under
-an `agent_runs` row (P8) → `202 {run_id}`. Synchronous validation: `404` unknown/tombstone; `400` a
-content node (routed to `DELETE /captures/{id}` capture-remove, so a reprocess can't replay the raw +
-resurrect it); `409` a still-referenced node (routed to Merge). Zero-degree = empty canonical
-`neighborhood` either direction (tombstoned endpoints excluded); a reprocess won't recreate an
-unreferenced hub, so the bare git-rm is never-lose-safe. Independent review: no must-fix. Gate green
-(1058 pytest, +10, ruff clean). Docs: 03 §Admin, 08 §M9.8 T5.
-*(M9.7 + M9.6 T6 + M9.8 T1 closed prior — see [status history](08-logs/status-history.md); M9.8 grilled
-to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md). T5 was built parallel-eligible
-with T1/T4 per the tracker.)*
+**Where we are (2026-07-19):** **M9.8 T4 DONE (committed, not yet pushed).** T1 DONE + DEPLOYED; T5 DONE
+(committed). **The M9.8 server foundation is complete** (T1/T4/T5). **Conservative entity-hub dedup
+detector** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §4): a new nightly `EntityDedupService`
+proposes duplicate **same-type** hubs gated by a **strict AND** — a **name gate** (surface-form
+containment OR high fuzzy match via stdlib `difflib`, low-entropy token guarded) **AND** a
+**shared-neighborhood gate** (≥ N common canonical neighbours). The AND leg suppresses the named false
+positive: **"Diana Wren"** (same first name, different neighbourhood → 0 shared) is never proposed. It
+powers **both** surfaces: **high-confidence** pairs land **inline** in the run's
+`agent_runs.details.high_confidence` (read off the latest `entity-dedup` run like the graph-health card
+→ one-click Merge via the existing `POST /admin/entities/merge`, pre-filled from the higher-degree
+survivor); **lower-confidence** pairs file a new **`entity-dedup`** review kind whose **merge** folds the
+loser hub into the survivor **with the alias union** (shared `fold_entities`) **and records a durable
+`entity_merges` decision** (survives a reprocess, §1). **Never auto-merges** (rule 2); a **re-file
+guard** makes a re-scan idempotent. Wired into the nightly pipeline + roster + CLI (`entity-dedup`).
+Gate green (1077 pytest, +19, ruff clean). Docs: 02 §3, 03 §Review + API-addendum, 04 §3b + §Scheduling,
+08 §M9.8 T4.
+*(M9.7 + M9.6 T6 + M9.8 T1/T5 closed prior — see [status history](08-logs/status-history.md); M9.8
+grilled to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md). T1/T4/T5 were the
+parallel-eligible server foundation per the tracker.)*
 
 **Repo hygiene (2026-07-19):** a **PII history-rewrite** (`git filter-repo` + force-push) of **both
 public repos** replaced every real contact's full name with a fabricated stand-in (real first name
@@ -52,11 +58,11 @@ pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git con
 **`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
 ⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
 
-**Next:** finish the **M9.8** server foundation — **T4** (conservative entity-hub dedup detector →
-inline feed + Review for low-confidence; suppresses the genuinely-different dupe; the last server
-task, paused-for-review before build); then the shared picker + merge surfaces (T2/T3), then
-inline-actionable graph-health (T6); T7 live Accept = merge the duplicated hub by name and confirm it
-survives a `reprocess-all`, a detected dupe merges inline while Diana Wren stays separate, an orphan
+**Next:** the M9.8 **web** work — the shared **visual entity picker** (T2, name-typeahead → id) and the
+**merge surfaces** (T3, profile "Merge into…" + AdminOps upgrade over T2), then **inline-actionable
+graph-health** (T6, per-section Merge/Delete/Keep wired to T3's picker + T5 delete + capture-remove; dupe
+candidates from T4's inline feed). Then **T7 live Accept**: merge the duplicated hub by name and confirm
+it survives a `reprocess-all`, a detected dupe merges inline while Diana Wren stays separate, an orphan
 hub deletes and doesn't resurrect. *(Separate background task in flight: the identity-capsule L0
 generator-preamble leak.)*
 

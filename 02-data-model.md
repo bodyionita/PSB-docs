@@ -307,7 +307,7 @@ of the index; a completed run's logs are fully durable after the on-finish flush
 
 **`review_queue`** (**M3**, [ADR-030](adr/030-entity-substrate-and-lifecycle.md) — pulled forward
 from M6 and made **kind-generic**): every human-decision item the system files, one lifecycle.
-| id uuid pk · kind (`entity-ambiguity` M3 \| `vocab-proposal` M3 \| `stance-candidate` M6 \| `dedup-proposal` M6) · payload jsonb (candidates / proposed content) · excerpt · source · source_ref · status (`pending`\|`resolved`\|`discarded`\|`maybe`, no expiry) · resolution jsonb null · created_at · resolved_at |
+| id uuid pk · kind (`entity-ambiguity` M3 \| `vocab-proposal` M3 \| `stance-candidate` M6 \| `dedup-proposal` M6 \| `occurred-enrichment` M8.2 \| `entity-dedup` M9.8) · payload jsonb (candidates / proposed content) · excerpt · source · source_ref · status (`pending`\|`resolved`\|`discarded`\|`maybe`, no expiry) · resolution jsonb null · created_at · resolved_at |
 
 Items are decidable in place (mention in capture excerpt, candidates with name/disambig/aliases +
 node-preview link). **Vocabulary proposals ([ADR-027](adr/027-typed-vocabulary-governance.md)) are
@@ -323,6 +323,15 @@ auto-endorse. **agree** materializes a `captures` row = the auto-endorse path. `
 default_survivor}` — canonical `least→greatest` ids (may reference node ids — it is
 truncate-on-reprocess); resolution `{action: merge|keep|link, survivor?}` (merge folds via the
 shared merge-core, link writes a canonical `similar` edge).
+**`entity-dedup`** (**M9.8 T4**, [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §4) is the
+**entity-hub** counterpart the conservative dedup detector files for a **lower-confidence** duplicate
+pair (its high-confidence pairs go **inline** on graph-health, not to review): payload
+`{node_a, node_b, default_survivor, type, titles, signals:{name_match:{kind,score}, shared_count,
+jaccard}}` — canonical `least→greatest` ids (truncate-on-reprocess); resolution
+`{action: merge|keep, survivor?}` where **merge** folds the loser hub into the survivor **with the
+entity alias union** (the shared `fold_entities`) **and records a durable `entity_merges` decision**
+so it survives a reprocess (§1) — the entity counterpart to the content-only `dedup-proposal` merge;
+**keep** discards.
 **`maybe` is re-openable** (M6 fixes the `resolve` guard: `pending`+`maybe` are still-decidable,
 `resolved`/`discarded` terminal). **Kind-aware reprocess** (see below): `reprocess-all` preserves
 `stance-candidate`, truncates the other kinds.
@@ -396,7 +405,7 @@ independent copy and may restore-to-last-nightly. Every capture ends as a node (
 | Loss | Recovery | Tier |
 |---|---|---|
 | Derived tables (`nodes`,`chunks`,`edges`) | `POST /admin/reindex` from the store | rebuildable |
-| A format/organizer-quality change left old nodes stale | `POST /admin/reprocess` ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reset derived state (node files + `nodes`/`chunks`/`edges`/`node_profiles`, `captures.node_paths`) and the **capture-derived `review_queue` kinds only** (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal` — **kind-aware**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §7; `stance-candidate` items are **preserved**), replay every capture's raw chronologically (incl. chat-endorsed captures → **P10**); **raw + approved vocabulary + `removed_at`-tombstoned captures' exclusion preserved**; **durable standing merges (`entity_merges`) are re-applied** after the rebuild by surface form ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1 — no longer dropped) | derived (from raw) |
+| A format/organizer-quality change left old nodes stale | `POST /admin/reprocess` ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reset derived state (node files + `nodes`/`chunks`/`edges`/`node_profiles`, `captures.node_paths`) and the **capture-derived `review_queue` kinds only** (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal`/`entity-dedup` — **kind-aware**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §7; `stance-candidate` items are **preserved**), replay every capture's raw chronologically (incl. chat-endorsed captures → **P10**); **raw + approved vocabulary + `removed_at`-tombstoned captures' exclusion preserved**; **durable standing merges (`entity_merges`) are re-applied** after the rebuild by surface form ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1 — no longer dropped) | derived (from raw) |
 | Operational state (`agent_runs`, `chat_*`, `captures`, `review_queue`, cursors, settings) | Supabase backup, or nightly `pg_dump` in R2 → restore-to-last-nightly | operational |
 | Whole database | as above; worst case reindex restores search/traverse/chat, losing at most the day's operational log + pending review items (re-derivable from persisted sessions) | operational |
 | Graph store on VPS | `git clone` from GitHub **or** the latest R2 WORM bundle | **never-lose** |

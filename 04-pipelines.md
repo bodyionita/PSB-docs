@@ -192,7 +192,7 @@ finish agent_runs ("3 sessions read, 1 recorded, 1 to review, 1 skipped")
 **Durability (P10).** An endorsed chat memory is a `captures` row, so it is indistinguishable
 downstream and `reprocess-all` rebuilds it for free; `reprocess-all` is **kind-aware** — it
 preserves `stance-candidate` review items (chat sessions aren't replayed by capture-replay) and
-truncates the capture/graph-derived kinds (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal`,
+truncates the capture/graph-derived kinds (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal`/`entity-dedup`,
 re-derivable). **Remove** = git-rm node file(s) + DB-delete + **tombstone the capture**
 (`removed_at`) so replay/reprocess can't resurrect it.
 
@@ -214,6 +214,22 @@ re-derivable). **Remove** = git-rm node file(s) + DB-delete + **tombstone the ca
   fallback (`captures.node_paths` in `inbox/`) → `reorganize_capture` with the now-richer entity
   registry; replaced only on success, still-failing stays in `inbox/`. Residual ambiguity files
   the normal `entity-ambiguity` items.
+- **`entity-dedup`** (nightly, after reindex + dedup-sweep — the **entity-hub** counterpart of the
+  content dedup sweep, **M9.8 T4 / [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §4**):
+  a **conservative** same-type hub-pair scan (watermark-free — O(n²) over the personal-scale hub set)
+  gated by a **strict AND** of a **name gate** (one hub's normalized surface form *contains* the
+  other's, or a high fuzzy match — with a low-entropy token guard) **and** a **shared-neighborhood
+  gate** (≥ `entity_dedup_min_shared` common canonical neighbours). The AND is what suppresses the
+  named false positive: **"Diana Wren"** shares the first name with "Diana" but wires into a *different*
+  neighbourhood, so she is never proposed. It powers **both** surfaces: **high-confidence** pairs
+  (containment/strong-fuzzy AND ≥ `entity_dedup_high_min_shared` shared) land **inline** — written to
+  the run's `agent_runs.details.high_confidence`, read off the latest `entity-dedup` run like the
+  graph-health card, for a one-click Merge (the shared picker, pre-filled from the higher-degree
+  survivor); **lower-confidence** pairs file an `entity-dedup` review item. **Never auto-merges**
+  (rule 2); a **re-file guard** skips any pair already carrying an `entity-dedup` review item in any
+  status. The **merge** resolution folds the loser hub into the survivor **with the entity alias union**
+  (the shared `fold_entities`) **and records a durable `entity_merges` decision** (survives a
+  reprocess, §1) — distinct from the content-only `dedup-proposal` merge.
 
 ## 4. Indexing pipeline
 
@@ -306,7 +322,9 @@ completes** — one start time, dependency order guaranteed regardless of step d
 RAM at a time. A bare job is **never** cron-scheduled; even single-step work is wrapped in a
 pipeline. Cadence maps to a pipeline:
 - **`nightly`** (one start, e.g. 03:00): chat-distiller → data-sync → db-backup → inbox-drain →
-  reindex → profile-refresh → backfill → identity-capsule → dedup-sweep → store-sweep → bundle →
+  reindex → profile-refresh → backfill → identity-capsule → dedup-sweep → **entity-dedup** (M9.8 T4,
+  [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §4 — the read-mostly hub-dedup detector) →
+  store-sweep → bundle →
   **graph-health** (M8, [ADR-053](adr/053-m8-ops-console-observability-build-decisions.md) §9 — the
   **read-only** health reporter runs **last**, so it reports on the settled post-reindex/post-dedup
   state; findings → its run's `details`, `on_fail: continue`).
