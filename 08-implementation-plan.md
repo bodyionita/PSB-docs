@@ -1954,6 +1954,16 @@ gate green (1039 pytest, +2 tests). After redeploy, re-capture and confirm `deri
 prose. **Follow-up (out of scope):** the identity capsule (L0) leaks its own generator preamble
 ("I'll help you distill this identity capsule…") — a different model path, flagged separately.
 
+**Progress — reasoning_format → reasoning_effort=none (`7e2f0fc`).** `reasoning_format: hidden`
+fixed the *preamble* but not the mechanism: qwen3.6-27b still generated reasoning tokens (just
+hidden from `content`), and on a **longer screenshot** the variable-length hidden reasoning ate the
+completion budget, **truncating the transcription to <half** — non-deterministically (a second run
+with less reasoning came out whole). Verified on the model's Groq page that `reasoning_effort:
+"none"` (non-thinking mode) is supported, so swapped the Groq `extra_body` to it: **no** reasoning
+tokens generated at all → no preamble *and* the full 32k output budget goes to the transcription, so
+long screenshots no longer truncate. Still Groq-scoped; tests updated; gate green. (Implementation
+detail under ADR-063's "disable it if it appears" — no ADR change.)
+
 > **T4 version note (reconciliation):** ADR-062 §3 / the T4 bullet say "prompt v8", but the code's
 > `ORGANIZER_PROMPT_VERSION` is **already `organizer-v8`** (bumped in M9.6 for the composite
 > `[[part N · kind]]` markers). So the ADR-062 §3 self-attribution mapping lands as
