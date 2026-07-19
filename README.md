@@ -30,34 +30,27 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.6 composite capture — SHIPPED TO PROD (T1–T5 done + deployed); only the manual live Accept remains.**
-A single-session build against the approved plan ([08 §M9.6](08-implementation-plan.md) +
-[ADR-061](adr/061-composite-multi-part-capture.md)); the user directed all M9.6 tasks in one pass
-(no per-task pause), agreeing to pushes + postponing manual/live drills to T6. **T1 (draft lifecycle
-+ schema) is committed** (`e785554`, code repo — **not yet deployed**; M9.6 deploys once at T6):
-migration **019** (`captures.text_body`, `media.part_ordinal`, `captures_single_active_draft` partial
-unique index), the server draft surface (open/resume · part add/remove with ≤1-voice + ordinals ·
-text edit · submit ≥1-part gate · discard · 7-day GC; orphan-sweep skips drafts), draft endpoints +
-`DraftView`, and a **baseline sequential composite `_process`** so submit works end-to-end. Full
-suite **1027 pass**, ruff clean. **T2** (`8ebd2c4`) concurrent-bounded derivation + cached
-`[[part N · kind]]` marker assembly + composite `rederive`; **T3** (`d4f1df9`) organizer `parts:[…]`
-contract (prompt v8) + per-node attribution; **T4** (`d942432`) CaptureView media→list + `text_body`
-+ removed the one-shot endpoints; **independent `/code-review` (high)** on the T1–T4 server diff found
-**4 issues, all fixed** (`ba9d465`): `captures.run_id` (migration **020**, live Activity deep-link
-replacing an unindexed JSON scan) + two draft-race guards. **T5** (`6ada4f4`) shipped the **web
-compose surface** — draft-backed text + multi-photo + record-voice-≤1 + per-part 'x' + Send +
-resume/discard, `CaptureView.media` singular→list across the capture surfaces, and the "See
-processing →" run deep-link (`tsc`+`eslint`+`vite build` green). **T6: DEPLOYED** — this session
-pushed the code (`e785554..6ada4f4`), CI deployed to prod, and automated verification confirms
-**migrations 019+020 applied** (`/health` ok, `db:true`) + the **endpoint fold is live** (`POST
-/capture/{text,image}` → **404**, `POST /capture/draft`/`…/submit` → **401** gated). Review posture:
-server T1–T4 got a high `/code-review` (4 fixed); web got typecheck+lint+build+self-review. See the
-**T1–T6 progress notes** in [08 §M9.6](08-implementation-plan.md). **Next (the user runs it):** the
-**manual live Accept** — real-phone composite compose drill (multi-photo + voice + text → cross-
-referencing nodes, per-node attribution, unattributed→capture-only), draft resume/discard,
-Activity-run deep-link, `reprocess-all` byte-parity, the folded M9 T6 single-part drills, media-join
-SQL smoke — then flip T6 done. One UI follow-up: wire `activityNav.openRun` in AppShell so the "See
-processing →" link navigates (the field + affordance already ship).
+**Where we are (2026-07-19):** **M9.6 composite capture — SHIPPED TO PROD (T1–T5 done + deployed); only the manual live Accept (T6) remains, and it's the user's to run.**
+The full T1–T5 build + T6 deploy is recorded in [08 §M9.6](08-implementation-plan.md) and
+[status-history](08-logs/status-history.md) (migrations **019+020** applied live, endpoint fold
+verified). **This session was drill prep + the one UI follow-up** — no phone/VPS is drivable from a
+fresh agent, so it did the automatable slice and left the manual Accept staged for the user:
+- **`activityNav.openRun` wired in AppShell** (the "one UI hop still to land"): the capture "See
+  processing →" link now pins that run's `RunDetail` atop Activity→Feed (pagination-proof, reuses the
+  existing by-id fetch; ADR-061 §10). Committed to the code working tree, **not pushed** — rides the
+  next deploy. `tsc`+`eslint`+`vite build` green; **independent review — no must-fix** (one minor
+  dismiss-stickiness gap found + fixed).
+- **media-join SQL smoke pre-run via Supabase MCP** — migrations 019+020 confirmed, integrity all
+  green (no dangling `node_media`/`media`/`run_id`, 0 tombstone-stranded links, voice backfill
+  complete). Caveat: no multi-part composite exists in prod yet (the one indexed composite is
+  text-only), so **part-ordinals + per-node `parts:[…]` attribution are first exercised by the phone
+  drill**.
+- **Runnable drill script written:** [08-logs/m9.6-accept-drill.md](08-logs/m9.6-accept-drill.md) —
+  step-by-step phone/VPS/SQL commands for the composite compose, resume/discard, deep-link,
+  `reprocess-all` byte-parity, folded M9 T6 single-part drills, and SQL smoke.
+
+**Next (the user runs it):** work the drill script → then flip **T6 done** + update this snapshot.
+Optionally push the web change first so the deep-link click is live during the drill.
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

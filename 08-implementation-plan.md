@@ -1747,9 +1747,9 @@ one-session directive). Checklist:
 - **Draft resume:** attach parts, close the app, reopen → the draft **resumes** (text + parts); the
   **Discard** action drops it.
 - **Deep-link:** the capture **"See processing →"** opens its **Activity run** with **per-part**
-  derivation steps — note the `activityNav.openRun` provider wiring in AppShell is the one UI hop
-  still to land (the `run_id` field + the row affordance ship now; wire `openRun` if the drill wants
-  the click live).
+  derivation steps — the `activityNav.openRun` provider wiring in AppShell **is now wired** (see the
+  drill-prep note below), so the click is live **once the web change deploys** (it's committed to the
+  working tree this session, not yet pushed).
 - **reprocess-all byte-parity:** run `reprocess-all` (VPS CLI) → the composite **replays
   byte-identically** (node set + `node_media` stable).
 - **Folded M9 T6 single-part drills** (now exercised through the composite/media flow): voice
@@ -1759,6 +1759,37 @@ one-session directive). Checklist:
   **node**; a **merged survivor inherits** the loser's media; **media-join SQL smoke** green; media
   serve only behind the **session gate**.
 - **Final independent review** of the live behavior + sign-off, then flip T6 to done.
+
+**Runnable drill script:** [08-logs/m9.6-accept-drill.md](08-logs/m9.6-accept-drill.md) — the same
+checklist, step-by-step with the exact phone/VPS/SQL commands, so the user's manual pass is fast and
+recordable.
+
+**Progress — drill prep + openRun wired (2026-07-19; the Accept itself still pending the user).** A
+support session ahead of the manual Accept (the user can't be driven from here — real phone + VPS):
+- **`activityNav.openRun` wired in AppShell** (the "one UI hop still to land"). `openRun(runId)` sets
+  a one-shot `activityRun` seed + lands on Activity→Feed (agents_jobs); **ActivityScreen** owns a
+  dismissible **pinned `RunDetail`** atop the Feed (reuses the existing `useRun`-by-id component, so
+  it's **pagination-proof** — no hunting the keyset list — satisfying ADR-061 §10 "expand and follow
+  live" with no bespoke stepper). Seed cleared on manual nav; mirrors the `openCaptures`/`openReviewItem`
+  sibling pattern. Touched `web/src/AppShell.tsx`, `features/activity/ActivityScreen.tsx`,
+  `features/activity/FeedView.tsx`. `tsc` + `eslint --max-warnings 0` + `vite build` all green.
+  **Independent review** (fresh agent, diff vs ADR-061 §10 + the degrade convention): **no must-fix**;
+  one **minor correctness gap fixed** — the pinned-run state started in FeedView, which unmounts on a
+  Feed↔Ops toggle, so a Dismiss would un-stick and the run re-pin on remount; **lifted the state up to
+  ActivityScreen** (stays mounted across the toggle) so Dismiss now sticks. **Committed to the code
+  working tree, not pushed** (M9.6 deploys on the user's call — this rides the next deploy).
+- **media-join SQL smoke pre-run via MCP (Supabase, prod `Braindan`)** — the automatable slice of the
+  Accept. **Migrations 019+020 confirmed applied** (`alembic_version = 020`); all new columns/index
+  present. Integrity **green**: `links_on_tombstone = 0`, `unreachable_capture_media = 0`, no dangling
+  `node_media`/`media`/`run_id` refs; voice backfill 13 = 11 derived + 2 unavailable, **0 unbackfilled**.
+  Caveat recorded: **every existing capture has ≤1 media** (all legacy single-part) and the one indexed
+  composite in prod is **text-only** — so **part-ordinal population + per-node `parts:[…]` attribution
+  are first exercised by the phone drill** (Part A), not yet by any prod data. Nit flagged (non-blocking):
+  `deploy/smoke/m9_media_join_smoke.sql` block-2 comment says `image`, but the media-kind vocab is
+  `photo` (`media_store.KIND_PHOTO`); data is correct, comment is stale.
+- **T6 stays `[~]`** — the real-phone composite/resume/deep-link/reprocess drills + folded M9 T6
+  device drills are the user's to run (drill script above); flip to done only after they pass + a final
+  live review.
 
 ## M10 — Reflection agent (+ push notifications)
 

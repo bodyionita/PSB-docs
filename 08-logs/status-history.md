@@ -1263,3 +1263,32 @@ photo/voice/screenshot drills → group-edit forward-live → the both-kinds fai
 Or respawn.
 
 **Where we are (2026-07-19, superseded by the M9.6 build session).** **M9 T6 live Accept STARTED then paused for a planning pivot; M9.6 composite capture GRILLED TO BUILD-READY.** The M9 media stack (T1–T5) is shipped and **live on prod**: the prior session pushed it (`2629053`), CI deployed it (migrations **017+018** applied), the **`voice-media-backfill`** op ran, and **Accept ¶1** (real-phone photo → described/organized media-backed node, inline in NodePreview + lightbox + "see raw capture") + the **session gate** (`GET /api/v1/media/{id}` → **401** without a cookie) verified live. A capture-screen **preview-centering bug** found during ¶1 — the `Lightbox`/`CaptureDetailSheet` overlays are `position:fixed` but were trapped inside framer-motion-transformed capture rows — was fixed by **portaling both overlays to `<body>`** and **shipped** (`8579974`, deployed). Then the user requested **composite multi-part capture**, an architecture change, so per [09](../09-session-protocol.md) the session **switched to a grilling/planning pass** and recorded **[ADR-061](../adr/061-composite-multi-part-capture.md)** + a new **M9.6** milestone (server-side **draft** compose → **one blended organize**; capture = typed text + 0..N photos + ≤1 voice; **per-node media attribution**; `raw_text` stays the cached assembled replay source). **M9 T6 superseded by M9.6.** **Next was:** implement M9.6 strictly sequentially T1→T6. **No composite code written yet** (planning pause).
+
+**Where we are (2026-07-19, superseded by the drill-prep + openRun support session):** **M9.6 composite capture — SHIPPED TO PROD (T1–T5 done + deployed); only the manual live Accept remains.**
+A single-session build against the approved plan ([08 §M9.6](../08-implementation-plan.md) +
+[ADR-061](../adr/061-composite-multi-part-capture.md)); the user directed all M9.6 tasks in one pass
+(no per-task pause), agreeing to pushes + postponing manual/live drills to T6. **T1 (draft lifecycle
++ schema) is committed** (`e785554`, code repo — **not yet deployed**; M9.6 deploys once at T6):
+migration **019** (`captures.text_body`, `media.part_ordinal`, `captures_single_active_draft` partial
+unique index), the server draft surface (open/resume · part add/remove with ≤1-voice + ordinals ·
+text edit · submit ≥1-part gate · discard · 7-day GC; orphan-sweep skips drafts), draft endpoints +
+`DraftView`, and a **baseline sequential composite `_process`** so submit works end-to-end. Full
+suite **1027 pass**, ruff clean. **T2** (`8ebd2c4`) concurrent-bounded derivation + cached
+`[[part N · kind]]` marker assembly + composite `rederive`; **T3** (`d4f1df9`) organizer `parts:[…]`
+contract (prompt v8) + per-node attribution; **T4** (`d942432`) CaptureView media→list + `text_body`
++ removed the one-shot endpoints; **independent `/code-review` (high)** on the T1–T4 server diff found
+**4 issues, all fixed** (`ba9d465`): `captures.run_id` (migration **020**, live Activity deep-link
+replacing an unindexed JSON scan) + two draft-race guards. **T5** (`6ada4f4`) shipped the **web
+compose surface** — draft-backed text + multi-photo + record-voice-≤1 + per-part 'x' + Send +
+resume/discard, `CaptureView.media` singular→list across the capture surfaces, and the "See
+processing →" run deep-link (`tsc`+`eslint`+`vite build` green). **T6: DEPLOYED** — this session
+pushed the code (`e785554..6ada4f4`), CI deployed to prod, and automated verification confirms
+**migrations 019+020 applied** (`/health` ok, `db:true`) + the **endpoint fold is live** (`POST
+/capture/{text,image}` → **404**, `POST /capture/draft`/`…/submit` → **401** gated). Review posture:
+server T1–T4 got a high `/code-review` (4 fixed); web got typecheck+lint+build+self-review. See the
+**T1–T6 progress notes** in [08 §M9.6](../08-implementation-plan.md). **Next (the user runs it):** the
+**manual live Accept** — real-phone composite compose drill (multi-photo + voice + text → cross-
+referencing nodes, per-node attribution, unattributed→capture-only), draft resume/discard,
+Activity-run deep-link, `reprocess-all` byte-parity, the folded M9 T6 single-part drills, media-join
+SQL smoke — then flip T6 done. One UI follow-up: wire `activityNav.openRun` in AppShell so the "See
+processing →" link navigates (the field + affordance already ship).
