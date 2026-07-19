@@ -1360,3 +1360,27 @@ A/B `llama-4-scout-17b` vs `qwen2.5-vl-72b`; migration rederive; re-drill §C.2/
 flip M9.6 T6 + M9.7 done. *(What actually happened in T7: the Groq Scout primary was decommissioned
 mid-drill → ADR-063 swap to `qwen/qwen3.6-27b` + `reasoning_effort=none`; all Accept items verified;
 the duplicate-hub/merge-durability findings became M9.8/ADR-064. See the current README snapshot.)*
+
+---
+
+**Status (2026-07-19, M9.7 done + M9.8-grilled snapshot — superseded by the M9.8-T1-deployed + PII-redaction snapshot).**
+**M9.7 + M9.6 T6 CLOSED — deployed, live Accept all verified.** Batch A/B (`e91d1cb`…`f83268e`)
+shipped chat-screenshot self-attribution (organizer v9), live per-part capture observability (M8
+run-log tail + `derive.parts[]`), and general capture remove (`DELETE /captures/{id}`, double-confirm
+UI). T7's live drill surfaced a live-ops issue — Groq decommissioned the `llama-4-scout-17b` vision
+primary (404 mid-drill) — fixed by [ADR-063](../adr/063-groq-vision-model-scout-decommissioned.md):
+vision primary → `qwen/qwen3.6-27b` with `reasoning_effort=none` (Groq-scoped `extra_body`). T7
+Accept verified (own-chat attribution under v9; live processing view; remove proven via Supabase;
+migration confirmed). Gate green (1039 pytest).
+**M9.8 GRILLED TO BUILD-READY ([ADR-064](../adr/064-durable-merges-visual-dedup-gc.md)):** the T7 wrap
+found manual entity merges don't survive `reprocess-all` (keyed on node id), the merge UI is unusable
+(paste two UUIDs), no entity-hub dedup, graph-health read-only → plan: durable merges (surface-form +
+type), a shared visual name-typeahead picker, inline-actionable graph-health, a conservative entity-hub
+dedup detector, manual orphan GC.
+**M9.8 T1 LANDED (server foundation):** durable, replayable merges ([ADR-064](../adr/064-durable-merges-visual-dedup-gc.md) §1)
+— `entity_merges` (migration 021) keyed on surface form + type; merge apply upserts, `reprocess-all`
+re-applies after the raw rebuild (new `MergeReplayService`, wired into the in-app service + CLI);
+unresolvable/ambiguous → skipped. Gate green (1049 pytest, +10). *(What happened next: T1 was pushed
++ deployed to prod; a PII history-rewrite of both public repos + a hashed pre-commit guard landed; the
+deploy job was hardened from `git pull --ff-only` to fetch+reset for force-push resilience. See the
+current README snapshot.)*

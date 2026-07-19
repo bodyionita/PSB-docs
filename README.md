@@ -30,42 +30,31 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.7 + M9.6 T6 CLOSED — deployed, live Accept all verified.**
-Batch A/B (`e91d1cb`…`f83268e`) shipped chat-screenshot self-attribution (organizer v9), live
-per-part capture observability (M8 run-log tail + `derive.parts[]`), and general capture remove
-(`DELETE /captures/{id}`, double-confirm UI). T7's live drill surfaced a live-ops issue —
-**Groq decommissioned the `llama-4-scout-17b` vision primary (404 mid-drill)** — fixed by
-**[ADR-063](adr/063-groq-vision-model-scout-decommissioned.md)**: vision primary → **`qwen/qwen3.6-27b`**
-(Groq's current free VLM), with **`reasoning_effort=none`** (Groq-scoped `extra_body`) to keep the
-Qwen3 thinking out of the derived text and stop long-screenshot truncation. **T7 Accept verified:**
-own-chat attribution correct under v9 (graph-store + MCP); live processing view (the run-log even
-caught the 404 in-flight); **remove** proven via Supabase (all removed captures `removed_at` set,
-`leftover_media=0`, hubs preserved, `reprocess` replays `WHERE removed_at IS NULL`); migration
-confirmed. Gate green throughout (1039 pytest).
+**Where we are (2026-07-19):** **M9.8 T1 DONE + DEPLOYED TO PROD.** **Durable, replayable merges**
+([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1, migration 021): each merge is recorded in
+`entity_merges` keyed on **surface form + type** (not node id); merge apply upserts the decision, and
+`reprocess-all` re-applies them after the raw rebuild (new `MergeReplayService`, wired into the in-app
+`ReprocessService` + the CLI) — matched by surface form, title-form ranked first so a survivor/loser
+sharing a short alias never cross; unresolvable/ambiguous → skipped (never-lose). Fixes ADR-042 §4's
+silent drop (a name-merge now survives a reprocess). Gate green (1049 pytest, +10); shipped via CI
+(migration 021 applied on prod, app live). Docs: 02 §3, 03 §Admin, 08 §M9.8 T1.
+*(M9.7 + M9.6 T6 closed just prior — see [status history](08-logs/status-history.md); M9.8 was grilled
+to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md).)*
 
-**M9.8 GRILLED TO BUILD-READY ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md)).** The T7 wrap
-investigated duplicate `Diana`/`Diana Vance` person hubs and found: manual entity merges **don't
-survive `reprocess-all`** (keyed on node id; the 07-17 rebuild silently dropped the merge), the merge
-UI is **unusable** (paste two raw UUIDs), there's **no entity-hub dedup** (sweep is content-only), and
-**graph-health is read-only**. Grilled to a plan (ADR-064): **durable merges** (keyed on surface-form
-+ type, replayed by reprocess), a **shared visual name-typeahead picker** (no ids), **inline-actionable
-graph-health** (merge/delete/keep), a **conservative entity-hub dedup detector** (suppresses the
-genuinely-different `Diana Wren`), and **manual orphan GC**. Better entity-resolution-at-ingest
-deferred. *(`Diana` stays duplicated until M9.8 ships — the user declined the id-paste stopgap.)*
-
-**M9.8 T1 LANDED (server foundation, pushed).** **Durable, replayable merges** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1):
-new `entity_merges` table (migration 021) records each merge keyed on **surface form + type** (not
-node id); merge apply upserts the decision, and `reprocess-all` re-applies them after the raw rebuild
-(new `MergeReplayService`, wired into both the in-app `ReprocessService` and the CLI) — matched by
-surface form, title-form ranked first so a survivor/loser sharing a short alias never cross;
-unresolvable/ambiguous → skipped (never-lose). Fixes ADR-042 §4's silent drop (the Diana merge will
-now survive a reprocess). Gate green (1049 pytest, +10). Docs updated (02 §3, 03 §Admin, 08 T1).
+**Repo hygiene (2026-07-19):** a **PII history-rewrite** (`git filter-repo` + force-push) of **both
+public repos** replaced every real contact's full name with a fabricated stand-in (real first name
+kept, so code examples still work: e.g. Horia Fenwick, Diana Vance, Madalina Fairfax); a **hashed
+pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git config core.hooksPath
+.githooks`) blocks re-introduction. The CI **deploy** step was hardened from `git pull --ff-only` to
+**`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
+⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
 
 **Next:** continue **M9.8** server foundation — **T4** (conservative entity-hub dedup detector →
-inline feed + Review for low-confidence; suppresses Diana Wren) and **T5** (node-delete path for
-orphan hubs); then the shared picker + merge surfaces (T2/T3), then inline-actionable graph-health
-(T6); T7 live Accept = merge Diana by name and confirm it survives a `reprocess-all`. *(Separate
-background task in flight: the identity-capsule L0 generator-preamble leak.)*
+inline feed + Review for low-confidence; suppresses the genuinely-different dupe) and **T5**
+(node-delete path for orphan hubs); then the shared picker + merge surfaces (T2/T3), then
+inline-actionable graph-health (T6); T7 live Accept = merge the duplicated hub by name and confirm it
+survives a `reprocess-all`. *(Separate background task in flight: the identity-capsule L0
+generator-preamble leak.)*
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
