@@ -136,7 +136,22 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   (`GET /activity/runs/{id}/logs?after_seq=`, ~1s poll).
 - **graph-health card** — the latest `graph-health` run's findings (orphans, `inbox/` depth, review
   aging, missing `occurred`, alias-less entities, tombstone integrity, freshness) read from its run
-  `details`; **read-only** in M8 (acting on flags → M10).
+  `details`. Read-only in M8; **M9.8 T6 ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §3)
+  makes two sections inline-actionable:**
+  - **Orphan-nodes** — each **hub** offender (offender `type`, T5.5) offers **Delete** (`POST
+    /admin/nodes/{id}/delete`, T5; on `409` still-referenced route to Merge, on `400` content route
+    to capture-remove), **Merge** (an orphan that's actually a dupe → the shared `<EntityPicker>`
+    propose→apply, reusing the T3 flow), and **Keep** (`POST /admin/nodes/{id}/keep`, T5.5 —
+    whitelists the hub so it stops nagging). A collapsible **"Kept (N)"** strip (`GET
+    /admin/orphan-keeps`) lists kept hubs, each with **Un-keep** (`DELETE /admin/orphan-keeps/{key}`).
+    A **content** orphan shows only a degraded "remove from the Captures tab" note on Delete (the API
+    carries no node→capture link — a logged follow-up).
+  - **Duplicate candidates** (new) — the latest `entity-dedup` run's `details.high_confidence[]` (T4),
+    read off the roster the same way, one **Merge** per pair **pre-filled** survivor/loser via `POST
+    /admin/entities/merge`; lower-confidence pairs are server-filed to Review (T4), so the section
+    links there.
+
+  The other five checks stay read-only (acting on those → M10).
 - **Parameterized admin ops** — `reindex` (live counts), `backup now`, `reprocess` (confirm-gated),
   `entities/merge` (pick two nodes), `tags`/`vocab` consolidate (two-step propose→apply)
   — **M9.5 adds** the **connector backfill** card (confirm-gated start, live per-session progress

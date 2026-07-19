@@ -2083,16 +2083,69 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       won't recreate an unreferenced hub, so the bare git-rm is never-lose-safe (ADR-064 §5). +10
       tests (service routing/git-rm/self-heal/commit-failure + admin router 202/404/400/409); gate
       green (1058 pytest). `parallel-with: T1, T4`. Docs: 03 §Admin (new endpoint).
-- [ ] **T6 — inline-actionable graph-health** (web): per-section Merge/Delete/Keep buttons wired to
-      T3's picker + T5 delete + capture-remove; dupe candidates from T4. `depends-on: T3, T4, T5`
+- [ ] **T5.5 — orphan keep-list** (server, GRILLED 2026-07-19): a durable **whitelist** so
+      intentionally-kept zero-degree hubs (e.g. Father/Mother) stop nagging the nightly graph-health
+      orphan check — ADR-064 §5's "Keep = dismiss/whitelist so it stops nagging", which T1–T5 left
+      unbuilt (the M9.8 T6 respawn surfaced the gap; grilled into this task). **Keyed on stable
+      identity — normalized surface-form + type, not node id** (mirrors §1's `entity_merges`), so a
+      keep **survives `reprocess-all`** with **no replay step**: it is a **read-time filter** on the
+      orphan check, not a mutation reprocess would undo. New **`orphan_keeps`** table (**migration
+      022**; `id, node_type, forms text[], keep_key text UNIQUE, node_id text (observability),
+      created_at` — parallels `entity_merges`) + **`KeepStore`** (mirrors `MergeDecisionStore`:
+      `record` upserts on `keep_key = loser_key(type, forms)`, `all_keeps`, `remove`). Three
+      **synchronous** endpoints (no `agent_runs` job — a keep is a config-like decision, like a merge
+      decision or a vocab approval): **`POST /admin/nodes/{id}/keep`** (server resolves the node's
+      current `surface_forms` + type, upserts; `200`/`204`; `404` unknown/tombstone; `400` a non-hub
+      content node — Keep is **hubs-only**), **`GET /admin/orphan-keeps`** (the kept list
+      `{key,type,label,kept_at}` for the web "Kept (N)" strip), **`DELETE /admin/orphan-keeps/{key}`**
+      (un-keep, keyed on the stable `keep_key`, **not** node id — a reprocess changes the id, the key
+      persists). **Graph-health orphan filter:** `orphan_nodes` returns candidate hubs with
+      `title`+`aliases`+`type`; `GraphHealthService` drops any hub whose normalized `surface_forms`
+      intersect a kept entry of the same type (reusing `surface_forms`/`normalize_alias` — SQL can't
+      do the diacritic-folded match; personal-scale, so a Python filter is trivially cheap), then
+      counts+samples the remainder — **kept hubs are fully excluded from both the count AND the
+      sample** (a resolved decision must not keep the check amber). Each **orphan offender payload
+      gains a `type`** field so the web knows which rows are hubs (Keep/Merge) vs content
+      (Delete→capture-remove only). `depends-on: —` (server foundation for T6). Docs: 02 §3 (table),
+      03 §Admin (endpoints + offender `type`).
+- [ ] **T6 — inline-actionable graph-health** (web, GRILLED 2026-07-19): the graph-health card gains
+      inline actions (ADR-064 §3). **Orphan-nodes section** — each **hub** offender gets **Delete**
+      (`POST /admin/nodes/{id}/delete`, T5 — new `api.deleteNode`; on `409` still-referenced route to
+      Merge, on `400` content route to capture-remove), **Merge** (an orphan that's actually a dupe →
+      the shared `<EntityPicker>` propose→apply, reusing the T3 flow), and **Keep** (`POST
+      /admin/nodes/{id}/keep`, T5.5); a collapsible **"Kept (N)"** strip (`GET /admin/orphan-keeps`)
+      lists kept hubs with **Un-keep** (`DELETE /admin/orphan-keeps/{key}`). A **content** orphan
+      (offender `type` non-hub) shows only a degraded "remove from the Captures tab" note on Delete —
+      the API carries no node→capture link (`NodeDetailResponse` has no `capture_id`), so inline
+      capture-remove for orphans is a **logged follow-up**, not T6. **New duplicate-candidates
+      section** — reads the latest `entity-dedup` run's `details.high_confidence[]` (T4) off the
+      roster (same mechanism the graph-health card uses in `OpsView`), one **Merge** per pair
+      **pre-filled** survivor/loser through the existing `POST /admin/entities/merge` propose→apply;
+      lower-confidence pairs are already server-filed to Review by T4, so the section links there. The
+      other five health checks stay **read-only**. `depends-on: T3, T4, T5, T5.5`. Docs: 06
+      §graph-health card.
 - [ ] **T7 — live Accept:** merge Diana via the picker (no ids); confirm it **survives a
       `reprocess-all`**; a detected dupe merges inline while Diana Wren stays separate; an orphan
-      hub deletes and doesn't resurrect. `depends-on: T1–T6`
+      hub deletes and doesn't resurrect; a **kept** hub stays suppressed across a reprocess.
+      `depends-on: T1–T6`
 
 **Accept (draft).** A profile "Merge into…" folds Diana Vance → Diana by name (no UUID); after a
 full `reprocess-all` the merge **persists** (no manual re-merge). Graph-health shows the dupe +
 orphan sections with working inline Merge/Delete/Keep; Diana Wren is never proposed. An orphan hub
-deleted from graph-health stays gone across reprocess.
+deleted from graph-health stays gone across reprocess; a **kept hub (Father) is suppressed from the
+orphan check and stays kept across a `reprocess-all`**.
+
+**Progress — T5.5 grilled into existence + planned (2026-07-19, planning session).** The M9.8 **T6**
+respawn hit an **unrecorded decision**: ADR-064 §5's orphan **Keep** ("dismiss/whitelist so it stops
+nagging") had **no backend** — T1–T5 built none — and T6 was labelled web-only. Per
+[09](09-session-protocol.md) this switched from implementation to a **planning pass**; grilled to
+build-ready and recorded above as the new server task **T5.5 — orphan keep-list**, with **T6** now
+`depends-on: …, T5.5` and expanded with the grilled web design. Design (agreed): surface-form+type
+keying (reprocess-surviving, mirrors §1), a **read-time filter** on the orphan check (no replay),
+**hubs-only**, reversible (keep/un-keep/list), kept hubs **fully excluded** from the orphan count.
+Recorded as a §5 **build decision** (no new ADR) here + contract docs 02/03/06. Execution shape:
+**T5.5 (server; migration 022) → T6 (web)**. **No code yet** — paused for the operator to implement
+(T5.5 → T6) or respawn.
 
 ## M10 — Reflection agent (+ push notifications)
 

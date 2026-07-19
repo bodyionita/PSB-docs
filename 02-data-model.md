@@ -352,6 +352,22 @@ loser→survivor. Preserved by the reset (like `removed_at` tombstones); an unre
 side is **skipped**, never guessed (never-lose). Operational state, not derived — the merge decision
 is *governance*, replayed on top of the raw-rebuilt graph, not baked into raw (byte-parity, ADR-042).
 
+**`orphan_keeps`** (**M9.8 T5.5**, migration 022 — [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §5):
+the **whitelist** of intentionally-kept zero-degree **entity hubs** (e.g. Father/Mother) so they
+stop nagging the nightly graph-health orphan check. Keyed on **stable identity — surface form + type,
+not node id** (the same posture as `entity_merges`), so a keep **survives `reprocess-all`** with **no
+replay step** — it is a **read-time filter** on the orphan check, not a mutation the rebuild would
+undo. | id uuid pk · node_type text · forms text[] (normalized surface forms via `surface_forms`, the
+hub's title + aliases at keep time) · **keep_key** text (idempotency key = `node_type` + sorted
+`forms`, **unique** → `record` is an upsert) · node_id text null (keep-time id, observability only —
+does not resolve post-reprocess) · created_at | Written **synchronously** by `POST
+/admin/nodes/{id}/keep` (no `agent_runs` job — a keep is a config-like decision, like a merge
+decision or a vocab approval); un-keyed by `DELETE /admin/orphan-keeps/{key}`. The graph-health
+`orphan_nodes` check excludes any hub whose normalized `surface_forms` intersect a kept entry of the
+same type (Python filter — SQL can't do the diacritic-folded match; personal-scale) — kept hubs are
+**fully excluded** from both the count and the sample. Operational state, not derived — governance
+replayed (as a filter) on top of whatever hubs the raw-rebuilt graph holds, never baked into raw.
+
 **`chat_distill_state`** (**M6**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)): the
 chat-distiller watermark — one row per distilled session. | session_id uuid pk (fk `chat_sessions`)
 · last_message_at timestamptz (watermark — the distiller processes only messages after it) ·

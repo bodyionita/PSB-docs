@@ -1499,3 +1499,45 @@ current README snapshot.)*
 > view, both feeding the unchanged two-step propose→apply (inbound-edge preview → confirm). Then
 > **inline-actionable graph-health** (T6, per-section Merge/Delete/Keep wired to T3's picker + T5 delete +
 > capture-remove; dupe candidates from T4's inline feed). Then **T7 live Accept**.
+
+---
+
+**Superseded README snapshot (moved verbatim at the M9.8 T5.5 planning pause, 2026-07-19):**
+
+> **Where we are (2026-07-19):** **M9.8 T3 DONE (committed to `main`, not yet pushed).** The M9.8
+> server foundation (T1/T4/T5) is complete + deployed and the shared picker (T2) is built; **T3 wires
+> that `<EntityPicker>` into the two merge surfaces** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md)
+> §2), both feeding the **unchanged two-step propose→apply** (ADR-030 §5). **AdminOps "Merge entities"
+> card:** the two raw node-id `<input>`s are replaced by two `<EntityPicker>`s (loser/survivor) with
+> **symmetric `excludeId`** (each drops the other from its results → a node can never be merged into
+> itself); changing either picker clears a stale preview; apply still uses the server-authoritative
+> `plan.loser.id`/`plan.survivor.id`. **Profile "Merge into…":** a new self-contained
+> `ui/MergeIntoPanel` embedded in the shared `ui/NodePreview` — **entity hubs only** (gated by a new
+> `ui/useEntityLikeTypes` over `GET /types`) — folds the viewed node (loser) into a picked survivor (picker
+> `type`-narrowed to the hub's kind, `excludeId`-ing it), calling the merge propose/apply **directly from
+> `ui/`** so the shared preview never imports a feature (layering, rule 4), and polling the background run
+> to terminal (invalidates the loser's `node`/`neighbors` queries on success). So a merge starts from
+> anywhere the profile shows — map drawer, search/chat expand — no ids ever. **Scope note:** the richer
+> full-`NodePreview` side-by-side previews sketched in 06 §Entity-merge stay a later enhancement — T3 keeps
+> the propose-response preview (identity + aliases + inbound-edge count) the tracker scoped. Self-review
+> (no independent agent this pass, as T2 — contained web wiring over the T2 picker + the already-verified
+> propose→apply seam; the live merge is T7's Accept): no must-fix. Web gate green (**tsc --noEmit + eslint
+> --max-warnings 0 clean**); dev server compiles + mounts with no console errors. Docs: 06 §Settings
+> (entity-merge bullet + new profile affordance), 08 §M9.8 T3.
+> *(M9.7 + M9.6 T6 + M9.8 T1/T2/T4/T5 closed prior — see [status history](08-logs/status-history.md); M9.8
+> grilled to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md).)*
+>
+> **Repo hygiene (2026-07-19):** a **PII history-rewrite** (`git filter-repo` + force-push) of **both
+> public repos** replaced every real contact's full name with a fabricated stand-in (real first name
+> kept, so code examples still work: e.g. Horia Fenwick, Diana Vance, Madalina Fairfax); a **hashed
+> pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git config core.hooksPath
+> .githooks`) blocks re-introduction. The CI **deploy** step was hardened from `git pull --ff-only` to
+> **`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
+> ⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
+>
+> **Next:** **T6 — inline-actionable graph-health** (web, `depends-on: T3, T4, T5`): per-section
+> **Merge/Delete/Keep** buttons on the graph-health card, wired to T3's `<EntityPicker>`/merge flow + T5's
+> node-delete + capture-remove; the dupe candidates come from T4's inline `high_confidence` feed, ambiguous
+> items route to Review. Then **T7 live Accept**: merge the duplicated hub by name and confirm it survives a
+> `reprocess-all`, a detected dupe merges inline while Diana Wren stays separate, an orphan hub deletes and
+> doesn't resurrect. *(Separate background task in flight: the identity-capsule L0 generator-preamble leak.)*
