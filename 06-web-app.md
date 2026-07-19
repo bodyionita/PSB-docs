@@ -136,8 +136,8 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   (`GET /activity/runs/{id}/logs?after_seq=`, ~1s poll).
 - **graph-health card** — the latest `graph-health` run's findings (orphans, `inbox/` depth, review
   aging, missing `occurred`, alias-less entities, tombstone integrity, freshness) read from its run
-  `details`. Read-only in M8; **M9.8 T6 ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §3)
-  makes two sections inline-actionable:**
+  `details`. Read-only in M8; **M9.8 T6 ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §3) —
+  BUILT 2026-07-19 — makes two sections inline-actionable:**
   - **Orphan-nodes** — each **hub** offender (offender `type`, T5.5) offers **Delete** (`POST
     /admin/nodes/{id}/delete`, T5; on `409` still-referenced route to Merge, on `400` content route
     to capture-remove), **Merge** (an orphan that's actually a dupe → the shared `<EntityPicker>`
@@ -151,7 +151,9 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
     /admin/entities/merge`; lower-confidence pairs are server-filed to Review (T4), so the section
     links there.
 
-  The other five checks stay read-only (acting on those → M10).
+  The other six checks stay read-only (acting on those → M10). *(As built: the "Kept (N)" strip
+  renders whenever keeps exist, even at orphan-count 0; the duplicate card's low-confidence tail
+  links to the Review tab. Live drills are T7.)*
 - **Parameterized admin ops** — `reindex` (live counts), `backup now`, `reprocess` (confirm-gated),
   `entities/merge` (pick two nodes), `tags`/`vocab` consolidate (two-step propose→apply)
   — **M9.5 adds** the **connector backfill** card (confirm-gated start, live per-session progress

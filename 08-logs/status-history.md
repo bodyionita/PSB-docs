@@ -1597,3 +1597,25 @@ read-time filter + `type` on the orphan offender payload + tests. Then **T6 — 
 graph-health** (web, `depends-on: T3, T4, T5, T5.5`): orphan-section Delete/Merge/Keep + "Kept (N)"
 strip + the new duplicate-candidates section (T4 feed). Then **T7 live Accept**. *(Separate background
 task in flight: the identity-capsule L0 generator-preamble leak.)*
+
+---
+
+**Where we are (2026-07-19).** **M9.8 T5.5 BUILT — orphan keep-list (server) done** (`fedd2ab` on
+`main`, not yet pushed). The durable **`orphan_keeps`** whitelist (**migration 022**) + **`KeepStore`**
++ **`OrphanKeepService`** + three **synchronous** endpoints (`POST /admin/nodes/{id}/keep` ·
+`GET /admin/orphan-keeps` · `DELETE /admin/orphan-keeps/{key}`) let an intentionally-kept zero-degree
+hub (Father/Mother) stop nagging the graph-health orphan check. Keyed on **surface form + type, not
+node id**, so a keep **survives `reprocess-all`** with **no replay step** — a **read-time filter**
+(`filter_kept_orphans`) excludes kept hubs from both the orphan **count and sample**; the orphan
+offender payload gains a **`type`** field (hubs vs content). **Hubs-only**, **reversible**. The
+independent `/code-review` (high) caught one **must-fix**: `keep_key` carried a raw NUL in the un-keep
+URL path → **base64url-encoded** (the raw NUL/`/` would be rejected by the Cloudflare+Caddy ingress);
+fixed + tested. Reprocess-survival verified (`orphan_keeps` has no FK to `nodes`). Gate green
+(**1107 pytest**, +17). Recorded as a §5 **build decision** (no new ADR) in 08 §M9.8 + contract docs
+02/03.
+
+**Next (as of the T5.5 pause):** implement **T6 — inline-actionable graph-health** (web,
+`depends-on: T3, T4, T5, T5.5` — all now met): orphan-section **Delete** / **Merge** / **Keep** per
+hub offender + a collapsible **"Kept (N)"** strip + the new **duplicate-candidates** section (T4's
+`high_confidence` feed). Then **T7 live Accept**. *(Separate background task in flight: the
+identity-capsule L0 generator-preamble leak.)*

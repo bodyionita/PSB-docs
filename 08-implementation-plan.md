@@ -2124,7 +2124,8 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       above (fixed + a URL-path-safety test); no others (minor/accepted: a form-less-hub keep is a
       harmless no-op; one extra `all_keeps` read per nightly run is negligible). +17 tests; gate
       green (**1107 pytest**, ruff check + format clean).
-- [ ] **T6 — inline-actionable graph-health** (web, GRILLED 2026-07-19): the graph-health card gains
+- [x] **T6 — inline-actionable graph-health** (web, GRILLED 2026-07-19) — **DONE** (`29c15a2` on
+      `main`, not yet pushed): the graph-health card gains
       inline actions (ADR-064 §3). **Orphan-nodes section** — each **hub** offender gets **Delete**
       (`POST /admin/nodes/{id}/delete`, T5 — new `api.deleteNode`; on `409` still-referenced route to
       Merge, on `400` content route to capture-remove), **Merge** (an orphan that's actually a dupe →
@@ -2138,8 +2139,33 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       roster (same mechanism the graph-health card uses in `OpsView`), one **Merge** per pair
       **pre-filled** survivor/loser through the existing `POST /admin/entities/merge` propose→apply;
       lower-confidence pairs are already server-filed to Review by T4, so the section links there. The
-      other five health checks stay **read-only**. `depends-on: T3, T4, T5, T5.5`. Docs: 06
+      other six health checks stay **read-only**. `depends-on: T3, T4, T5, T5.5`. Docs: 06
       §graph-health card.
+      **As built:** all web, ADR-006-clean (no server change). **Orphan section**
+      (`features/activity/GraphHealthCard.tsx`, rewritten): the `orphan-nodes` check routes to a new
+      `OrphanCheckRow`; every other check stays the read-only `CheckRow`. Each **hub** offender
+      (`type` entity-like per `GET /types`) is an `OrphanHubRow` with **Delete** (confirm-gated —
+      there's no propose-preview for delete — then polls the `202` run via `useRun`; `409`→"Merge it
+      instead", `400`→content-note, `404`→"Already gone"), **Merge** (reuses the shared
+      `ui/MergeIntoPanel` verbatim — orphan = loser, survivor picked by name; the T3 flow, no fork),
+      and **Keep** (`useKeepNode`). Acted-on rows show a **local resolved state** (the flagged sample
+      lives in a *past* run's immutable details, so the row can't drop — it settles in place). A
+      **content** offender → `ContentOrphanRow` (degraded "remove from the Captures tab" note, no
+      inline call). The collapsible **`KeptStrip`** (`useOrphanKeeps`) renders **whenever keeps
+      exist — even at orphan-count 0** (all orphans kept), each row **Un-keep** keyed on the stable
+      `key` (`useUnkeepOrphan`, not node id). **Duplicate-candidates**
+      (`features/activity/DuplicateCandidatesCard.tsx`, new, mounted in `OpsView` after the health
+      card): reads the latest **`entity-dedup`** run's `details.high_confidence[]` off the roster
+      `last_run.run_id` (same mechanism as graph-health), one **pre-filled** propose→confirm→apply
+      Merge per pair (reuses `useMergeEntitiesPropose/Apply` + `useRun`); `low_confidence_filed` links
+      to Review via a new no-arg **`ReviewNav.openReview`** (wired in `AppShell`). **New API**
+      (`client.ts`): `deleteNode`/`keepNode`/`listOrphanKeeps`/`unkeepOrphan`; types `OrphanKeepItem`
+      + `DedupCandidate`. Independent review (**fresh general-purpose agent**, read the plan + diff +
+      server contract): **all 5 acceptance criteria met, no must-fix**; two minors fixed
+      (delete-in-progress feedback; a types-loading guard so hubs aren't briefly mislabeled content).
+      Gate green: **tsc --noEmit + eslint --max-warnings 0 + vite build** clean; dev server mounts
+      with no console errors (the live orphan/dedup/keep drills are **T7**). Docs: 06 §graph-health
+      card (built; "five"→"six" read-only checks corrected).
 - [ ] **T7 — live Accept:** merge Diana via the picker (no ids); confirm it **survives a
       `reprocess-all`**; a detected dupe merges inline while Diana Wren stays separate; an orphan
       hub deletes and doesn't resurrect; a **kept** hub stays suppressed across a reprocess.
@@ -2150,6 +2176,21 @@ full `reprocess-all` the merge **persists** (no manual re-merge). Graph-health s
 orphan sections with working inline Merge/Delete/Keep; Diana Wren is never proposed. An orphan hub
 deleted from graph-health stays gone across reprocess; a **kept hub (Father) is suppressed from the
 orphan check and stays kept across a `reprocess-all`**.
+
+**Progress — T6 built (2026-07-19, implementation session).** Inline-actionable graph-health is
+**DONE** (`29c15a2` on `main`, not yet pushed) — see the T6 **As built** note above. All web
+(ADR-006-clean, no server change): the `orphan-nodes` check is now actionable (per-hub
+Delete/Merge/Keep + the collapsible "Kept (N)" strip; content orphans get a degraded note), and a
+new **Duplicate candidates** card surfaces the `entity-dedup` run's high-confidence pairs with a
+pre-filled Merge (low-confidence → Review). Merge reuses the shared `MergeIntoPanel`/`EntityPicker`
+(T3) and the merge propose→apply hooks — no fork. Independent review (fresh general-purpose agent,
+plan + diff + server contract): **all 5 acceptance criteria met, no must-fix**; two minors fixed
+(delete progress feedback; a `GET /types` loading guard). Gate green (tsc + eslint + vite build; dev
+server mounts, no console errors). The **live** orphan-delete / dedup-merge / keep-survives-reprocess
+drills are **T7**. **Next: T7 — live M9.8 Accept** (`depends-on: T1–T6`, all now built): merge Diana
+via the picker (no ids) and confirm it survives a `reprocess-all`; a detected dupe merges inline
+while Diana Wren stays separate; an orphan hub deletes and doesn't resurrect; a kept hub stays
+suppressed across a reprocess. Paused for the operator to run T7 (needs the live stack) or respawn.
 
 **Progress — T5.5 built (2026-07-19, implementation session).** The orphan keep-list server task is
 **DONE** (`fedd2ab` on `main`, not yet pushed): migration 022 + `orphan_keeps` + `KeepStore` +
