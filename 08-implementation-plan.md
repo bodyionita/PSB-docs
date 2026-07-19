@@ -1927,6 +1927,19 @@ gate on the merged tree **green**: server ruff+format clean, **full pytest 1037 
 user's** (code push auto-deploys to prod, so it is held for the user per [09](09-session-protocol.md)
 commit-discipline + the ADR-062 §4 A/B / §5 migration / re-drill all being the user's calls).
 
+**Progress — T7 in flight (live drill, 2026-07-19).** Batch A+B pushed (`6786bb6..f83268e`); CI
+deploy green; prod healthy. First live screenshot capture surfaced a **vision-primary failure**,
+caught by the new M9.7 T2/T3 run-log: `meta-llama/llama-4-scout-17b-16e-instruct (groq)` returns
+**404 — Groq decommissioned it**. Derive fell back to the Nebius 72B (clean transcript). Fixed by
+**[ADR-063](adr/063-groq-vision-model-scout-decommissioned.md)**: Groq vision primary →
+**`qwen/qwen3.6-27b`** (Groq's current free VLM, same Qwen family as the 72B fallback), chain shape
+unchanged. Config swapped in `deploy/defaults.env` (the deployed value) + `deploy/.env.example` +
+`server/app/config.py`; server ruff+format clean, routing/settings tests green. This is a **7th
+commit → push → redeploy**, then resume T7: the ADR-062 §4 A/B runs `qwen/qwen3.6-27b` (free) vs
+the 72B (paid) via the Settings vision-group flip — note a **saved Settings override from the failed
+pass currently pins the 72B**, so the new Groq primary only applies once the vision group is re-set
+in Settings. Remaining T7 (A/B pick · migration · §C.2/§E.2 re-drill · remove-drill) unchanged.
+
 > **T4 version note (reconciliation):** ADR-062 §3 / the T4 bullet say "prompt v8", but the code's
 > `ORGANIZER_PROMPT_VERSION` is **already `organizer-v8`** (bumped in M9.6 for the composite
 > `[[part N · kind]]` markers). So the ADR-062 §3 self-attribution mapping lands as
