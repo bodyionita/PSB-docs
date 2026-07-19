@@ -1343,3 +1343,20 @@ code and grilled into **[08 §M9.7](../08-implementation-plan.md)**:
 T2 pipeline logging, T3 RunDetail tail+parts}** → **Batch B {T4 organizer v8, T5 remove server,
 T6 remove web}** → **T7 live Accept** (deploy; A/B on the real screenshot; migration rederive;
 re-drill §C.2/§E.2 + the remaining drill steps; flip **M9.6 T6 + M9.7** done together).
+
+---
+
+**Status (2026-07-19, M9.7 code-complete snapshot — superseded by the T7-done + M9.8 snapshot).**
+**M9.7 code COMPLETE — Batch A + B built, reviewed, committed locally; only T7 (deploy + live
+Accept) remains, and it's the user's.** The two M9.6-drill FAILs + the general-remove scope-add
+([ADR-062](../adr/062-chat-screenshot-self-attribution.md), grilled to build-ready) were implemented
+against the approved [08 §M9.7](../08-implementation-plan.md): **Batch A {T1,T2,T3}**
+(`e91d1cb`/`1a8a809`/`ab173db`) — vision per-message screenshot lines, pipeline milestone logging
+through the M8 run-log tail, openRun RunDetail live tail + `derive.parts[]`; **Batch B {T4,T5,T6}**
+(`8ec8de6`/`dcefee7`/`f83268e`) — organizer v9 self-attribution, `DELETE /captures/{id}` remove,
+double-confirm Remove UI. Every task independently reviewed (no must-fix); gate green (1037 pytest;
+web tsc+eslint+build); no migrations; commits local on `main`, not pushed. **Next was T7:** deploy;
+A/B `llama-4-scout-17b` vs `qwen2.5-vl-72b`; migration rederive; re-drill §C.2/§E.2; remove-drill;
+flip M9.6 T6 + M9.7 done. *(What actually happened in T7: the Groq Scout primary was decommissioned
+mid-drill → ADR-063 swap to `qwen/qwen3.6-27b` + `reasoning_effort=none`; all Accept items verified;
+the duplicate-hub/merge-durability findings became M9.8/ADR-064. See the current README snapshot.)*

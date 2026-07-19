@@ -1652,10 +1652,9 @@ fan-out batch; per [09 §Parallel task batches](09-session-protocol.md) sequenti
 - [x] **T5 — compose surface (web)** — **DONE (2026-07-19)**: the draft-backed **compose** UI (text
       + multi-photo + record-voice ≤1 + per-part 'x' + **Send**), **resume/discard**, capture list
       renders the media list, **Activity-run deep-link**. `depends-on: T4` (see T5 note below)
-- [~] **T6 — live M9.6 Accept** — **DEPLOY TRIGGERED (2026-07-19); manual drills PENDING the user**:
-      deploy (migrations 019+020 apply), real-phone **composite** drills + the **folded M9 T6
-      single-part drills** (above), reprocess byte-parity check, SQL smoke, independent review.
-      `depends-on: T5` (see T6 note + Accept checklist below)
+- [x] **T6 — live M9.6 Accept — DONE 2026-07-19** (flipped alongside M9.7 T7): composite drills +
+      folded single-part drills passed; the two FAILs (§C.2 live steps, §E.2 own-chat attribution)
+      were replanned into M9.7 and are now verified fixed. `depends-on: T5`
 
 **Progress — T1 done (2026-07-19).** Migration **019** (`captures.text_body`, `media.part_ordinal`,
 + the `captures_single_active_draft` **partial unique index** = the DB backstop for one-active-draft)
@@ -1888,26 +1887,36 @@ contract recorded at this planning pass, so it has no build-time dependency on T
       **double confirmation**, calls T5's contract; removed capture animates out of Recents.
       `parallel-with: T4, T5 (batch B)` — **done `f83268e`** (independent review pass; two-step
       confirm on the settled-capture card; `useDeleteCapture` invalidates captures + activity).
-- [ ] **T7 — deploy + live Accept (the user, agent-guided):** deploy; **A/B** the real screenshot
-      on both VLMs (Settings flip; pick primary on evidence — ADR-062 §4); **migration** rederive+
-      reorganize existing photo captures (§5) and verify the drill's misattributed capture is
-      corrected; **re-drill** m9.6-accept-drill §C (live inner steps now stream) + §E.2 (attribution
-      under the new semantics); **remove-drill**: double-confirm remove a junk capture → gone from
-      Recents/search/chat, nodes + media gone, hubs preserved, `reprocess-all` does **not**
-      resurrect it; then flip **M9.6 T6 → done** together with this Accept. `depends-on: T1–T6`
+- [x] **T7 — deploy + live Accept (the user, agent-guided): DONE 2026-07-19.** Deployed; the Groq
+      vision primary was found decommissioned mid-drill → [ADR-063](adr/063-groq-vision-model-scout-decommissioned.md)
+      (`qwen/qwen3.6-27b`) + reasoning suppression (`reasoning_effort=none`); A/B settled on the free
+      Groq qwen. Migration, §C.2/§E.2 re-drill, and remove all verified (see the Accept below).
+      M9.6 T6 flipped done alongside. `depends-on: T1–T6`
 
 ### Accept (T7 checklist)
 
-- [ ] Own-chat screenshot → user's side organized as **their own words** (no phantom sender/no
+- [x] Own-chat screenshot → user's side organized as **their own words** (no phantom sender/no
       self-entity), other party a **named person entity**, reply-quotes attributed to the
       **quoted** party; A/B outcome recorded + vision primary confirmed/changed on evidence.
-- [ ] During a composite capture, the capture's "See processing →" deep-link shows **live streaming
+      **PASS** — verified via the graph-store clone + graph MCP (the "cake" conversation node under
+      organizer v9); vision primary = `qwen/qwen3.6-27b` (Groq, free) per ADR-063.
+- [x] During a composite capture, the capture's "See processing →" deep-link shows **live streaming
       per-part lines** while deriving, and the **structured per-part block** after finish; single
-      image/voice captures show their derive milestone lines too.
-- [ ] Remove: double-confirm on the phone → capture + nodes + media **entirely gone** everywhere
+      image/voice captures show their derive milestone lines too. **PASS** (user-confirmed; the live
+      run-log even caught the Groq 404 in-flight).
+- [x] Remove: double-confirm on the phone → capture + nodes + media **entirely gone** everywhere
       (Recents/Captures/search/chat), entity hubs intact, tombstone excluded from `reprocess-all`.
-- [ ] Existing screenshot captures migrated (rederive+reorganize) — the P1 capture reads correctly.
-- [ ] M9.6 T6 flipped done alongside; README snapshot updated.
+      **PASS** — verified via Supabase (all 6 removed captures `removed_at` set, `leftover_media=0`,
+      no stranded node_media; only preserved entity/topic hubs remain) + code (`reprocess` replays
+      `WHERE removed_at IS NULL`).
+- [x] Existing screenshot captures migrated (rederive+reorganize) — the P1 capture reads correctly.
+      **PASS** (user-confirmed).
+- [x] M9.6 T6 flipped done alongside; README snapshot updated. **DONE.**
+
+**Follow-ups spun out of T7 (→ [M9.8](#m98--graph-hygiene--durable-merges--visualactionable-dedup--gc-adr-064)):**
+duplicate entity hubs + unmergeable merge UX + merges not surviving `reprocess-all` + orphan-hub GC
+(the zero-degree "gluten-free baking" topic) → grilled to build-ready as **M9.8 / ADR-064**. Separate
+follow-up (background task): the identity-capsule L0 generator-preamble leak.
 
 **Progress — Batch A {T1,T2,T3} done (implementation session 2026-07-19).** All three landed as
 per-task commits (`e91d1cb`/`1a8a809`/`ab173db`) on `main`, **not pushed** (code push = the CI
@@ -1969,6 +1978,50 @@ detail under ADR-063's "disable it if it appears" — no ADR change.)
 > `[[part N · kind]]` markers). So the ADR-062 §3 self-attribution mapping lands as
 > **`organizer-v9`** — same intent, version number reconciled against the code. (The M9.6 v8 prompt
 > already carries the ADR-057 §5 "never you" rule that ADR-062 §3 replaces.)
+
+## M9.8 — Graph hygiene: durable merges + visual/actionable dedup & GC ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) — GRILLED TO BUILD-READY 2026-07-19)
+
+*(Grilled out of the M9.7 T7 duplicate-"Diana"-hubs investigation. Motivating case: `Diana`
+(`8e874e52`, 45 edges) + `Diana Vance` (`0bd6f214`, 4 edges) are one person, unmerged — a manual
+merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste merge UI is unusable.
+`Diana Wren` (`f1ad15ee`) is a **different** person — the detector must not merge her.)*
+
+**Scope (per [ADR-064](adr/064-durable-merges-visual-dedup-gc.md)).**
+- **Durable merges (§1):** record each merge keyed on **surface-form + type** (not node id);
+  `reprocess-all` re-applies them after the raw rebuild (fixes ADR-042 §4's drop). Foundation.
+- **Visual picker (§2):** one shared **name-typeahead** entity picker (no ids), on profile
+  "Merge into…", graph-health one-click, and the upgraded AdminOps card. Two-step propose→apply intact.
+- **Inline-hybrid actionable graph-health (§3):** per-section inline actions for decisive ops
+  (delete orphan, merge dupe) reusing shared services; ambiguous items → Review.
+- **Entity-hub dedup detector (§4):** conservative (name/alias containment/fuzzy **AND**
+  shared-neighborhood; suppresses Diana Wren), human-approved; inline high-confidence, Review low.
+- **Orphan GC (§5):** Delete / Keep / Merge per orphan, manual-only; delete kind-aware
+  (content→capture-tombstone, hub→net-new node-delete). Never auto.
+- **Deferred (§6):** better entity-resolution-at-ingest (first-name↔full-name) — later roadmap item.
+
+### Tasks (draft — batch annotations at build; server foundation first)
+
+- [ ] **T1 — durable merge store + reprocess replay** (server): persist merge decisions
+      (survivor + loser surface-forms + type); `reprocess-all` re-folds matches after rebuild.
+      `parallel-with: —` (foundation; others build on the merge engine but not on this store).
+- [ ] **T2 — shared visual entity picker** (web): name-typeahead resolving to id; the reusable
+      component. `parallel-with: T1`
+- [ ] **T3 — merge surfaces** (web): profile "Merge into…" + AdminOps upgrade, using T2.
+      `depends-on: T2`
+- [ ] **T4 — entity-hub dedup detector** (server): the §4 conservative detector → inline feed +
+      `review_queue` for low-confidence. `parallel-with: T1`
+- [ ] **T5 — node-delete path** (server): delete a zero-degree orphan hub (git-rm + index prune);
+      content orphans route to capture-remove. `parallel-with: T1, T4`
+- [ ] **T6 — inline-actionable graph-health** (web): per-section Merge/Delete/Keep buttons wired to
+      T3's picker + T5 delete + capture-remove; dupe candidates from T4. `depends-on: T3, T4, T5`
+- [ ] **T7 — live Accept:** merge Diana via the picker (no ids); confirm it **survives a
+      `reprocess-all`**; a detected dupe merges inline while Diana Wren stays separate; an orphan
+      hub deletes and doesn't resurrect. `depends-on: T1–T6`
+
+**Accept (draft).** A profile "Merge into…" folds Diana Vance → Diana by name (no UUID); after a
+full `reprocess-all` the merge **persists** (no manual re-merge). Graph-health shows the dupe +
+orphan sections with working inline Merge/Delete/Keep; Diana Wren is never proposed. An orphan hub
+deleted from graph-health stays gone across reprocess.
 
 ## M10 — Reflection agent (+ push notifications)
 

@@ -30,33 +30,34 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.7 code COMPLETE — Batch A + B built, reviewed, committed
-locally; only T7 (deploy + live Accept) remains, and it's the user's.** The two M9.6-drill FAILs
-+ the general-remove scope-add ([ADR-062](adr/062-chat-screenshot-self-attribution.md), grilled
-to build-ready) were implemented this session against the approved [08 §M9.7](08-implementation-plan.md):
-- **Batch A {T1,T2,T3}** (`e91d1cb`/`1a8a809`/`ab173db`): **T1** vision emits disciplined
-  per-message chat-screenshot lines (`[side · sender]` + `quoting` insets, identity-agnostic —
-  ADR-062 §2); **T2** the capture pipeline streams milestone `logger.info` lines (per-part derive +
-  stage transitions) live through the M8 run-log tail, **zero new schema**; **T3** the openRun
-  RunDetail renders the live `RunLogTail` + a structured `derive.parts[]` block (ADR-061 §10, *by
-  reuse* — the §C.2 fix).
-- **Batch B {T4,T5,T6}** (`8ec8de6`/`dcefee7`/`f83268e`): **T4** organizer **v9** maps `[right]`→the
-  user's own words (no self-entity, phantom-sender ban), `[left · Name]`→named person, `quoting`→the
-  quoted party, own-chat default + "not mine" override (the §E.2 fix, ADR-062 §3); **T5** general
-  capture remove `DELETE /captures/{id}` (shared hub-preserving core, media purge, tombstone-last —
-  ADR-062 §R); **T6** the double-confirm Remove affordance on the capture card.
-- **Every task independently reviewed — no must-fix** anywhere. Integration gate green: server
-  ruff+format + **1037 pytest**; web `tsc` + whole-project `eslint` + `vite build`. **No migrations**
-  (no schema changes). Commits are **local on `main`, not pushed** — a code push auto-deploys to prod
-  (= T7's deploy), which is the user's call.
+**Where we are (2026-07-19):** **M9.7 + M9.6 T6 CLOSED — deployed, live Accept all verified.**
+Batch A/B (`e91d1cb`…`f83268e`) shipped chat-screenshot self-attribution (organizer v9), live
+per-part capture observability (M8 run-log tail + `derive.parts[]`), and general capture remove
+(`DELETE /captures/{id}`, double-confirm UI). T7's live drill surfaced a live-ops issue —
+**Groq decommissioned the `llama-4-scout-17b` vision primary (404 mid-drill)** — fixed by
+**[ADR-063](adr/063-groq-vision-model-scout-decommissioned.md)**: vision primary → **`qwen/qwen3.6-27b`**
+(Groq's current free VLM), with **`reasoning_effort=none`** (Groq-scoped `extra_body`) to keep the
+Qwen3 thinking out of the derived text and stop long-screenshot truncation. **T7 Accept verified:**
+own-chat attribution correct under v9 (graph-store + MCP); live processing view (the run-log even
+caught the 404 in-flight); **remove** proven via Supabase (all removed captures `removed_at` set,
+`leftover_media=0`, hubs preserved, `reprocess` replays `WHERE removed_at IS NULL`); migration
+confirmed. Gate green throughout (1039 pytest).
 
-**Next:** **T7 — deploy + live Accept (the user, agent-guided):** push/deploy; **A/B** the real
-screenshot on `llama-4-scout-17b` vs `qwen2.5-vl-72b` (Settings flip; pick primary on evidence —
-ADR-062 §4); **migration** rederive+reorganize existing photo captures (§5) and confirm the drill's
-misattributed capture reads correctly; **re-drill** m9.6-accept-drill §C.2 (live per-part lines now
-stream) + §E.2 (attribution under v9); **remove-drill** a junk capture (double-confirm → gone from
-Recents/search/chat, nodes + media gone, hubs preserved, `reprocess-all` doesn't resurrect it);
-then flip **M9.6 T6 + M9.7** done together and update this snapshot.
+**M9.8 GRILLED TO BUILD-READY ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md)).** The T7 wrap
+investigated duplicate `Diana`/`Diana Vance` person hubs and found: manual entity merges **don't
+survive `reprocess-all`** (keyed on node id; the 07-17 rebuild silently dropped the merge), the merge
+UI is **unusable** (paste two raw UUIDs), there's **no entity-hub dedup** (sweep is content-only), and
+**graph-health is read-only**. Grilled to a plan (ADR-064): **durable merges** (keyed on surface-form
++ type, replayed by reprocess), a **shared visual name-typeahead picker** (no ids), **inline-actionable
+graph-health** (merge/delete/keep), a **conservative entity-hub dedup detector** (suppresses the
+genuinely-different `Diana Wren`), and **manual orphan GC**. Better entity-resolution-at-ingest
+deferred. *(`Diana` stays duplicated until M9.8 ships — the user declined the id-paste stopgap.)*
+
+**Next:** **implement M9.8** (implementation session, no grilling) per [08 §M9.8](08-implementation-plan.md)
+— server foundation first (durable merge store + reprocess replay; dedup detector; node-delete),
+then the shared picker + merge surfaces, then inline-actionable graph-health; T7 live Accept =
+merge Diana by name and confirm it survives a `reprocess-all`. *(Separate background task in flight:
+the identity-capsule L0 generator-preamble leak.)*
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
