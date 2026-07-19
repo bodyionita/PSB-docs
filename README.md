@@ -30,8 +30,9 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.8 T4 DONE (committed, not yet pushed).** T1 DONE + DEPLOYED; T5 DONE
-(committed). **The M9.8 server foundation is complete** (T1/T4/T5). **Conservative entity-hub dedup
+**Where we are (2026-07-19):** **M9.8 T4 DONE + PUSHED (deploying).** T1/T4/T5 all pushed to `main`
+(CI deploying; no migration — the detector is read-mostly, T5's delete is a gated admin endpoint).
+**The M9.8 server foundation is complete** (T1/T4/T5). **Conservative entity-hub dedup
 detector** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §4): a new nightly `EntityDedupService`
 proposes duplicate **same-type** hubs gated by a **strict AND** — a **name gate** (surface-form
 containment OR high fuzzy match via stdlib `difflib`, low-entropy token guarded) **AND** a
