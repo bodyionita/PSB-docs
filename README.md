@@ -53,7 +53,7 @@ graph-health** (merge/delete/keep), a **conservative entity-hub dedup detector**
 genuinely-different `Diana Wren`), and **manual orphan GC**. Better entity-resolution-at-ingest
 deferred. *(`Diana` stays duplicated until M9.8 ships — the user declined the id-paste stopgap.)*
 
-**M9.8 T1 LANDED (server foundation, not yet pushed).** **Durable, replayable merges** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1):
+**M9.8 T1 LANDED (server foundation, pushed).** **Durable, replayable merges** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1):
 new `entity_merges` table (migration 021) records each merge keyed on **surface form + type** (not
 node id); merge apply upserts the decision, and `reprocess-all` re-applies them after the raw rebuild
 (new `MergeReplayService`, wired into both the in-app `ReprocessService` and the CLI) — matched by
@@ -134,7 +134,10 @@ If you are an AI (or human) picking this up with no prior context:
 - New architectural choices get a new ADR; existing ADRs are never edited, only superseded.
 - Docs are written to be directly ingestible by an AI implementer (Claude Code).
 - **This repo is public: no real names, no relationship details, no personal data** — use
-  placeholders (P1/P2) in logs; the triage manifest and export data stay local, gitignored.
+  placeholders (P1/P2) in logs; the triage manifest and export data stay local, gitignored. A
+  **pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, a SHA-256 denylist) blocks any real
+  contact's full name; wire it on a fresh clone with `git config core.hooksPath .githooks`. Example
+  people in docs/code use fabricated names (Diana Vance, Horia Fenwick, …).
 
 ## License
 
