@@ -2011,8 +2011,26 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       both the interactive merge + the replay (no fork). Preview `{merges}` + run details
       (`standing_merges_reapplied`) updated. +10 tests (`test_merge_replay.py`, merge/reprocess);
       gate green (1049 pytest). `parallel-with: —` (foundation).
-- [ ] **T2 — shared visual entity picker** (web): name-typeahead resolving to id; the reusable
-      component. `parallel-with: T1`
+- [x] **T2 — shared visual entity picker** (web + a thin server endpoint) — **DONE** (committed to
+      `main`, not yet pushed): name-typeahead resolving to id; the reusable component. **Scope note:**
+      the picker's documented backend `GET /entities?q=&type=&limit=` (03-api §Search, ADR-058 §11) was
+      **specced but never built**, so T2 was slightly wider than the tracker's "web-only" label — it also
+      adds the endpoint. **Server:** `GET /entities` → new `EntityBrowseService.browse` → the existing
+      `EntityStore.list_entities`, ranked in Python by a **pure** diacritic-folded name/alias matcher
+      `rank_entity_matches` (`app/entities/entity_browse.py`): tiers exact-title > title-prefix >
+      exact-alias > title-contains > alias-contains, then alphabetical; empty `q` = alphabetical browse;
+      `type` narrows to one entity-like kind (all `entity_like_types` when omitted); `limit` 1..50
+      (default 20). Reuses `normalize_alias` so **"madalina"** finds **"Mădălina"** (ADR-041); read-only,
+      no model, session-gated; `/search` stays the query-shaped semantic surface; tombstones excluded by
+      the store read. **Web:** reusable `<EntityPicker>` (`web/src/ui/EntityPicker.tsx`) — controlled
+      name-typeahead (`value`/`onChange` → picked hub or null), `type`/`excludeId`/`placeholder`/
+      `autoFocus` props, debounced `GET /entities` via `useEntitySearch` (`ui/useEntitySearch.ts`),
+      keyboard nav (↑/↓/Enter/Esc) + outside-click close, selected-chip with clear; `api.entities()` +
+      `EntityBrowseItem` type added. Independent review: **self-review only** this pass (no fresh agent —
+      read-only change, all gates green); no must-fix (minor: `type` filter left permissive; no
+      `aria-activedescendant`). +14 tests (pure ranker + service + router). Gate green (**1090 pytest**,
+      +14; tsc + eslint + ruff clean). `parallel-with: T1` (the web component was; in practice T2 also
+      landed the missing server endpoint). Docs: 03 §Search & graph (endpoint confirmed built).
 - [ ] **T3 — merge surfaces** (web): profile "Merge into…" + AdminOps upgrade, using T2.
       `depends-on: T2`
 - [x] **T4 — entity-hub dedup detector** (server) — **DONE**: new nightly `EntityDedupService`

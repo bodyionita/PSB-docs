@@ -1423,3 +1423,41 @@ current README snapshot.)*
 > inline feed + Review for low-confidence; suppresses the genuinely-different dupe; the last server
 > task, paused-for-review before build); then the shared picker + merge surfaces (T2/T3), then
 > inline-actionable graph-health (T6); T7 live Accept.
+
+---
+
+**Superseded README snapshot (moved verbatim at the M9.8 T2 pause, 2026-07-19):**
+
+> **Where we are (2026-07-19):** **M9.8 T4 DONE + PUSHED (deploying).** T1/T4/T5 all pushed to `main`
+> (CI deploying; no migration — the detector is read-mostly, T5's delete is a gated admin endpoint).
+> **The M9.8 server foundation is complete** (T1/T4/T5). **Conservative entity-hub dedup
+> detector** ([ADR-064](../adr/064-durable-merges-visual-dedup-gc.md) §4): a new nightly `EntityDedupService`
+> proposes duplicate **same-type** hubs gated by a **strict AND** — a **name gate** (surface-form
+> containment OR high fuzzy match via stdlib `difflib`, low-entropy token guarded) **AND** a
+> **shared-neighborhood gate** (≥ N common canonical neighbours). The AND leg suppresses the named false
+> positive: **"Diana Wren"** (same first name, different neighbourhood → 0 shared) is never proposed. It
+> powers **both** surfaces: **high-confidence** pairs land **inline** in the run's
+> `agent_runs.details.high_confidence` (read off the latest `entity-dedup` run like the graph-health card
+> → one-click Merge via the existing `POST /admin/entities/merge`, pre-filled from the higher-degree
+> survivor); **lower-confidence** pairs file a new **`entity-dedup`** review kind whose **merge** folds the
+> loser hub into the survivor **with the alias union** (shared `fold_entities`) **and records a durable
+> `entity_merges` decision** (survives a reprocess, §1). **Never auto-merges** (rule 2); a **re-file
+> guard** makes a re-scan idempotent. Wired into the nightly pipeline + roster + CLI (`entity-dedup`).
+> Gate green (1077 pytest, +19, ruff clean). Docs: 02 §3, 03 §Review + API-addendum, 04 §3b + §Scheduling,
+> 08 §M9.8 T4.
+> *(M9.7 + M9.6 T6 + M9.8 T1/T5 closed prior — see [status history](status-history.md); M9.8
+> grilled to build-ready in [ADR-064](../adr/064-durable-merges-visual-dedup-gc.md). T1/T4/T5 were the
+> parallel-eligible server foundation per the tracker.)*
+>
+> **Repo hygiene (2026-07-19):** a **PII history-rewrite** (`git filter-repo` + force-push) of **both
+> public repos** replaced every real contact's full name with a fabricated stand-in (real first name
+> kept, so code examples still work: e.g. Horia Fenwick, Diana Vance, Madalina Fairfax); a **hashed
+> pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git config core.hooksPath
+> .githooks`) blocks re-introduction. The CI **deploy** step was hardened from `git pull --ff-only` to
+> **`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
+> ⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
+>
+> **Next:** the M9.8 **web** work — the shared **visual entity picker** (T2, name-typeahead → id) and the
+> **merge surfaces** (T3, profile "Merge into…" + AdminOps upgrade over T2), then **inline-actionable
+> graph-health** (T6, per-section Merge/Delete/Keep wired to T3's picker + T5 delete + capture-remove; dupe
+> candidates from T4's inline feed). Then **T7 live Accept**.
