@@ -359,7 +359,9 @@ not node id** (the same posture as `entity_merges`), so a keep **survives `repro
 replay step** — it is a **read-time filter** on the orphan check, not a mutation the rebuild would
 undo. | id uuid pk · node_type text · forms text[] (normalized surface forms via `surface_forms`, the
 hub's title + aliases at keep time) · **keep_key** text (idempotency key = `node_type` + sorted
-`forms`, **unique** → `record` is an upsert) · node_id text null (keep-time id, observability only —
+`forms`, **unique** → `record` is an upsert; **base64url-encoded** so it is URL-path-safe — it is
+the handle `DELETE /admin/orphan-keeps/{key}` un-keys on) · node_id text null (keep-time id,
+observability only —
 does not resolve post-reprocess) · created_at | Written **synchronously** by `POST
 /admin/nodes/{id}/keep` (no `agent_runs` job — a keep is a config-like decision, like a merge
 decision or a vocab approval); un-keyed by `DELETE /admin/orphan-keeps/{key}`. The graph-health

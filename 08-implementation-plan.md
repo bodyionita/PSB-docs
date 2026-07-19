@@ -2083,7 +2083,8 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       won't recreate an unreferenced hub, so the bare git-rm is never-lose-safe (ADR-064 §5). +10
       tests (service routing/git-rm/self-heal/commit-failure + admin router 202/404/400/409); gate
       green (1058 pytest). `parallel-with: T1, T4`. Docs: 03 §Admin (new endpoint).
-- [ ] **T5.5 — orphan keep-list** (server, GRILLED 2026-07-19): a durable **whitelist** so
+- [x] **T5.5 — orphan keep-list** (server) — **DONE** (`fedd2ab` on `main`, not yet pushed): a
+      durable **whitelist** so
       intentionally-kept zero-degree hubs (e.g. Father/Mother) stop nagging the nightly graph-health
       orphan check — ADR-064 §5's "Keep = dismiss/whitelist so it stops nagging", which T1–T5 left
       unbuilt (the M9.8 T6 respawn surfaced the gap; grilled into this task). **Keyed on stable
@@ -2108,6 +2109,21 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       gains a `type`** field so the web knows which rows are hubs (Keep/Merge) vs content
       (Delete→capture-remove only). `depends-on: —` (server foundation for T6). Docs: 02 §3 (table),
       03 §Admin (endpoints + offender `type`).
+      **As built:** `KeepStore` (`app/entities/keep_store.py`) + `OrphanKeepService`
+      (`app/services/orphan_keep.py`); the orphan filter is the pure `filter_kept_orphans` in
+      `graph_health.py` over `orphan_nodes` (now returns **all** candidates + `type`+`aliases`, no
+      SQL `LIMIT`), and `build_graph_health_service` wires a `PgKeepStore` so both the in-app
+      scheduler and CLI `pipeline nightly` get the filter (signature unchanged). Keep validates
+      hubs-only via the **effective** entity-like vocabulary (like node-delete). **Build refinement
+      (review must-fix):** `keep_key` is the `node_type`+sorted-`forms` canonical joined on NUL/SOH
+      **then base64url-encoded** — it travels in a URL path (`DELETE /orphan-keeps/{key}`) and a raw
+      NUL (in *every* key) or a `/` inside a surface form would be rejected/normalized by the
+      Cloudflare+Caddy ingress; base64url stays path-safe + an opaque reversible handle. Reprocess
+      safety verified: `orphan_keeps` has **no FK to `nodes`**, so `TRUNCATE nodes CASCADE` never
+      touches it (no replay needed). Independent review: **`/code-review` high** — the one must-fix
+      above (fixed + a URL-path-safety test); no others (minor/accepted: a form-less-hub keep is a
+      harmless no-op; one extra `all_keeps` read per nightly run is negligible). +17 tests; gate
+      green (**1107 pytest**, ruff check + format clean).
 - [ ] **T6 — inline-actionable graph-health** (web, GRILLED 2026-07-19): the graph-health card gains
       inline actions (ADR-064 §3). **Orphan-nodes section** — each **hub** offender gets **Delete**
       (`POST /admin/nodes/{id}/delete`, T5 — new `api.deleteNode`; on `409` still-referenced route to
@@ -2135,7 +2151,20 @@ orphan sections with working inline Merge/Delete/Keep; Diana Wren is never propo
 deleted from graph-health stays gone across reprocess; a **kept hub (Father) is suppressed from the
 orphan check and stays kept across a `reprocess-all`**.
 
-**Progress — T5.5 grilled into existence + planned (2026-07-19, planning session).** The M9.8 **T6**
+**Progress — T5.5 built (2026-07-19, implementation session).** The orphan keep-list server task is
+**DONE** (`fedd2ab` on `main`, not yet pushed): migration 022 + `orphan_keeps` + `KeepStore` +
+`OrphanKeepService` + the three sync keep/list/un-keep endpoints + the graph-health orphan read-time
+filter (`filter_kept_orphans`, kept hubs excluded from count AND sample) + the `type` field on the
+orphan offender payload. Built exactly to the grilled design (surface-form+type keying, reprocess-
+surviving with no replay, hubs-only, reversible). One **must-fix** from the independent `/code-review`
+(high): the `keep_key` travelled a raw NUL in the un-keep URL path → **base64url-encoded** (would
+break every un-keep behind the Cloudflare+Caddy ingress); fixed + tested. Reprocess-survival verified
+(`orphan_keeps` has no FK to `nodes`). Gate green (1107 pytest, +17). **Next: T6 — inline-actionable
+graph-health** (web, `depends-on: T3, T4, T5, T5.5` — now all met): orphan-section Delete/Merge/Keep +
+"Kept (N)" strip + the duplicate-candidates section. Paused for the operator to implement T6 or
+respawn.
+
+**Prior — T5.5 grilled into existence + planned (2026-07-19, planning session).** The M9.8 **T6**
 respawn hit an **unrecorded decision**: ADR-064 §5's orphan **Keep** ("dismiss/whitelist so it stops
 nagging") had **no backend** — T1–T5 built none — and T6 was labelled web-only. Per
 [09](09-session-protocol.md) this switched from implementation to a **planning pass**; grilled to
@@ -2144,8 +2173,7 @@ build-ready and recorded above as the new server task **T5.5 — orphan keep-lis
 keying (reprocess-surviving, mirrors §1), a **read-time filter** on the orphan check (no replay),
 **hubs-only**, reversible (keep/un-keep/list), kept hubs **fully excluded** from the orphan count.
 Recorded as a §5 **build decision** (no new ADR) here + contract docs 02/03/06. Execution shape:
-**T5.5 (server; migration 022) → T6 (web)**. **No code yet** — paused for the operator to implement
-(T5.5 → T6) or respawn.
+**T5.5 (server; migration 022) → T6 (web)**.
 
 ## M10 — Reflection agent (+ push notifications)
 

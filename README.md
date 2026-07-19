@@ -30,21 +30,19 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.8 T5.5 GRILLED + PLANNED — planning session, no code.** The T6
-respawn (inline-actionable graph-health) hit an **unrecorded decision**: ADR-064 §5's orphan **Keep**
-("dismiss/whitelist so it stops nagging") had **no backend** — T1–T5 built none — and T6 was labelled
-web-only. Per [09](09-session-protocol.md) this switched from implementation to a **planning pass**,
-grilled to build-ready and recorded as a new **server** task **T5.5 — orphan keep-list**, with **T6**
-now `depends-on: …, T5.5` and expanded with the grilled web design. **Design (agreed):** a durable
-**`orphan_keeps`** whitelist (**migration 022**) keyed on **surface form + type, not node id** — so a
-kept hub (Father/Mother) **survives `reprocess-all`** with **no replay step**, applied as a
-**read-time filter** on the graph-health orphan check (kept hubs **fully excluded** from the count).
-**Hubs-only**, **reversible** — three **synchronous** endpoints (`POST /admin/nodes/{id}/keep` ·
-`GET /admin/orphan-keeps` · `DELETE /admin/orphan-keeps/{key}`), plus a **`type`** field added to the
-orphan offender payload so the web tells hubs (Keep/Merge) from content (Delete). Mirrors §1's durable
-merges; recorded as a §5 **build decision** (no new ADR) in 08 §M9.8 + contract docs 02/03/06.
-Execution shape: **T5.5 (server) → T6 (web)**. **This session wrote no code**; the prior **T1–T5**
-commits remain on `main`, **not yet pushed** (push is the user's call).
+**Where we are (2026-07-19):** **M9.8 T5.5 BUILT — orphan keep-list (server) done** (`fedd2ab` on
+`main`, not yet pushed). The durable **`orphan_keeps`** whitelist (**migration 022**) + **`KeepStore`**
++ **`OrphanKeepService`** + three **synchronous** endpoints (`POST /admin/nodes/{id}/keep` ·
+`GET /admin/orphan-keeps` · `DELETE /admin/orphan-keeps/{key}`) let an intentionally-kept zero-degree
+hub (Father/Mother) stop nagging the graph-health orphan check. Keyed on **surface form + type, not
+node id**, so a keep **survives `reprocess-all`** with **no replay step** — a **read-time filter**
+(`filter_kept_orphans`) excludes kept hubs from both the orphan **count and sample**; the orphan
+offender payload gains a **`type`** field (hubs vs content). **Hubs-only**, **reversible**. The
+independent `/code-review` (high) caught one **must-fix**: `keep_key` carried a raw NUL in the un-keep
+URL path → **base64url-encoded** (the raw NUL/`/` would be rejected by the Cloudflare+Caddy ingress);
+fixed + tested. Reprocess-survival verified (`orphan_keeps` has no FK to `nodes`). Gate green
+(**1107 pytest**, +17). Recorded as a §5 **build decision** (no new ADR) in 08 §M9.8 + contract docs
+02/03.
 *(M9.7 + M9.6 T6 + M9.8 T1/T2/T3/T4/T5 closed prior — see [status history](08-logs/status-history.md);
 M9.8 grilled to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md).)*
 
@@ -56,12 +54,13 @@ pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git con
 **`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
 ⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
 
-**Next:** implement **T5.5 — orphan keep-list** (server, `depends-on: —`): migration 022 +
-`orphan_keeps` + `KeepStore` + the three sync keep/un-keep/list endpoints + the graph-health orphan
-read-time filter + `type` on the orphan offender payload + tests. Then **T6 — inline-actionable
-graph-health** (web, `depends-on: T3, T4, T5, T5.5`): orphan-section Delete/Merge/Keep + "Kept (N)"
-strip + the new duplicate-candidates section (T4 feed). Then **T7 live Accept**. *(Separate background
-task in flight: the identity-capsule L0 generator-preamble leak.)*
+**Next:** implement **T6 — inline-actionable graph-health** (web, `depends-on: T3, T4, T5, T5.5` —
+all now met): orphan-section **Delete** (`POST /admin/nodes/{id}/delete`, T5) / **Merge** (the shared
+`<EntityPicker>` propose→apply, T3) / **Keep** (`POST /admin/nodes/{id}/keep`, T5.5) per hub offender +
+a collapsible **"Kept (N)"** strip (`GET /admin/orphan-keeps`, Un-keep via `DELETE
+/admin/orphan-keeps/{key}`), plus the new **duplicate-candidates** section (T4's `high_confidence`
+feed). Then **T7 live Accept**. *(Separate background task in flight: the identity-capsule L0
+generator-preamble leak.)*
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

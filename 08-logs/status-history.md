@@ -1541,3 +1541,59 @@ current README snapshot.)*
 > items route to Review. Then **T7 live Accept**: merge the duplicated hub by name and confirm it survives a
 > `reprocess-all`, a detected dupe merges inline while Diana Wren stays separate, an orphan hub deletes and
 > doesn't resurrect. *(Separate background task in flight: the identity-capsule L0 generator-preamble leak.)*
+
+---
+
+**Snapshot superseded 2026-07-19 (T5.5 built) — moved verbatim from the README:**
+
+**Live at `https://braindan.cc` — M0 through M8.2 all closed.** The graph-native stack
+([ADR-026](adr/026-graph-native-storage-obsidian-removed.md)–029 pivot, M3): capture
+(voice/text/MCP) → organizer (single writer; typed nodes + edges, entity resolution, alias
+accretion, diacritic folding) → `PSB-graph` git store → index/hybrid search (vector ⊍ FTS RRF +
+recency + profile leg). Grounded cited **chat** with UI-editable model routing
+(`chat`/`conspect`/`quick`; provider ≠ model, [ADR-045](adr/045-provider-model-effort-separation.md))
++ provider observability (M4). **MCP server behind self-hosted OAuth 2.1** — connector-verified
+on Claude (mobile/web) *and* ChatGPT (M5); identity capsule L0. **Pipeline scheduling primitive**
+(M5.5, [ADR-047](adr/047-pipeline-scheduling-primitive.md)). **Chat distiller** with stance gate,
+watermarks, salience, dedup sweep + merge core, inbox drainer, one-tap remove (M6,
+[ADR-048](adr/048-m6-chat-distiller-build-decisions.md)/[049](adr/049-dedup-sweep-merge-core-build-decisions.md)).
+**Map/Explore** constellation UI (M7/M8.1), **ops console + observability** (M8,
+[ADR-053](adr/053-m8-ops-console-observability-build-decisions.md)), **graph-health**.
+**Interiority + temporal correctness** (M8.2, [ADR-055](adr/055-interiority-inner-voice-first-class.md)/[056](adr/056-temporal-correctness-date-tokens.md)):
+"LLMs classify, code computes" (hard rule 12), anchored symbolic time-refs → `[[t:…]]` tokens,
+inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability: everything
+derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
+[ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
+
+**Where we are (2026-07-19):** **M9.8 T5.5 GRILLED + PLANNED — planning session, no code.** The T6
+respawn (inline-actionable graph-health) hit an **unrecorded decision**: ADR-064 §5's orphan **Keep**
+("dismiss/whitelist so it stops nagging") had **no backend** — T1–T5 built none — and T6 was labelled
+web-only. Per [09](09-session-protocol.md) this switched from implementation to a **planning pass**,
+grilled to build-ready and recorded as a new **server** task **T5.5 — orphan keep-list**, with **T6**
+now `depends-on: …, T5.5` and expanded with the grilled web design. **Design (agreed):** a durable
+**`orphan_keeps`** whitelist (**migration 022**) keyed on **surface form + type, not node id** — so a
+kept hub (Father/Mother) **survives `reprocess-all`** with **no replay step**, applied as a
+**read-time filter** on the graph-health orphan check (kept hubs **fully excluded** from the count).
+**Hubs-only**, **reversible** — three **synchronous** endpoints (`POST /admin/nodes/{id}/keep` ·
+`GET /admin/orphan-keeps` · `DELETE /admin/orphan-keeps/{key}`), plus a **`type`** field added to the
+orphan offender payload so the web tells hubs (Keep/Merge) from content (Delete). Mirrors §1's durable
+merges; recorded as a §5 **build decision** (no new ADR) in 08 §M9.8 + contract docs 02/03/06.
+Execution shape: **T5.5 (server) → T6 (web)**. **This session wrote no code**; the prior **T1–T5**
+commits remain on `main`, **not yet pushed** (push is the user's call).
+*(M9.7 + M9.6 T6 + M9.8 T1/T2/T3/T4/T5 closed prior — see [status history](08-logs/status-history.md);
+M9.8 grilled to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md).)*
+
+**Repo hygiene (2026-07-19):** a **PII history-rewrite** (`git filter-repo` + force-push) of **both
+public repos** replaced every real contact's full name with a fabricated stand-in (real first name
+kept, so code examples still work: e.g. Horia Fenwick, Diana Vance, Madalina Fairfax); a **hashed
+pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git config core.hooksPath
+.githooks`) blocks re-introduction. The CI **deploy** step was hardened from `git pull --ff-only` to
+**`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
+⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
+
+**Next:** implement **T5.5 — orphan keep-list** (server, `depends-on: —`): migration 022 +
+`orphan_keeps` + `KeepStore` + the three sync keep/un-keep/list endpoints + the graph-health orphan
+read-time filter + `type` on the orphan offender payload + tests. Then **T6 — inline-actionable
+graph-health** (web, `depends-on: T3, T4, T5, T5.5`): orphan-section Delete/Merge/Keep + "Kept (N)"
+strip + the new duplicate-candidates section (T4 feed). Then **T7 live Accept**. *(Separate background
+task in flight: the identity-capsule L0 generator-preamble leak.)*
