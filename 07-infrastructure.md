@@ -132,7 +132,10 @@ repo with any editor — any external client must be **merge-only, never force-p
 - **Push to `main`** (or manual `workflow_dispatch`): all of the above → render `.env` + origin
   TLS files → `scp` them to the VPS → **`scp` the built `web/dist`** (uploaded as an artifact by
   the `web` job; `web/dist` is gitignored, so the box's clone never has it — CI is its sole
-  delivery path, mirroring the `.env`/cert flow) → SSH to VPS → `git pull --ff-only && docker
+  delivery path, mirroring the `.env`/cert flow) → SSH to VPS → **`git fetch origin main && git
+  reset --hard origin/main`** (mirror the remote exactly — not `pull --ff-only`, which *aborts* after
+  a history rewrite/force-push, wedging the deploy; the clone is a read-only mirror with no local
+  commits, and only tracked files are reset so the gitignored `.env`/TLS files survive) → `docker
   compose up -d --build` → **`docker compose up -d --force-recreate --no-deps caddy`** → `alembic
   upgrade head`. Caddy then serves `/srv/app/web/dist` at `/`. Rollback = revert commit and push.
   - **Why the explicit caddy force-recreate** (M5 live-deploy finding): the caddy service
