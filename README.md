@@ -41,8 +41,8 @@ the **merge picker was unreachable** inside the bottom-sheet drawer (absolute `t
 clipped off the sheet edge) → now **in-flow** so it rides the sheet scroll; ③ **`entity-dedup` in
 Review wasn't actionable** (no card for the kind → badge-only) → new **`EntityDedupCard`**
 (survivor-pick Merge / keep, calling the existing resolver). Gate green (tsc + eslint + vite build);
-independent diff review **no must-fix**. **Not yet committed→pushed** — needs a deploy before the
-**T7.1 live drills**. All four drill fixtures confirmed live (`entity_merges`/`orphan_keeps` = 0):
+independent diff review **no must-fix**. **Committed `62f9d04` on `main`, not pushed** — needs a
+deploy before the **T7.1 live drills**. All four drill fixtures confirmed live (`entity_merges`/`orphan_keeps` = 0):
 the **Diana Vance** dup (`0bd6f214`) vs the **Diana** hub (`8e874e52`), **Diana Wren** (`f1ad15ee`,
 the negative control), zero-degree orphan hubs (`gluten-free baking` …), and **Father** (`db99f269`)
 for the keep drill. *(T6, now superseded here, is archived in [status history](08-logs/status-history.md).)*
@@ -114,7 +114,7 @@ PersonalSecondBrain/            # workspace folder, not a repo
 ├── second-brain/               # code monorepo: server/ + web/ + deploy/ + tools/
 ├── PSB-graph/                  # local clone of the (private) production graph-store repo
 ├── instagram-…/                # the user's unzipped Instagram data export (local only,
-│                               # NEVER committed anywhere — M9.5 prep-tool input)
+│                               # NEVER committed anywhere — M10 prep-tool input)
 └── _archive/                   # pre-pivot artifacts (ADR-026): ObisidanVault/ (dead dev
                                 # scratch) + PSB-vault/ (pre-pivot vault repo — ARCHIVED
                                 # 2026-07-14 at the M3 close; see _archive/README.md)
@@ -138,7 +138,7 @@ If you are an AI (or human) picking this up with no prior context:
    starting at the first milestone whose acceptance criteria don't pass yet. Do not skip ahead.
 4. Anything ambiguous or contradictory: fix the docs first (new ADR if architectural),
    then implement. Never silently diverge from these documents.
-5. Things intentionally NOT decided yet (ask the user when reached): Slack app creation (M12);
+5. Things intentionally NOT decided yet (ask the user when reached): Slack app creation (M13);
    exact vision model ids (M9 T1 — verified against live Groq/Nebius catalogs at build).
    Already provisioned: domain (`braindan.cc`), Cloudflare, Supabase, code repo, `PSB-graph`
    (+ VPS deploy key, write access).

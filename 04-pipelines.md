@@ -126,7 +126,7 @@ profiles the reset truncated** (a profile-refresh over the replayed graph, so th
 The run reports per-heal totals (`coerced`/`accreted`/`profiles_refreshed`) for auditability.
 Idempotent; raw is never touched, so a bad reprocess is recovered by fixing code and re-running.
 
-## 2. Ingestion pipeline (connectors — the conversation substrate, M9/M9.5 [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md))
+## 2. Ingestion pipeline (connectors — the conversation substrate, M9/M10 [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md))
 
 Contract + per-connector specs: [05-connectors.md](05-connectors.md). v3 shape:
 
@@ -305,12 +305,12 @@ surfaces a **fallback/model banner** (`fallback_used`) and a **"not from your me
 best-effort + non-blocking after the first exchange. **Backlog:** graph-aware context (one-hop
 canonical-edge expansion of retrieved nodes), then agentic traversal.
 
-## 6. Reflection & life-manager agents (M10/M11 — scope recorded, grilled at their milestones)
+## 6. Reflection & life-manager agents (M11/M12 — scope recorded, grilled at their milestones)
 
-- **Reflection agent (M10):** absorbs the old daily-summary/weekly-review — one agent, multiple
+- **Reflection agent (M11):** absorbs the old daily-summary/weekly-review — one agent, multiple
   timescales (1d/1w/1m/1y): what went well, what to work on, improvements. Output = `insight`
   nodes through the organizer; morning **push notification** + on-demand asks.
-- **Life-manager agent (M11):** schedule/tasks/goals across planes — full grilling session
+- **Life-manager agent (M12):** schedule/tasks/goals across planes — full grilling session
   before build (node types? calendar integration? advisor vs state-manager?).
 
 ## Scheduling policy ([ADR-047](adr/047-pipeline-scheduling-primitive.md) pipelines + [ADR-010](adr/010-agent-window-3-5am.md) window + the jobs-observability contract)

@@ -151,12 +151,12 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
     /admin/entities/merge`; lower-confidence pairs are server-filed to Review (T4), so the section
     links there.
 
-  The other six checks stay read-only (acting on those → M10). *(As built: the "Kept (N)" strip
+  The other six checks stay read-only (acting on those → M11). *(As built: the "Kept (N)" strip
   renders whenever keeps exist, even at orphan-count 0; the duplicate card's low-confidence tail
   links to the Review tab. Live drills are T7.)*
 - **Parameterized admin ops** — `reindex` (live counts), `backup now`, `reprocess` (confirm-gated),
   `entities/merge` (pick two nodes), `tags`/`vocab` consolidate (two-step propose→apply)
-  — **M9.5 adds** the **connector backfill** card (confirm-gated start, live per-session progress
+  — **M10 adds** the **connector backfill** card (confirm-gated start, live per-session progress
   via `agent_runs`, resumable; optional model override + concurrency) and the **targeted
   re-derive / re-distill** ops ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)
   §8–§9): rehomed
@@ -171,10 +171,10 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   - **dedup-proposal** — two node previews + **merge / keep / link** (survivor pick on merge).
 - **Batch actions:** multi-select → agree/disagree/maybe (or keep/dismiss) in one call
   (`POST /review/batch`). A weekly **maybe digest** keeps the parked pile from stalling silently.
-- **Kind filter chips (M9.5, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)
+- **Kind filter chips (M10, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)
   §11):** per-kind chips with counts (stance / entity-ambiguity / vocab / dedup /
   occurred-enrichment / …) so a connector-backfill stance flood never buries the other kinds.
-- **Session transcript view (M9.5, ADR-058 §11):** from a distilled memory's capture/node,
+- **Session transcript view (M10, ADR-058 §11):** from a distilled memory's capture/node,
   "view source conversation" opens the rendered session (`GET /connector/sessions/{id}`) —
   sender-attributed messages, day dividers, **photos inline + voice notes playable**
   (`GET /media/{id}`). The memory→source traceability surface.
@@ -213,7 +213,7 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
 - **Vocabulary (M3, [ADR-027](adr/027-typed-vocabulary-governance.md)):** node + edge type
   vocabularies with pending LLM proposals — approve/reject; approval queues the
   retro-consolidation job.
-- **Connectors (M9.5 API path / M12):** per-connector config incl. the lookback override (default 6 months).
+- **Connectors (M10 API path / M13):** per-connector config incl. the lookback override (default 6 months).
 - **Models section (M4, [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md) +
   [ADR-043](adr/043-quick-routing-tier-m4.md), [ADR-045](adr/045-provider-model-effort-separation.md)):**
   routing groups — **Chat**, **Conspect**, **Quick** (trivial tasks, e.g. session titling;
@@ -228,7 +228,7 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   model (`effort_by_model`). Choices + effort levels come from `GET /settings` (registry-sourced, never
   hardcoded); saved via `PUT /settings/models`. This is where the M0/M4 model-and-effort control lives;
   the chat composer picker is a per-conversation override of the Chat group's active model.
-- **Entity merge (M9.5, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §11;
+- **Entity merge (M10, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §11;
   **pickers built M9.8 T3**, [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §2):**
   the manual counterpart to the nightly dedup sweep — **two searchable entity pickers**
   (the shared `<EntityPicker>`, `GET /entities`, search-as-you-type; each `excludeId`s the

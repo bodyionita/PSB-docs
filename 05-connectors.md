@@ -5,7 +5,7 @@ connectors produce normalized *messages* into source-generic tables; determinist
 **sessionization** + the **generalized stance-gated distiller** turn them into memories
 ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)); media handled by the
 multi-modal substrate ([ADR-057](adr/057-multimodal-media-ingestion-substrate.md)); **Instagram
-promoted from deferred to M9.5** (export-first; ADR-009 resolved); **Slack → M12**; **Telegram
+promoted from deferred to M10** (export-first; ADR-009 resolved); **Slack → M13**; **Telegram
 removed** ([ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md)). 2.0 =
 mind-graph pivot: distillation emits typed nodes/edges through the organizer; stance gate +
 review queue; 6-month default lookback. 1.0 = initial contract.)
@@ -68,7 +68,7 @@ Downstream is shared, source-blind, and always re-runnable over the stored raw:
 **Traceability:** memory → capture → `source_ref` → session; the session-transcript endpoint +
 web view render the conversation with inline media ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §11).
 
-## Instagram DM connector (M9.5 — [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md))
+## Instagram DM connector (M10 — [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md))
 
 **Decision:** ingest **DMs only** (group chats excluded — user call; `message_requests` never
 inventoried), **export-first** for history, API only as the gated freshness path.
@@ -88,7 +88,7 @@ inventoried), **export-first** for history, API only as the gated freshness path
 - `source_ref`: `instagram:<thread_id>/<session>`; sender attribution structural; the user's
   account name marked first-person via the manifest.
 
-## Slack connector (M12 — deferred by [ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md); spec unchanged, inherits the v3 substrate)
+## Slack connector (M13 — deferred by [ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md); spec unchanged, inherits the v3 substrate)
 
 **Decision:** ingest **conversations I participate in** — DMs, group DMs and channels
 where I'm active — including other people's messages in those threads (full context).

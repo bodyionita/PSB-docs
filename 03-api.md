@@ -60,19 +60,19 @@ layer** ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)) — MCP tool 
 | `POST /captures/{id}/follow-up` | `{ "answer" }` → Pass-2 re-organize, replaces the capture's nodes ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)); `202`; `409` if no nudge pending |
 | `PUT /captures/{id}/anchor` | **(M8.2, [ADR-056](adr/056-temporal-correctness-date-tokens.md) §5 — the anchor edit)** `{ "anchor": iso-datetime }` corrects the capture's recorded-at, then triggers a **background one-capture reorganize** re-resolving every relative date against the new anchor; `202`; `404` unknown. The stored anchor is data (never wall-clock), so the replay is deterministic |
 
-## Connectors & media (M9/M9.5 — [ADR-057](adr/057-multimodal-media-ingestion-substrate.md)/[058](adr/058-instagram-dm-connector-and-conversation-substrate.md); shapes draft-level, re-checked at task kickoff)
+## Connectors & media (M9/M10 — [ADR-057](adr/057-multimodal-media-ingestion-substrate.md)/[058](adr/058-instagram-dm-connector-and-conversation-substrate.md); shapes draft-level, re-checked at task kickoff)
 
 | | |
 |---|---|
 | `GET /media/{id}` | **(M9, ADR-057 §7)** streams a stored media file (photo/voice/thumbnail); session-gated. Serves **ad-hoc voice audio** from M9 T4 ([ADR-060](adr/060-node-media-linkage-and-voice-unification.md) §5); `FileResponse` Range/206 supports audio scrubbing (verified in the T6 phone drill) |
-| `POST /connector/import/threads` | **(M9.5)** authenticated bulk upsert from the local prep tool: thread metadata (+ `name_override`/aliases) — idempotent |
-| `POST /connector/import/messages` | **(M9.5)** batched message upsert by `(source, thread_id, message_id)` — idempotent, safe to re-send |
-| `POST /connector/import/media` | **(M9.5)** multipart media upload (photos/voice raw; video = summary text + optional thumbnail) tied to message refs — idempotent |
-| `GET /connector/sessions/{id}` | **(M9.5, ADR-058 §11)** the session transcript: rendered messages + media refs (photos inline via `GET /media/{id}`, voice playable) — the memory→source traceability surface |
-| `GET /entities?type=person&q=…&limit=` | **(specced M9.5 ADR-058 §11; BUILT M9.8 T2, ADR-064 §2)** alphabetical browse/search over entity hubs → `[{ id, type, title, aliases }]` — feeds the shared merge picker (search-as-you-type; **diacritic-folded** name/alias match ranked exact-title→prefix→exact-alias→title-contains→alias-contains then alphabetical; empty `q` = alphabetical browse; `type` narrows to one entity-like kind, all when omitted; `limit` 1..50 default 20). Read-only, no model, session-gated; tombstones excluded; `/search` stays query-shaped |
-| `POST /admin/connector/backfill` | **(M9.5, ADR-058 §8)** start the distill campaign (confirm-gated, single-flight, resumable; optional per-run model override + concurrency); `202`/`409`; progress via `agent_runs` |
-| `POST /admin/connector/rederive` | **(M9.5, ADR-058 §9)** targeted media re-derivation — only `status=unavailable` or explicit ids |
-| `POST /admin/connector/redistill` | **(M9.5, ADR-058 §9)** targeted session re-distill — only degraded sessions or an explicit list; idempotent via candidate dedup keys |
+| `POST /connector/import/threads` | **(M10)** authenticated bulk upsert from the local prep tool: thread metadata (+ `name_override`/aliases) — idempotent |
+| `POST /connector/import/messages` | **(M10)** batched message upsert by `(source, thread_id, message_id)` — idempotent, safe to re-send |
+| `POST /connector/import/media` | **(M10)** multipart media upload (photos/voice raw; video = summary text + optional thumbnail) tied to message refs — idempotent |
+| `GET /connector/sessions/{id}` | **(M10, ADR-058 §11)** the session transcript: rendered messages + media refs (photos inline via `GET /media/{id}`, voice playable) — the memory→source traceability surface |
+| `GET /entities?type=person&q=…&limit=` | **(specced M10 ADR-058 §11; BUILT M9.8 T2, ADR-064 §2)** alphabetical browse/search over entity hubs → `[{ id, type, title, aliases }]` — feeds the shared merge picker (search-as-you-type; **diacritic-folded** name/alias match ranked exact-title→prefix→exact-alias→title-contains→alias-contains then alphabetical; empty `q` = alphabetical browse; `type` narrows to one entity-like kind, all when omitted; `limit` 1..50 default 20). Read-only, no model, session-gated; tombstones excluded; `/search` stays query-shaped |
+| `POST /admin/connector/backfill` | **(M10, ADR-058 §8)** start the distill campaign (confirm-gated, single-flight, resumable; optional per-run model override + concurrency); `202`/`409`; progress via `agent_runs` |
+| `POST /admin/connector/rederive` | **(M10, ADR-058 §9)** targeted media re-derivation — only `status=unavailable` or explicit ids |
+| `POST /admin/connector/redistill` | **(M10, ADR-058 §9)** targeted session re-distill — only degraded sessions or an explicit list; idempotent via candidate dedup keys |
 
 ## Chat (M4 — carries the grilled chat plan, retargeted to nodes; [ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md))
 
@@ -196,7 +196,7 @@ Kind-generic: `entity-ambiguity` + `vocab-proposal` (M3), `stance-candidate` (M6
 | `GET /settings` | model routing for **all groups** (`chat`/`conspect`/`quick`, ADR-025 + [ADR-043](adr/043-quick-routing-tier-m4.md); **+ `vision` at M9** — [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §4, Groq-primary seed, effort N/A) + available **models** incl. which support effort + their levels (registry-sourced; no hardcoded lists in web). **([ADR-045](adr/045-provider-model-effort-separation.md)) the routable unit is a MODEL id** (the raw vendor string, e.g. `claude-opus-4-8`) — the provider is an attribute of the model; each model option carries its `provider`. `active`/`fallback` are model ids; effort is keyed by model id |
 | `PUT /settings/models` | save **one** group's `{active, fallback, effort_by_model}` (model ids — [ADR-045](adr/045-provider-model-effort-separation.md); was `effort_by_provider`/provider ids); `422` on unknown id; busts the routing cache (forward-live, no restart) |
 | `PUT /settings/vocabulary` | **(M3)** `{ review_id, verdict: "approve"\|"reject" }` → resolve a pending type proposal. Approve writes the type to the live vocabulary (`app_settings`, forward-live) + opens the `vocab-consolidation` job; reject discards. Returns the updated review item. Same choke point as `POST /review/{id}` for a `vocab-proposal` (ADR-027 §4 / [ADR-035](adr/035-vocabulary-consolidation-scope-m3.md)). `404`/`409`/`400` as `POST /review/{id}` |
-| `PUT /settings/connectors/{name}` | **(M9.5 API-connector path / M12)** per-connector config incl. lookback override (default 6 months) |
+| `PUT /settings/connectors/{name}` | **(M10 API-connector path / M13)** per-connector config incl. lookback override (default 6 months) |
 
 ## Admin
 

@@ -30,7 +30,7 @@ compounding over time.
   ([ADR-028](adr/028-one-service-layer-mcp-peer-surface.md)).
 - **Conversations become memory**: in-app LLM chats are distilled — anchored on *my* stance,
   not the model's words — and people-conversations (**Instagram DMs first** —
-  [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md); Slack at M12) flow in
+  [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md); Slack at M13) flow in
   through connectors; anything with unclear stance waits in a review queue for my agree/disagree
   ([ADR-029](adr/029-conversational-ingestion-stance-gate-review-queue.md)). Media inside
   conversations (photos, voice notes, videos) are understood, not dropped
@@ -72,7 +72,7 @@ Nodes carry **planes** — configurable life areas used for scoping, filtering a
 
 - Multi-user, collaboration, public sharing.
 - Native mobile apps (the PWA is the app).
-- Connectors beyond **Instagram (M9.5)** and Slack (M12) in v1 — the conversation substrate
+- Connectors beyond **Instagram (M10)** and Slack (M13) in v1 — the conversation substrate
   ([ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)) anticipates WhatsApp,
   LLM-chat exports, Facebook Messenger, email, calendar. (Telegram: removed —
   [ADR-059](adr/059-roadmap-restructure-telegram-removed-slack-m12.md).)

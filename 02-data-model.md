@@ -213,7 +213,7 @@ tombstone. Feeds `GET /nodes/{id}.media[]` + the `media_kinds` list glyphs (03-a
 ([ADR-019](adr/019-conversational-capture-minimal-in-m1.md)) and interaction logging
 ([ADR-021](adr/021-capture-interactions-agent-runs-logging.md)) carry over. **M5 adds a
 `source` column** ([ADR-046](adr/046-m5-mcp-server-oauth-connectors.md) — `web` default \|
-`mcp` \| `chat` (M6) \| **`instagram` (M9.5)** \| later `slack`; distinct from `kind` =
+`mcp` \| `chat` (M6) \| **`instagram` (M10)** \| later `slack`; distinct from `kind` =
 text/voice **\| `image` (M9, [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §6 —
 raw file kept under `/srv/data/media/capture/` (the media `source`=`capture` layout — ADR-057 §3's
 `captures/` sketch reconciled to `<source>` here, as with the `media` table name), vision
@@ -234,12 +234,12 @@ byte-parity); `text_body` holds the person's typed words; the ordinal makes part
 attribution deterministic. Detailed schema lands alongside the M9.6 build (08 §M9.6).
 
 **`connector_cursors`** — unchanged (`connector` pk, `cursor` jsonb, `updated_at`). Used by
-API-fetcher connectors (Instagram daily if the spike passes; Slack at M12). **The
+API-fetcher connectors (Instagram daily if the spike passes; Slack at M13). **The
 chat-distiller does NOT use it** — it needs *per-session* watermarks, so it uses the dedicated
 **`chat_distill_state`** table (above, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)),
 not a single connector cursor.
 
-**`connector_threads` / `connector_messages` / `connector_media`** (**M9/M9.5**,
+**`connector_threads` / `connector_messages` / `connector_media`** (**M9/M10**,
 [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §3 +
 [ADR-057](adr/057-multimodal-media-ingestion-substrate.md) §3 — exact columns pinned at the
 build task, migration numbered then): the source-generic **conversation substrate**.
@@ -249,11 +249,11 @@ replay source for re-sessionization/re-distillation): `(source, thread_id, messa
 **upsert key** (idempotent import), sender, `sent_at` (ms precision), repaired text, reactions,
 share/link payload, edit marker. **`media`** (**physical table name pinned at M9 T2**, migration 017; ADR-057 §3 sketched it as
 `connector_media`, but it is **source-generic** — it serves ad-hoc PWA photo captures *now* (M9)
-and connector media at M9.5 — so the physical table is `media`) — one row per media item: `kind`
-(`photo`/`voice`/`video`), `source` (`capture` for ad-hoc | `instagram` at M9.5 — also the top of
+and connector media at M10 — so the physical table is `media`) — one row per media item: `kind`
+(`photo`/`voice`/`video`), `source` (`capture` for ad-hoc | `instagram` at M10 — also the top of
 the `/srv/data/media/<source>/…` layout), a **nullable `capture_id` fk → `captures`**
 (`ON DELETE CASCADE` — the M9 ad-hoc-capture link) with a **nullable `message_id` fk →
-`connector_messages` added at M9.5** (the connector link — "media fk wiring" in M9.5 T1),
+`connector_messages` added at M10** (the connector link — "media fk wiring" in M10 T1),
 `file_path` **relative to the media root** (**null for video** — summary-only, ADR-057 §2),
 `thumb_path`, `mime_type`, **derivation `status`** (`pending`/`derived`/`unavailable` — the
 resumability + targeted-re-derive hinge) + `derived_text` (photo description / voice transcript /
@@ -377,7 +377,7 @@ distilled_at timestamptz · run_id uuid null | Idle-eligibility is derived from
 `max(chat_messages.created_at)`; delta-after-watermark makes re-distillation idempotent.
 
 **`summaries`** — retired at the pivot; daily/weekly output becomes `insight` nodes produced by
-the reflection agent (M10). (Table kept until M10 replaces it; no new writers.)
+the reflection agent (M11). (Table kept until M11 replaces it; no new writers.)
 
 **`chat_sessions` / `chat_messages`** — unchanged ([ADR-025](adr/025-ui-editable-model-routing-and-per-task-effort.md)):
 `chat_messages.model` records the resolved **model id** (the vendor string; [ADR-045](adr/045-provider-model-effort-separation.md) — legacy provider-id rows like `claude-max`/`nebius` are **left untouched** and stay label-tolerated, not rewritten); `sources` = cited **nodes** (renumbered).
