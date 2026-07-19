@@ -1859,16 +1859,20 @@ cleanly.)*
 migrations** anywhere (no schema changes), no intra-batch dependency. T6 builds against the 03-api
 contract recorded at this planning pass, so it has no build-time dependency on T5.)*
 
-- [ ] **T1 — vision per-message screenshot format** (`media_derivation.py`
+- [x] **T1 — vision per-message screenshot format** (`media_derivation.py`
       `MEDIA_DESCRIPTION_SYSTEM_PROMPT`): ADR-062 §2 — header line + `[side · sender]` per-message
       lines + quote-inset attribution; non-chat images unchanged. `parallel-with: T2, T3 (batch A)`
-- [ ] **T2 — pipeline milestone logging** (`capture_pipeline.py`): the C-scope `logger.info` lines
+      — **done `e91d1cb`** (independent review pass; 2 minor prompt-clarity tweaks applied).
+- [x] **T2 — pipeline milestone logging** (`capture_pipeline.py`): the C-scope `logger.info` lines
       (per-part + stage transitions, all media kinds), auto-tagged to the run by the existing
-      contextvar. `parallel-with: T1, T3 (batch A)`
-- [ ] **T3 — openRun RunDetail: live tail + per-part block** (`FeedView.tsx`): render
+      contextvar. `parallel-with: T1, T3 (batch A)` — **done `1a8a809`** (independent review pass;
+      reviewer traced the full streaming path — namespace + contextvar scope + `gather` child-task
+      context copy all confirmed; single-media start line added per the reviewer's note).
+- [x] **T3 — openRun RunDetail: live tail + per-part block** (`FeedView.tsx`): render
       `<RunLogTail runId>` while the pinned run lives + a structured `details.derive.parts[]`
       block (kind, ordinal, status, model, attempts, error) when present.
-      `parallel-with: T1, T2 (batch A)`
+      `parallel-with: T1, T2 (batch A)` — **done `ab173db`** (independent review pass; latch mirrors
+      OpsView's drain-safe pattern; `details` narrowed defensively; new `RunDerivePart` type).
 - [ ] **T4 — organizer v8 self-attribution mapping** (`organizer.py`): ADR-062 §3 — right→own
       words / left→named entity / quote→quoted party / phantom-sender ban / "not mine" text
       override; prompt version bump. `depends-on: T1` `parallel-with: T5, T6 (batch B)`
@@ -1898,6 +1902,20 @@ contract recorded at this planning pass, so it has no build-time dependency on T
       (Recents/Captures/search/chat), entity hubs intact, tombstone excluded from `reprocess-all`.
 - [ ] Existing screenshot captures migrated (rederive+reorganize) — the P1 capture reads correctly.
 - [ ] M9.6 T6 flipped done alongside; README snapshot updated.
+
+**Progress — Batch A {T1,T2,T3} done (implementation session 2026-07-19).** All three landed as
+per-task commits (`e91d1cb`/`1a8a809`/`ab173db`) on `main`, **not pushed** (code push = the CI
+prod-deploy = T7, the user's). Each passed a **fresh independent review** (no must-fix; minor
+reviewer notes applied). Integration gate on the merged tree is **green**: server `ruff check` +
+`ruff format --check` clean, **full pytest 1027 passed**; web `tsc --noEmit` + `vite build` pass.
+No migrations (as planned). **Next: Batch B {T4,T5,T6}**, then pause for the user's T7 (deploy +
+A/B + migration + re-drill).
+
+> **T4 version note (reconciliation):** ADR-062 §3 / the T4 bullet say "prompt v8", but the code's
+> `ORGANIZER_PROMPT_VERSION` is **already `organizer-v8`** (bumped in M9.6 for the composite
+> `[[part N · kind]]` markers). So the ADR-062 §3 self-attribution mapping lands as
+> **`organizer-v9`** — same intent, version number reconciled against the code. (The M9.6 v8 prompt
+> already carries the ADR-057 §5 "never you" rule that ADR-062 §3 replaces.)
 
 ## M10 — Reflection agent (+ push notifications)
 
