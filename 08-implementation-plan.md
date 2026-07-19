@@ -2001,9 +2001,16 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
 
 ### Tasks (draft — batch annotations at build; server foundation first)
 
-- [ ] **T1 — durable merge store + reprocess replay** (server): persist merge decisions
-      (survivor + loser surface-forms + type); `reprocess-all` re-folds matches after rebuild.
-      `parallel-with: —` (foundation; others build on the merge engine but not on this store).
+- [x] **T1 — durable merge store + reprocess replay** (server) — **DONE**: `entity_merges`
+      (migration 021) records each merge keyed on **surface form + type** (not node id); merge apply
+      upserts the decision (`MergeService(decisions=…)`); `reprocess-all` re-applies them after the
+      raw rebuild (new `MergeReplayService`, wired into `ReprocessService` between capture-replay and
+      derived-recompute + into the CLI `build_reprocess_service`). Resolves both sides by surface
+      form (title-form ranked first so a survivor/loser sharing a short alias never cross);
+      unresolvable/ambiguous/already-merged → skipped (never-lose). Shared `fold_entities` used by
+      both the interactive merge + the replay (no fork). Preview `{merges}` + run details
+      (`standing_merges_reapplied`) updated. +10 tests (`test_merge_replay.py`, merge/reprocess);
+      gate green (1049 pytest). `parallel-with: —` (foundation).
 - [ ] **T2 — shared visual entity picker** (web): name-typeahead resolving to id; the reusable
       component. `parallel-with: T1`
 - [ ] **T3 — merge surfaces** (web): profile "Merge into…" + AdminOps upgrade, using T2.

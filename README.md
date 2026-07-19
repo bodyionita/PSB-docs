@@ -53,11 +53,19 @@ graph-health** (merge/delete/keep), a **conservative entity-hub dedup detector**
 genuinely-different `Diana Wren`), and **manual orphan GC**. Better entity-resolution-at-ingest
 deferred. *(`Diana` stays duplicated until M9.8 ships — the user declined the id-paste stopgap.)*
 
-**Next:** **implement M9.8** (implementation session, no grilling) per [08 §M9.8](08-implementation-plan.md)
-— server foundation first (durable merge store + reprocess replay; dedup detector; node-delete),
-then the shared picker + merge surfaces, then inline-actionable graph-health; T7 live Accept =
-merge Diana by name and confirm it survives a `reprocess-all`. *(Separate background task in flight:
-the identity-capsule L0 generator-preamble leak.)*
+**M9.8 T1 LANDED (server foundation, not yet pushed).** **Durable, replayable merges** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1):
+new `entity_merges` table (migration 021) records each merge keyed on **surface form + type** (not
+node id); merge apply upserts the decision, and `reprocess-all` re-applies them after the raw rebuild
+(new `MergeReplayService`, wired into both the in-app `ReprocessService` and the CLI) — matched by
+surface form, title-form ranked first so a survivor/loser sharing a short alias never cross;
+unresolvable/ambiguous → skipped (never-lose). Fixes ADR-042 §4's silent drop (the Diana merge will
+now survive a reprocess). Gate green (1049 pytest, +10). Docs updated (02 §3, 03 §Admin, 08 T1).
+
+**Next:** continue **M9.8** server foundation — **T4** (conservative entity-hub dedup detector →
+inline feed + Review for low-confidence; suppresses Diana Wren) and **T5** (node-delete path for
+orphan hubs); then the shared picker + merge surfaces (T2/T3), then inline-actionable graph-health
+(T6); T7 live Accept = merge Diana by name and confirm it survives a `reprocess-all`. *(Separate
+background task in flight: the identity-capsule L0 generator-preamble leak.)*
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows

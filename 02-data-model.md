@@ -327,6 +327,22 @@ shared merge-core, link writes a canonical `similar` edge).
 `resolved`/`discarded` terminal). **Kind-aware reprocess** (see below): `reprocess-all` preserves
 `stance-candidate`, truncates the other kinds.
 
+**`entity_merges`** (**M9.8 T1**, migration 021 — [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1):
+the **durable, replayable** record of every manual entity merge, so a merge **survives
+`reprocess-all`** (closing ADR-042 §4's "reported but dropped" — a merge tombstone keyed on the
+loser's node id can't be re-applied after the rebuild mints fresh ids). A merge is keyed on **stable
+identity — surface form + type, not node id**. | id uuid pk · survivor_type · survivor_forms text[]
+(normalized: folded+lower+collapsed, matching `normalize_alias`) · loser_type · loser_forms text[] ·
+**loser_key** text (idempotency key = `loser_type` + sorted `loser_forms`, **unique** → `record` is
+an upsert, last survivor wins) · survivor_node_id / loser_node_id text null (merge-time ids,
+observability only — they no longer resolve post-reprocess, which is the whole point) · created_at |
+Written on merge apply; **read + replayed** by `reprocess-all` *after* the raw rebuild and *before*
+the derived recompute — each decision resolves both sides to the re-created hubs by surface form
+(title-form ranked first so a survivor/loser sharing a short alias don't cross) and re-folds
+loser→survivor. Preserved by the reset (like `removed_at` tombstones); an unresolvable/ambiguous
+side is **skipped**, never guessed (never-lose). Operational state, not derived — the merge decision
+is *governance*, replayed on top of the raw-rebuilt graph, not baked into raw (byte-parity, ADR-042).
+
 **`chat_distill_state`** (**M6**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md)): the
 chat-distiller watermark — one row per distilled session. | session_id uuid pk (fk `chat_sessions`)
 · last_message_at timestamptz (watermark — the distiller processes only messages after it) ·
@@ -380,7 +396,7 @@ independent copy and may restore-to-last-nightly. Every capture ends as a node (
 | Loss | Recovery | Tier |
 |---|---|---|
 | Derived tables (`nodes`,`chunks`,`edges`) | `POST /admin/reindex` from the store | rebuildable |
-| A format/organizer-quality change left old nodes stale | `POST /admin/reprocess` ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reset derived state (node files + `nodes`/`chunks`/`edges`/`node_profiles`, `captures.node_paths`) and the **capture-derived `review_queue` kinds only** (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal` — **kind-aware**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §7; `stance-candidate` items are **preserved**), replay every capture's raw chronologically (incl. chat-endorsed captures → **P10**); **raw + approved vocabulary + `removed_at`-tombstoned captures' exclusion preserved**, standing merges reported | derived (from raw) |
+| A format/organizer-quality change left old nodes stale | `POST /admin/reprocess` ([ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)): reset derived state (node files + `nodes`/`chunks`/`edges`/`node_profiles`, `captures.node_paths`) and the **capture-derived `review_queue` kinds only** (`entity-ambiguity`/`vocab-proposal`/`dedup-proposal` — **kind-aware**, [ADR-048](adr/048-m6-chat-distiller-build-decisions.md) §7; `stance-candidate` items are **preserved**), replay every capture's raw chronologically (incl. chat-endorsed captures → **P10**); **raw + approved vocabulary + `removed_at`-tombstoned captures' exclusion preserved**; **durable standing merges (`entity_merges`) are re-applied** after the rebuild by surface form ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §1 — no longer dropped) | derived (from raw) |
 | Operational state (`agent_runs`, `chat_*`, `captures`, `review_queue`, cursors, settings) | Supabase backup, or nightly `pg_dump` in R2 → restore-to-last-nightly | operational |
 | Whole database | as above; worst case reindex restores search/traverse/chat, losing at most the day's operational log + pending review items (re-derivable from persisted sessions) | operational |
 | Graph store on VPS | `git clone` from GitHub **or** the latest R2 WORM bundle | **never-lose** |
