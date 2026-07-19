@@ -2031,7 +2031,24 @@ merge was silently dropped by the 2026-07-17 `reprocess-all`, and the id-paste m
       `aria-activedescendant`). +14 tests (pure ranker + service + router). Gate green (**1090 pytest**,
       +14; tsc + eslint + ruff clean). `parallel-with: T1` (the web component was; in practice T2 also
       landed the missing server endpoint). Docs: 03 §Search & graph (endpoint confirmed built).
-- [ ] **T3 — merge surfaces** (web): profile "Merge into…" + AdminOps upgrade, using T2.
+- [x] **T3 — merge surfaces** (web) — **DONE** (`c6aaeef` on `main`, not yet pushed): the two T2
+      `<EntityPicker>` wirings, both feeding the unchanged two-step propose→apply. **AdminOps card**
+      (`features/activity/AdminOps.tsx`): the two raw id `<input>`s are replaced by two `<EntityPicker>`s
+      (loser/survivor) with symmetric `excludeId` (each drops the other from its results, so a
+      node can't be merged into itself); changing either picker clears any stale preview; apply still
+      uses the server-authoritative `plan.loser.id`/`plan.survivor.id`. **Profile "Merge into…"**: a new
+      self-contained `ui/MergeIntoPanel.tsx` embedded in the shared `ui/NodePreview` — entity hubs only
+      (gated by a new `ui/useEntityLikeTypes` over `GET /types`) — folds the viewed node (loser) into a
+      picked survivor (picker `type`-narrowed to the hub's kind, `excludeId`-ing it), calling
+      `api.mergeEntitiesPropose/Apply` directly (kept in `ui/` so the shared preview never imports a
+      feature — layering, rule 4) and polling the background run to terminal; on success it invalidates
+      the loser's `['node']`/`['neighbors']` queries. **Scope note:** the richer full-`NodePreview`
+      side-by-side previews sketched in 06 §Entity-merge stay a later enhancement — T3 keeps the existing
+      propose-response preview (identity + aliases + inbound-edge count) the tracker scoped. Independent
+      review: **self-review only** (as T2 — contained web wiring reusing the T2 picker + the unchanged,
+      already-verified propose→apply seam; no backend here to drive live, that's T7's live Accept); no
+      must-fix. Web gate green (**tsc --noEmit + eslint --max-warnings 0 clean**); dev server compiles +
+      mounts with no console errors. Docs: 06 §Settings (entity-merge bullet + new profile affordance).
       `depends-on: T2`
 - [x] **T4 — entity-hub dedup detector** (server) — **DONE**: new nightly `EntityDedupService`
       (`app/entities/entity_dedup.py`) proposes duplicate **same-type** hubs gated by a **strict AND**

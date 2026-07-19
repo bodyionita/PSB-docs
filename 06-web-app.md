@@ -211,12 +211,21 @@ infinite scroll (`before=` keyset); staggered entrance animations; tap to expand
   model (`effort_by_model`). Choices + effort levels come from `GET /settings` (registry-sourced, never
   hardcoded); saved via `PUT /settings/models`. This is where the M0/M4 model-and-effort control lives;
   the chat composer picker is a per-conversation override of the Chat group's active model.
-- **Entity merge (M9.5, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §11):**
+- **Entity merge (M9.5, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md) §11;
+  **pickers built M9.8 T3**, [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §2):**
   the manual counterpart to the nightly dedup sweep — **two searchable entity pickers**
-  (`GET /entities`, type-filtered, search-as-you-type), **side-by-side previews** (stacked
-  top-bottom on mobile) reusing `NodePreview` (profile, aliases, degree, recent edges),
-  **survivor choice**, confirm-gated apply over `POST /admin/entities/merge`, feed-visible;
-  the merge registers as a standing merge (ADR-042 caveat reporting).
+  (the shared `<EntityPicker>`, `GET /entities`, search-as-you-type; each `excludeId`s the
+  other so a node can't be merged into itself), **survivor choice**, confirm-gated apply over
+  `POST /admin/entities/merge`, feed-visible; the merge registers as a durable, replayable merge
+  (ADR-064 §1, survives `reprocess-all`). The two-step preview is the propose response's identity +
+  aliases + **inbound-edge inventory** per side (`MergeSideBox`); the richer full-`NodePreview`
+  side-by-side previews sketched here remain a later enhancement (out of T3 scope).
+- **"Merge into…" on the profile (M9.8 T3, [ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §2a):**
+  the shared `NodePreview` — the entity/profile view — carries a subtle **"Merge into…"** affordance on
+  **entity hubs only** (gated by `GET /types` `entity_like_types`). It folds *this* node (the loser)
+  into another entity picked by name via the same `<EntityPicker>` (type-narrowed to this hub's kind,
+  `excludeId`-ing it), driving the same propose→apply seam and polling the background run to a terminal
+  state. So a merge starts from anywhere the profile shows (map drawer, search/chat expand), no ids ever.
 - **Providers status (M4 follow-up, [ADR-044](adr/044-provider-observability-surface.md);
   [ADR-045](adr/045-provider-model-effort-separation.md)):** a **read-only** card over
   `GET /admin/providers` — **one row per provider** (5: Claude, Nebius, Groq, OpenAI, Ollama) labeled by

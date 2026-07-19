@@ -30,23 +30,27 @@ inner-voice extraction; prod reprocessed (41/41 captures, 160 nodes). Durability
 derived rebuilds from the store (`reprocess-all-from-raw`, vision P10,
 [ADR-042](adr/042-reprocess-all-from-raw-and-data-survival.md)); reindex parity verified live.
 
-**Where we are (2026-07-19):** **M9.8 T2 DONE (committed to `main`, not yet pushed).** The M9.8
-server foundation (T1/T4/T5) is complete + deployed; **T2 begins the web work** — the shared
-**name-typeahead entity picker** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md) §2, the reusable
-component every merge surface will use). Discovery: the picker's documented backend
-`GET /entities?q=&type=&limit=` (03-api §Search, [ADR-058](adr/058-instagram-dm-connector-and-conversation-substrate.md)
-§11) was **specced but never built** — so T2 was slightly wider than the tracker's "web-only" note: it
-adds a thin **server** endpoint (`browse_entities` → new `EntityBrowseService` → the existing
-`EntityStore.list_entities`, ranked in Python by a pure **diacritic-folded name/alias matcher**
-`rank_entity_matches`: exact-title > title-prefix > exact-alias > title-contains > alias-contains, then
-alphabetical; empty `q` = alphabetical browse) that reuses `normalize_alias` so **"madalina"** finds a
-hub written **"Mădălina"** (ADR-041). Read-only, no model — `/search` stays the query-shaped semantic
-surface. **Web:** a reusable `<EntityPicker>` (`ui/`) — controlled name-typeahead that resolves a typed
-name to an entity **id** (no UUIDs), debounced `GET /entities`, keyboard nav, selected-chip + clear;
-`useEntitySearch` hook split out. **Wiring into the merge surfaces is T3.** Self-review (no independent
-agent this pass): no must-fix; read-only, gate green (**1090 pytest**, +14; **tsc + eslint + ruff
-clean**). Docs: 03 §Search & graph (endpoint confirmed live), 08 §M9.8 T2.
-*(M9.7 + M9.6 T6 + M9.8 T1/T4/T5 closed prior — see [status history](08-logs/status-history.md); M9.8
+**Where we are (2026-07-19):** **M9.8 T3 DONE (committed to `main`, not yet pushed).** The M9.8
+server foundation (T1/T4/T5) is complete + deployed and the shared picker (T2) is built; **T3 wires
+that `<EntityPicker>` into the two merge surfaces** ([ADR-064](adr/064-durable-merges-visual-dedup-gc.md)
+§2), both feeding the **unchanged two-step propose→apply** (ADR-030 §5). **AdminOps "Merge entities"
+card:** the two raw node-id `<input>`s are replaced by two `<EntityPicker>`s (loser/survivor) with
+**symmetric `excludeId`** (each drops the other from its results → a node can never be merged into
+itself); changing either picker clears a stale preview; apply still uses the server-authoritative
+`plan.loser.id`/`plan.survivor.id`. **Profile "Merge into…":** a new self-contained
+`ui/MergeIntoPanel` embedded in the shared `ui/NodePreview` — **entity hubs only** (gated by a new
+`ui/useEntityLikeTypes` over `GET /types`) — folds the viewed node (loser) into a picked survivor (picker
+`type`-narrowed to the hub's kind, `excludeId`-ing it), calling the merge propose/apply **directly from
+`ui/`** so the shared preview never imports a feature (layering, rule 4), and polling the background run
+to terminal (invalidates the loser's `node`/`neighbors` queries on success). So a merge starts from
+anywhere the profile shows — map drawer, search/chat expand — no ids ever. **Scope note:** the richer
+full-`NodePreview` side-by-side previews sketched in 06 §Entity-merge stay a later enhancement — T3 keeps
+the propose-response preview (identity + aliases + inbound-edge count) the tracker scoped. Self-review
+(no independent agent this pass, as T2 — contained web wiring over the T2 picker + the already-verified
+propose→apply seam; the live merge is T7's Accept): no must-fix. Web gate green (**tsc --noEmit + eslint
+--max-warnings 0 clean**); dev server compiles + mounts with no console errors. Docs: 06 §Settings
+(entity-merge bullet + new profile affordance), 08 §M9.8 T3.
+*(M9.7 + M9.6 T6 + M9.8 T1/T2/T4/T5 closed prior — see [status history](08-logs/status-history.md); M9.8
 grilled to build-ready in [ADR-064](adr/064-durable-merges-visual-dedup-gc.md).)*
 
 **Repo hygiene (2026-07-19):** a **PII history-rewrite** (`git filter-repo` + force-push) of **both
@@ -57,15 +61,12 @@ pre-commit guard** (`.githooks/pre-commit` → `pii_scan.py`, wire with `git con
 **`git fetch + reset --hard origin/main`** so a force-push no longer wedges the VPS deploy (07-infra).
 ⚠ GitHub may still serve pre-rewrite commits by SHA until GC — verify no forks.
 
-**Next:** **T3 — merge surfaces** (web, `depends-on: T2`): drop the T2 `<EntityPicker>` into the
-**AdminOps** "Merge entities" card (replace its two raw id boxes with two pickers — loser/survivor, the
-survivor picker `excludeId`-ing the loser) and add a **"Merge into…"** affordance on the entity/profile
-view, both feeding the unchanged two-step propose→apply (inbound-edge preview → confirm). Then
-**inline-actionable graph-health** (T6, per-section Merge/Delete/Keep wired to T3's picker + T5 delete +
-capture-remove; dupe candidates from T4's inline feed). Then **T7 live Accept**: merge the duplicated hub
-by name and confirm it survives a `reprocess-all`, a detected dupe merges inline while Diana Wren stays
-separate, an orphan hub deletes and doesn't resurrect. *(Separate background task in flight: the
-identity-capsule L0 generator-preamble leak.)*
+**Next:** **T6 — inline-actionable graph-health** (web, `depends-on: T3, T4, T5`): per-section
+**Merge/Delete/Keep** buttons on the graph-health card, wired to T3's `<EntityPicker>`/merge flow + T5's
+node-delete + capture-remove; the dupe candidates come from T4's inline `high_confidence` feed, ambiguous
+items route to Review. Then **T7 live Accept**: merge the duplicated hub by name and confirm it survives a
+`reprocess-all`, a detected dupe merges inline while Diana Wren stays separate, an orphan hub deletes and
+doesn't resurrect. *(Separate background task in flight: the identity-capsule L0 generator-preamble leak.)*
 
 > **Planning/replanning sessions start with `/grilling`; implementation sessions build
 > against the approved plan (no grilling). Every session follows
